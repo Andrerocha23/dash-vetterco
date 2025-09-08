@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apple-style Dark Design System - All colors MUST be HSL */
+
+@layer base {
+  :root {
+    /* Apple Dark Theme - Page Background */
+    --background: 240 7% 4%; /* #0B0B0D */
+    --foreground: 0 0% 100%; /* #FFFFFF */
+
+    /* Card/Surface Background */
+    --card: 240 6% 7%; /* #111318 */
+    --card-foreground: 0 0% 100%; /* #FFFFFF */
+
+    /* Popovers and Modals */
+    --popover: 240 6% 7%; /* #111318 */
+    --popover-foreground: 0 0% 100%; /* #FFFFFF */
+
+    /* Apple Blue Primary - #0A84FF */
+    --primary: 214 100% 52%; /* #0A84FF */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+
+    /* Secondary Surfaces */
+    --secondary: 240 4% 12%; /* #1C1C1E */
+    --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+
+    /* Muted/Disabled States */
+    --muted: 240 4% 12%; /* #1C1C1E */
+    --muted-foreground: 220 9% 67%; /* #A9AFB8 */
+
+    /* Accent Color (lighter blue) */
+    --accent: 214 100% 60%; /* lighter blue */
+    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+
+    /* Destructive/Error */
+    --destructive: 0 84% 60%; /* #FF453A */
+    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+
+    /* Borders and Inputs */
+    --border: 240 6% 14%; /* #23262E */
+    --input: 240 6% 14%; /* #23262E */
+    --ring: 214 100% 52%; /* Apple Blue */
+
+    /* Border Radius */
+    --radius: 1rem; /* rounded-2xl default */
+
+    /* Sidebar Specific */
+    --sidebar-background: 240 7% 4%; /* same as page bg */
+    --sidebar-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-primary: 214 100% 52%; /* Apple Blue */
+    --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-accent: 240 4% 12%; /* #1C1C1E */
+    --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-border: 240 6% 14%; /* #23262E */
+    --sidebar-ring: 214 100% 52%; /* Apple Blue */
+
+    /* Custom Design Tokens */
+    --surface-elevated: 240 6% 7%; /* #111318 - elevated cards */
+    --surface-overlay: 240 6% 10%; /* modals/overlays */
+    --text-secondary: 220 9% 67%; /* #A9AFB8 - secondary text */
+    --text-tertiary: 220 9% 46%; /* darker secondary text */
+    
+    /* Status Colors */
+    --success: 120 80% 45%; /* Green for success */
+    --warning: 45 100% 55%; /* Yellow for warning */
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 100% 52%) 0%, hsl(214 100% 60%) 100%);
+    --gradient-surface: linear-gradient(135deg, hsl(240 6% 7%) 0%, hsl(240 6% 9%) 100%);
+    
+    /* Shadows - Apple style soft shadows */
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 20px rgba(10, 132, 255, 0.3);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter antialiased;
+  }
+}
+
+@layer components {
+  /* Apple-style elevated surface */
+  .surface-elevated {
+    @apply bg-card border border-border shadow-lg;
+    background: hsl(var(--surface-elevated));
+    box-shadow: var(--shadow-md);
+  }
+  
+  /* Glass effect for overlays */
+  .surface-glass {
+    @apply backdrop-blur-md border border-border/50;
+    background: hsl(var(--surface-overlay) / 0.8);
+  }
+  
+  /* Text variants */
+  .text-secondary {
+    color: hsl(var(--text-secondary));
+  }
+  
+  .text-tertiary {
+    color: hsl(var(--text-tertiary));
+  }
+  
+  /* Gradient backgrounds */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-surface {
+    background: var(--gradient-surface);
+  }
+}
