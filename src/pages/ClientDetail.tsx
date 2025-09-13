@@ -53,8 +53,8 @@ export default function ClientDetail() {
         
         if (!clientData) {
           toast({
-            title: "Client not found",
-            description: "The requested client could not be found",
+            title: "Cliente não encontrado",
+            description: "O cliente solicitado não foi encontrado",
             variant: "destructive",
           });
           navigate("/clients");
@@ -64,10 +64,10 @@ export default function ClientDetail() {
         setClient(clientData);
         setCampaigns([]); // No campaigns for now
       } catch (error) {
-        console.error("Failed to load client data:", error);
+        console.error("Falha ao carregar dados do cliente:", error);
         toast({
-          title: "Error",
-          description: "Failed to load client data",
+          title: "Erro",
+          description: "Falha ao carregar dados do cliente",
           variant: "destructive",
         });
       } finally {
@@ -79,9 +79,9 @@ export default function ClientDetail() {
   }, [id, navigate, toast]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'BRL',
       minimumFractionDigits: 2,
     }).format(value);
   };
@@ -127,11 +127,11 @@ export default function ClientDetail() {
       <AppLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">Client not found</h2>
-            <p className="text-muted-foreground mb-4">The client you're looking for doesn't exist.</p>
+            <h2 className="text-2xl font-bold mb-2">Cliente não encontrado</h2>
+            <p className="text-muted-foreground mb-4">O cliente que você está procurando não existe.</p>
             <Button onClick={() => navigate("/clients")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Clients
+              Voltar aos Clientes
             </Button>
           </div>
         </div>
@@ -161,15 +161,15 @@ export default function ClientDetail() {
             <div className="flex items-center gap-4 text-muted-foreground">
               <span className="flex items-center gap-2">
                 <span className="text-lg">{client.manager.avatar}</span>
-                Managed by {client.manager.name}
+                Gerenciado por {client.manager.name}
               </span>
               <span>•</span>
-              <span>Created {new Date(client.createdOn).toLocaleDateString()}</span>
+              <span>Criado em {new Date(client.createdOn).toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">Edit Client</Button>
-            <Button variant="apple">Sync Now</Button>
+            <Button variant="outline">Editar Cliente</Button>
+            <Button variant="apple">Sincronizar Agora</Button>
           </div>
         </div>
 
@@ -179,14 +179,14 @@ export default function ClientDetail() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Meta Balance
+                Meta Saldo
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 {formatCurrency(client.metaBalance)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Current account balance</p>
+              <p className="text-xs text-muted-foreground mt-1">Saldo atual da conta</p>
             </CardContent>
           </Card>
 
@@ -194,12 +194,12 @@ export default function ClientDetail() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Play className="h-4 w-4" />
-                Active Campaigns
+                Campanhas Ativas
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{client.activeCampaigns}</div>
-              <p className="text-xs text-muted-foreground mt-1">Currently running</p>
+              <p className="text-xs text-muted-foreground mt-1">Executando atualmente</p>
             </CardContent>
           </Card>
 
@@ -207,12 +207,12 @@ export default function ClientDetail() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Target className="h-4 w-4" />
-                Total Leads
+                Total de Leads
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{Math.floor(Math.random() * 150) + 50}</div>
-              <p className="text-xs text-muted-foreground mt-1">This month</p>
+              <p className="text-xs text-muted-foreground mt-1">Este mês</p>
             </CardContent>
           </Card>
 
@@ -220,12 +220,12 @@ export default function ClientDetail() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Avg CPL
+                CPL Médio
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(Math.random() * 50 + 20)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Cost per lead</p>
+              <p className="text-xs text-muted-foreground mt-1">Custo por lead</p>
             </CardContent>
           </Card>
         </div>
@@ -236,7 +236,7 @@ export default function ClientDetail() {
             <CardContent className="p-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">{(Math.random() * 5 + 1).toFixed(2)}%</div>
-                <p className="text-muted-foreground">Average CTR</p>
+                <p className="text-muted-foreground">CTR Médio</p>
               </div>
             </CardContent>
           </Card>
@@ -245,7 +245,7 @@ export default function ClientDetail() {
             <CardContent className="p-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">{formatCurrency(Math.random() * 1000 + 500)}</div>
-                <p className="text-muted-foreground">Current Spend</p>
+                <p className="text-muted-foreground">Gasto Atual</p>
               </div>
             </CardContent>
           </Card>
@@ -254,7 +254,7 @@ export default function ClientDetail() {
             <CardContent className="p-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">{(Math.random() * 15 + 5).toFixed(1)}%</div>
-                <p className="text-muted-foreground">Hook Rate</p>
+                <p className="text-muted-foreground">Taxa de Gancho</p>
               </div>
             </CardContent>
           </Card>
@@ -264,7 +264,7 @@ export default function ClientDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="surface-elevated">
             <CardHeader>
-              <CardTitle>Leads Over Time</CardTitle>
+              <CardTitle>Leads ao Longo do Tempo</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -297,7 +297,7 @@ export default function ClientDetail() {
 
           <Card className="surface-elevated">
             <CardHeader>
-              <CardTitle>Daily Spend</CardTitle>
+              <CardTitle>Gasto Diário</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -336,17 +336,17 @@ export default function ClientDetail() {
             {campaigns.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📢</div>
-                <h3 className="text-lg font-medium mb-2">No campaigns found</h3>
-                <p className="text-muted-foreground">This client doesn't have any campaigns yet.</p>
+                <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
+                <p className="text-muted-foreground">Este cliente ainda não possui campanhas.</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Campaign Name</TableHead>
+                    <TableHead>Nome da Campanha</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Daily Budget</TableHead>
-                    <TableHead>Impressions</TableHead>
+                    <TableHead>Orçamento Diário</TableHead>
+                    <TableHead>Impressões</TableHead>
                     <TableHead>CTR</TableHead>
                     <TableHead>CPC</TableHead>
                     <TableHead>Leads</TableHead>
@@ -368,7 +368,7 @@ export default function ClientDetail() {
                           }`}
                         >
                           {campaign.status === "Active" ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-                          {campaign.status}
+                          {campaign.status === "Active" ? "Ativo" : "Pausado"}
                         </Badge>
                       </TableCell>
                       <TableCell>{formatCurrency(campaign.dailyBudget)}</TableCell>
@@ -385,9 +385,9 @@ export default function ClientDetail() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover border-border">
-                            <DropdownMenuItem>View Campaign</DropdownMenuItem>
-                            <DropdownMenuItem>Edit Campaign</DropdownMenuItem>
-                            <DropdownMenuItem>Duplicate</DropdownMenuItem>
+                            <DropdownMenuItem>Ver Campanha</DropdownMenuItem>
+                            <DropdownMenuItem>Editar Campanha</DropdownMenuItem>
+                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
