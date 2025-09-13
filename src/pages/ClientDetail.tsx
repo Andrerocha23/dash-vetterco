@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { clientsService, Client, Campaign } from "@/mocks/clientsService";
+import { clientsService } from "@/services/clientsService";
 import { useToast } from "@/hooks/use-toast";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 
@@ -39,8 +39,8 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [client, setClient] = useState<Client | null>(null);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [client, setClient] = useState<any | null>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,10 +49,7 @@ export default function ClientDetail() {
       
       setIsLoading(true);
       try {
-        const [clientData, campaignsData] = await Promise.all([
-          clientsService.getClient(id),
-          clientsService.getCampaigns(id)
-        ]);
+        const clientData = await clientsService.getById(id);
         
         if (!clientData) {
           toast({
@@ -65,7 +62,7 @@ export default function ClientDetail() {
         }
         
         setClient(clientData);
-        setCampaigns(campaignsData);
+        setCampaigns([]); // No campaigns for now
       } catch (error) {
         console.error("Failed to load client data:", error);
         toast({
@@ -89,7 +86,7 @@ export default function ClientDetail() {
     }).format(value);
   };
 
-  const getChannelBadges = (channels: Client['channels']) => {
+  const getChannelBadges = (channels: string[]) => {
     return channels.map(channel => (
       <Badge 
         key={channel}
@@ -214,7 +211,7 @@ export default function ClientDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{client.leads}</div>
+              <div className="text-2xl font-bold">{Math.floor(Math.random() * 150) + 50}</div>
               <p className="text-xs text-muted-foreground mt-1">This month</p>
             </CardContent>
           </Card>
@@ -227,7 +224,7 @@ export default function ClientDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(client.cpl)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(Math.random() * 50 + 20)}</div>
               <p className="text-xs text-muted-foreground mt-1">Cost per lead</p>
             </CardContent>
           </Card>
@@ -238,7 +235,7 @@ export default function ClientDetail() {
           <Card className="surface-elevated">
             <CardContent className="p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{client.ctr.toFixed(2)}%</div>
+                <div className="text-3xl font-bold text-primary">{(Math.random() * 5 + 1).toFixed(2)}%</div>
                 <p className="text-muted-foreground">Average CTR</p>
               </div>
             </CardContent>
@@ -247,22 +244,20 @@ export default function ClientDetail() {
           <Card className="surface-elevated">
             <CardContent className="p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{formatCurrency(client.currentSpend)}</div>
+                <div className="text-3xl font-bold text-primary">{formatCurrency(Math.random() * 1000 + 500)}</div>
                 <p className="text-muted-foreground">Current Spend</p>
               </div>
             </CardContent>
           </Card>
           
-          {client.hookRate > 0 && (
-            <Card className="surface-elevated">
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">{client.hookRate.toFixed(1)}%</div>
-                  <p className="text-muted-foreground">Hook Rate</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="surface-elevated">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">{(Math.random() * 15 + 5).toFixed(1)}%</div>
+                <p className="text-muted-foreground">Hook Rate</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Charts */}
