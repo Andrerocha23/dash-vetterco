@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          alerta_saldo_baixo: number | null
+          ativar_campanhas_meta: boolean | null
+          budget_mensal_global: number | null
+          budget_mensal_google: number | null
+          budget_mensal_meta: number | null
+          canais: string[]
+          canal_relatorio: string | null
+          centro_custo: string | null
+          contrato_inicio: string | null
+          contrato_renovacao: string | null
+          conversoes: string[] | null
+          created_at: string
+          email: string | null
+          forma_pagamento: string | null
+          ga4_stream_id: string | null
+          gestor_id: string
+          google_ads_id: string | null
+          gtm_id: string | null
+          horario_relatorio: string | null
+          id: string
+          id_grupo: string | null
+          link_drive: string | null
+          link_google: string | null
+          link_meta: string | null
+          meta_account_id: string | null
+          meta_business_id: string | null
+          meta_page_id: string | null
+          modo_saldo_meta: string | null
+          monitorar_saldo_meta: boolean | null
+          nome_cliente: string
+          nome_empresa: string
+          notificacao_erro_sync: boolean | null
+          notificacao_leads_diarios: boolean | null
+          notificacao_saldo_baixo: boolean | null
+          observacoes: string | null
+          ocultar_ranking: boolean | null
+          papel_padrao: string | null
+          pixel_meta: string | null
+          saldo_meta: number | null
+          somar_metricas: boolean | null
+          status: string
+          telefone: string
+          templates_padrao: string[] | null
+          traqueamento_ativo: boolean | null
+          typebot_ativo: boolean | null
+          typebot_url: string | null
+          updated_at: string
+          url_crm: string | null
+          usa_crm_externo: boolean | null
+          usa_google_ads: boolean | null
+          usa_meta_ads: boolean | null
+          user_id: string | null
+          usuarios_vinculados: string[] | null
+          utm_padrao: string | null
+          webhook_google: string | null
+          webhook_meta: string | null
+        }
+        Insert: {
+          alerta_saldo_baixo?: number | null
+          ativar_campanhas_meta?: boolean | null
+          budget_mensal_global?: number | null
+          budget_mensal_google?: number | null
+          budget_mensal_meta?: number | null
+          canais?: string[]
+          canal_relatorio?: string | null
+          centro_custo?: string | null
+          contrato_inicio?: string | null
+          contrato_renovacao?: string | null
+          conversoes?: string[] | null
+          created_at?: string
+          email?: string | null
+          forma_pagamento?: string | null
+          ga4_stream_id?: string | null
+          gestor_id: string
+          google_ads_id?: string | null
+          gtm_id?: string | null
+          horario_relatorio?: string | null
+          id?: string
+          id_grupo?: string | null
+          link_drive?: string | null
+          link_google?: string | null
+          link_meta?: string | null
+          meta_account_id?: string | null
+          meta_business_id?: string | null
+          meta_page_id?: string | null
+          modo_saldo_meta?: string | null
+          monitorar_saldo_meta?: boolean | null
+          nome_cliente: string
+          nome_empresa: string
+          notificacao_erro_sync?: boolean | null
+          notificacao_leads_diarios?: boolean | null
+          notificacao_saldo_baixo?: boolean | null
+          observacoes?: string | null
+          ocultar_ranking?: boolean | null
+          papel_padrao?: string | null
+          pixel_meta?: string | null
+          saldo_meta?: number | null
+          somar_metricas?: boolean | null
+          status?: string
+          telefone: string
+          templates_padrao?: string[] | null
+          traqueamento_ativo?: boolean | null
+          typebot_ativo?: boolean | null
+          typebot_url?: string | null
+          updated_at?: string
+          url_crm?: string | null
+          usa_crm_externo?: boolean | null
+          usa_google_ads?: boolean | null
+          usa_meta_ads?: boolean | null
+          user_id?: string | null
+          usuarios_vinculados?: string[] | null
+          utm_padrao?: string | null
+          webhook_google?: string | null
+          webhook_meta?: string | null
+        }
+        Update: {
+          alerta_saldo_baixo?: number | null
+          ativar_campanhas_meta?: boolean | null
+          budget_mensal_global?: number | null
+          budget_mensal_google?: number | null
+          budget_mensal_meta?: number | null
+          canais?: string[]
+          canal_relatorio?: string | null
+          centro_custo?: string | null
+          contrato_inicio?: string | null
+          contrato_renovacao?: string | null
+          conversoes?: string[] | null
+          created_at?: string
+          email?: string | null
+          forma_pagamento?: string | null
+          ga4_stream_id?: string | null
+          gestor_id?: string
+          google_ads_id?: string | null
+          gtm_id?: string | null
+          horario_relatorio?: string | null
+          id?: string
+          id_grupo?: string | null
+          link_drive?: string | null
+          link_google?: string | null
+          link_meta?: string | null
+          meta_account_id?: string | null
+          meta_business_id?: string | null
+          meta_page_id?: string | null
+          modo_saldo_meta?: string | null
+          monitorar_saldo_meta?: boolean | null
+          nome_cliente?: string
+          nome_empresa?: string
+          notificacao_erro_sync?: boolean | null
+          notificacao_leads_diarios?: boolean | null
+          notificacao_saldo_baixo?: boolean | null
+          observacoes?: string | null
+          ocultar_ranking?: boolean | null
+          papel_padrao?: string | null
+          pixel_meta?: string | null
+          saldo_meta?: number | null
+          somar_metricas?: boolean | null
+          status?: string
+          telefone?: string
+          templates_padrao?: string[] | null
+          traqueamento_ativo?: boolean | null
+          typebot_ativo?: boolean | null
+          typebot_url?: string | null
+          updated_at?: string
+          url_crm?: string | null
+          usa_crm_externo?: boolean | null
+          usa_google_ads?: boolean | null
+          usa_meta_ads?: boolean | null
+          user_id?: string | null
+          usuarios_vinculados?: string[] | null
+          utm_padrao?: string | null
+          webhook_google?: string | null
+          webhook_meta?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

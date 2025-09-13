@@ -21,18 +21,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { clientsService, Client } from "@/mocks/clientsService";
+import { clientsService } from "@/services/clientsService";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
 import { ClienteFormData } from "@/types/client";
 
 export default function Clients() {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("active");
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editingClient, setEditingClient] = useState<any | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const navigate = useNavigate();
@@ -118,7 +118,7 @@ export default function Clients() {
     }
   };
 
-  const handleEditClient = (client: Client) => {
+  const handleEditClient = (client: any) => {
     const clientFormData: ClienteFormData = {
       id: client.id,
       nomeCliente: client.name,
@@ -138,7 +138,7 @@ export default function Clients() {
     setShowEditModal(true);
   };
 
-  const getChannelBadges = (channels: Client['channels']) => {
+  const getChannelBadges = (channels: string[]) => {
     return channels.map(channel => (
       <Badge 
         key={channel}
