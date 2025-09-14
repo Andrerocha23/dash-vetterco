@@ -76,35 +76,34 @@ export interface Alert {
   actionUrl: string;
 }
 
-// Mock data generators
-const generateLeadsMetrics = (period: string): LeadsMetrics => {
-  const baseLeads = period === 'today' ? 45 : period === 'yesterday' ? 38 : 
-                   period === '7d' ? 280 : period === '15d' ? 650 : 1240;
-  
-  const variation = (Math.random() - 0.4) * 30; // -12% to +18% bias positive
-  
-  return {
-    current: baseLeads,
-    previous: Math.floor(baseLeads / (1 + variation / 100)),
-    variation: Math.round(variation * 10) / 10
-  };
-};
+import { supabase } from "@/integrations/supabase/client";
 
-const generateHealthScore = (): HealthScore => {
-  const factors = {
-    contasSaldoBaixo: Math.random() * 0.3, // 0-30%
-    contasSemLeads48h: Math.random() * 0.2, // 0-20%
-    campanhasPausadas: Math.random() * 0.15, // 0-15%
-    contasSemRastreamento: Math.random() * 0.25 // 0-25%
-  };
+// Função para calcular health score baseado em dados reais
+const calculateHealthScore = (clients: any[]): HealthScore => {
+  const totalClients = clients.length;
+  if (totalClients === 0) return { score: 100, factors: { contasSaldoBaixo: 0, contasSemLeads48h: 0, campanhasPausadas: 0, contasSemRastreamento: 0 } };
+
+  const contasSaldoBaixo = clients.filter(c => c.usa_meta_ads && (c.saldo_meta || 0) < (c.alerta_saldo_baixo || 100)).length;
+  const contasSemRastreamento = clients.filter(c => !c.traqueamento_ativo).length;
   
+  // Por enquanto, simulamos dados de leads e campanhas pausadas (serão implementados quando tivermos as tabelas)
+  const contasSemLeads48h = Math.floor(totalClients * 0.1); // 10% das contas
+  const campanhasPausadas = Math.floor(totalClients * 0.15); // 15% das contas
+
+  const factors = {
+    contasSaldoBaixo: contasSaldoBaixo / totalClients,
+    contasSemLeads48h: contasSemLeads48h / totalClients,
+    campanhasPausadas: campanhasPausadas / totalClients,
+    contasSemRastreamento: contasSemRastreamento / totalClients
+  };
+
   const score = Math.round(100 - (
     25 * factors.contasSaldoBaixo +
     25 * factors.contasSemLeads48h +
     25 * factors.campanhasPausadas +
     25 * factors.contasSemRastreamento
   ));
-  
+
   return { score: Math.max(0, score), factors };
 };
 
@@ -184,73 +183,168 @@ const mockAlerts: Alert[] = [
 
 export const impactDashboardService = {
   async getHealthScore(): Promise<HealthScore> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return generateHealthScore();
+    try {
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('status', 'Ativo');
+
+      if (error) throw error;
+      
+      return calculateHealthScore(clients || []);
+    } catch (error) {
+      console.error('Erro ao buscar health score:', error);
+      return { score: 0, factors: { contasSaldoBaixo: 0, contasSemLeads48h: 0, campanhasPausadas: 0, contasSemRastreamento: 0 } };
+    }
   },
 
   async getLeadsMetrics(period: string): Promise<LeadsMetrics> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return generateLeadsMetrics(period);
+    // TODO: Implementar quando tivermos tabela de leads
+    // Por enquanto retorna dados simulados baseados no período
+    const baseLeads = period === 'today' ? 45 : period === 'yesterday' ? 38 : 
+                     period === '7d' ? 280 : period === '15d' ? 650 : 1240;
+    
+    const variation = (Math.random() - 0.4) * 30;
+    
+    return {
+      current: baseLeads,
+      previous: Math.floor(baseLeads / (1 + variation / 100)),
+      variation: Math.round(variation * 10) / 10
+    };
   },
 
   async getAccountsWithLowBalance(): Promise<AccountsWithLowBalance> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return {
-      count: 3,
-      accounts: [
-        { id: '1', name: 'TechCorp', balance: 89.50, threshold: 100 },
-        { id: '2', name: 'Urban Style', balance: 45.20, threshold: 200 },
-        { id: '3', name: 'EcoHome', balance: 12.80, threshold: 150 }
-      ]
-    };
+    try {
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('id, nome_cliente, saldo_meta, alerta_saldo_baixo, usa_meta_ads')
+        .eq('status', 'Ativo')
+        .eq('usa_meta_ads', true);
+
+      if (error) throw error;
+
+      const lowBalanceAccounts = (clients || []).filter(client => {
+        const balance = (client.saldo_meta || 0) / 100; // Convertendo de centavos para reais
+        const threshold = (client.alerta_saldo_baixo || 100) / 100;
+        return balance < threshold;
+      });
+
+      return {
+        count: lowBalanceAccounts.length,
+        accounts: lowBalanceAccounts.map(account => ({
+          id: account.id,
+          name: account.nome_cliente,
+          balance: (account.saldo_meta || 0) / 100,
+          threshold: (account.alerta_saldo_baixo || 100) / 100
+        }))
+      };
+    } catch (error) {
+      console.error('Erro ao buscar contas com saldo baixo:', error);
+      return { count: 0, accounts: [] };
+    }
   },
 
   async getAccountsWithoutLeads(): Promise<AccountsWithoutLeads> {
-    await new Promise(resolve => setTimeout(resolve, 350));
-    return {
-      count: 2,
-      percentage: 16.7, // 2 de 12 contas
-      accounts: [
-        { id: '4', name: 'FashionBrand', lastLeadDate: '2024-01-04T10:00:00Z' },
-        { id: '5', name: 'LocalBiz', lastLeadDate: '2024-01-03T15:30:00Z' }
-      ]
-    };
+    try {
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('id, nome_cliente')
+        .eq('status', 'Ativo');
+
+      if (error) throw error;
+
+      const totalClients = clients?.length || 0;
+      
+      // TODO: Implementar quando tivermos tabela de leads
+      // Por enquanto simula 10% das contas sem leads
+      const withoutLeadsCount = Math.floor(totalClients * 0.1);
+      const percentage = totalClients > 0 ? (withoutLeadsCount / totalClients) * 100 : 0;
+
+      return {
+        count: withoutLeadsCount,
+        percentage,
+        accounts: [] // Será preenchido quando tivermos dados reais de leads
+      };
+    } catch (error) {
+      console.error('Erro ao buscar contas sem leads:', error);
+      return { count: 0, percentage: 0, accounts: [] };
+    }
   },
 
   async getPausedCampaigns(): Promise<PausedCampaigns> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return {
-      count: 5,
-      campaigns: [
-        { id: '1', name: 'Summer Sale', accountName: 'TechCorp', pausedDate: '2024-01-05T09:00:00Z' },
-        { id: '2', name: 'Brand Awareness', accountName: 'Urban Style', pausedDate: '2024-01-04T14:20:00Z' },
-        { id: '3', name: 'Product Launch', accountName: 'EcoHome', pausedDate: '2024-01-04T11:15:00Z' }
-      ]
-    };
+    try {
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('id, nome_cliente')
+        .eq('status', 'Pausado');
+
+      if (error) throw error;
+
+      // TODO: Implementar quando tivermos tabela de campanhas
+      // Por enquanto considera clientes pausados como campanhas pausadas
+      return {
+        count: clients?.length || 0,
+        campaigns: (clients || []).map(client => ({
+          id: client.id,
+          name: 'Campanha Principal',
+          accountName: client.nome_cliente,
+          pausedDate: new Date().toISOString()
+        }))
+      };
+    } catch (error) {
+      console.error('Erro ao buscar campanhas pausadas:', error);
+      return { count: 0, campaigns: [] };
+    }
   },
 
   async getLeadsByChannel(period: string): Promise<LeadsByChannel> {
-    await new Promise(resolve => setTimeout(resolve, 450));
-    
-    const multiplier = period === 'today' ? 0.1 : period === 'yesterday' ? 0.08 : 
-                     period === '7d' ? 0.6 : period === '15d' ? 1.2 : 2;
-    
-    return {
-      meta: Math.floor(680 * multiplier),
-      google: Math.floor(420 * multiplier),
-      organico: Math.floor(95 * multiplier),
-      outro: Math.floor(45 * multiplier)
-    };
+    try {
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('canais')
+        .eq('status', 'Ativo');
+
+      if (error) throw error;
+
+      // Conta quantos clientes usam cada canal
+      const channelCounts = {
+        meta: 0,
+        google: 0,
+        organico: 0,
+        outro: 0
+      };
+
+      (clients || []).forEach(client => {
+        const canais = client.canais || [];
+        if (canais.includes('Meta')) channelCounts.meta++;
+        if (canais.includes('Google')) channelCounts.google++;
+        if (canais.includes('Orgânico')) channelCounts.organico++;
+        if (canais.includes('Outro')) channelCounts.outro++;
+      });
+
+      // Multiplica por um fator baseado no período para simular leads
+      const multiplier = period === 'today' ? 5 : period === 'yesterday' ? 4 : 
+                        period === '7d' ? 35 : period === '15d' ? 75 : 150;
+
+      return {
+        meta: channelCounts.meta * multiplier,
+        google: channelCounts.google * multiplier,
+        organico: channelCounts.organico * multiplier,
+        outro: channelCounts.outro * multiplier
+      };
+    } catch (error) {
+      console.error('Erro ao buscar leads por canal:', error);
+      return { meta: 0, google: 0, organico: 0, outro: 0 };
+    }
   },
 
   async getHeatmapData(): Promise<HeatmapData[]> {
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // TODO: Implementar quando tivermos dados de leads com timestamp
     return generateHeatmapData();
   },
 
   async getLeadsTrend(period: string): Promise<LeadsTrend> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    // TODO: Implementar quando tivermos tabela de leads
     const days = period === '7d' ? 7 : period === '15d' ? 15 : period === '30d' ? 30 : 1;
     const data = [];
     
@@ -266,12 +360,81 @@ export const impactDashboardService = {
     
     return {
       data,
-      variation: Math.round((Math.random() - 0.3) * 25 * 10) / 10 // -7.5% to +17.5%
+      variation: Math.round((Math.random() - 0.3) * 25 * 10) / 10
     };
   },
 
   async getAlerts(): Promise<Alert[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockAlerts.slice(0, 5);
+    try {
+      const alerts: Alert[] = [];
+
+      // Buscar contas com saldo baixo
+      const { data: lowBalanceClients } = await supabase
+        .from('clients')
+        .select('id, nome_cliente, saldo_meta, alerta_saldo_baixo')
+        .eq('status', 'Ativo')
+        .eq('usa_meta_ads', true);
+
+      const lowBalance = (lowBalanceClients || []).filter(c => 
+        (c.saldo_meta || 0) < (c.alerta_saldo_baixo || 100)
+      );
+
+      if (lowBalance.length > 0) {
+        alerts.push({
+          id: 'saldo-baixo',
+          type: 'saldo_critico',
+          severity: 'alta',
+          title: 'Saldo Crítico',
+          description: `${lowBalance.length} conta(s) com saldo abaixo do limite`,
+          count: lowBalance.length,
+          action: 'Ver contas',
+          actionUrl: '/clientes?filter=saldo-baixo'
+        });
+      }
+
+      // Buscar contas sem rastreamento
+      const { data: noTrackingClients } = await supabase
+        .from('clients')
+        .select('id, nome_cliente')
+        .eq('status', 'Ativo')
+        .eq('traqueamento_ativo', false);
+
+      if (noTrackingClients && noTrackingClients.length > 0) {
+        alerts.push({
+          id: 'sem-rastreamento',
+          type: 'rastreamento_pendente',
+          severity: 'media',
+          title: 'Rastreamento Pendente',
+          description: `${noTrackingClients.length} conta(s) sem rastreamento configurado`,
+          count: noTrackingClients.length,
+          action: 'Configurar',
+          actionUrl: '/clientes?filter=sem-rastreamento'
+        });
+      }
+
+      // Buscar clientes pausados
+      const { data: pausedClients } = await supabase
+        .from('clients')
+        .select('id, nome_cliente')
+        .eq('status', 'Pausado');
+
+      if (pausedClients && pausedClients.length > 0) {
+        alerts.push({
+          id: 'pausados',
+          type: 'campanhas_pausadas',
+          severity: 'media',
+          title: 'Contas Pausadas',
+          description: `${pausedClients.length} conta(s) pausada(s)`,
+          count: pausedClients.length,
+          action: 'Revisar contas',
+          actionUrl: '/clientes?status=pausado'
+        });
+      }
+
+      return alerts.slice(0, 5);
+    } catch (error) {
+      console.error('Erro ao buscar alertas:', error);
+      return [];
+    }
   }
 };
