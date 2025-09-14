@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, DollarSign, Target, TrendingUp, Play, Pause, MoreHorizontal } from "lucide-react";
+import { 
+  ArrowLeft, DollarSign, Target, TrendingUp, Play, Pause, MoreHorizontal, 
+  Settings, Users, BarChart3, Calendar, Globe, Shield, ExternalLink,
+  Edit, Archive, RefreshCw, Zap, LineChart
+} from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -20,27 +25,66 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { clientsService } from "@/services/clientsService";
 import { useToast } from "@/hooks/use-toast";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock chart data for client detail
-const mockChartData = [
-  { date: "2024-01-01", leads: 15, spend: 420 },
-  { date: "2024-01-02", leads: 22, spend: 380 },
-  { date: "2024-01-03", leads: 18, spend: 450 },
-  { date: "2024-01-04", leads: 28, spend: 520 },
-  { date: "2024-01-05", leads: 24, spend: 480 },
-  { date: "2024-01-06", leads: 32, spend: 600 },
-  { date: "2024-01-07", leads: 26, spend: 540 },
-];
+// Interfaces
+interface ClientData {
+  id: string;
+  nome_cliente: string;
+  nome_empresa: string;
+  telefone: string;
+  email: string | null;
+  gestor_id: string;
+  canais: string[];
+  status: string;
+  observacoes: string | null;
+  usa_meta_ads: boolean;
+  usa_google_ads: boolean;
+  traqueamento_ativo: boolean;
+  saldo_meta: number | null;
+  budget_mensal_meta: number | null;
+  budget_mensal_google: number | null;
+  pixel_meta: string | null;
+  ga4_stream_id: string | null;
+  gtm_id: string | null;
+  typebot_ativo: boolean | null;
+  typebot_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CampaignStats {
+  totalCampaigns: number;
+  totalLeads: number;
+  totalSpend: number;
+  avgQualityScore: number;
+  qualificationRate: number;
+  conversionRate: number;
+}
+
+// Dados dos gestores
+const gestores = {
+  'gest1': { id: 'gest1', name: 'Carlos Silva', avatar: '👨‍💼' },
+  'gest2': { id: 'gest2', name: 'Ana Costa', avatar: '👩‍💼' },
+  'gest3': { id: 'gest3', name: 'João Santos', avatar: '🧑‍💼' },
+};
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [client, setClient] = useState<any | null>(null);
+  
+  const [client, setClient] = useState<ClientData | null>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campaignStats, setCampaignStats] = useState<CampaignStats>({
+    totalCampaigns: 0,
+    totalLeads: 0,
+    totalSpend: 0,
+    avgQualityScore: 0,
+    qualificationRate: 0,
+    conversionRate: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,25 +93,65 @@ export default function ClientDetail() {
       
       setIsLoading(true);
       try {
-        const clientData = await clientsService.getById(id);
-        
-        if (!clientData) {
-          toast({
-            title: "Cliente não encontrado",
-            description: "O cliente solicitado não foi encontrado",
-            variant: "destructive",
-          });
-          navigate("/clients");
-          return;
+        // Buscar dados do cliente
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (clientError) {
+          if (clientError.code === 'PGRST116') {
+            toast({
+              title: "Cliente não encontrado",
+              description: "O cliente solicitado não foi encontrado",
+              variant: "destructive",
+            });
+            navigate("/clients");
+            return;
+          }
+          throw clientError;
         }
-        
+
         setClient(clientData);
-        setCampaigns([]); // No campaigns for now
+
+        // Buscar campanhas do cliente
+        const { data: campaignsData, error: campaignsError } = await supabase
+          .from('campaign_leads_daily')
+          .select('*')
+          .eq('client_id', id)
+          .order('date', { ascending: false });
+
+        if (campaignsError) throw campaignsError;
+
+        setCampaigns(campaignsData || []);
+
+        // Calcular estatísticas das campanhas
+        if (campaignsData && campaignsData.length > 0) {
+          const totalLeads = campaignsData.reduce((sum, c) => sum + c.leads_count, 0);
+          const totalSpend = campaignsData.reduce((sum, c) => sum + c.spend, 0);
+          const totalQualified = campaignsData.reduce((sum, c) => sum + (c.qualified_leads || 0), 0);
+          const totalConverted = campaignsData.reduce((sum, c) => sum + (c.converted_leads || 0), 0);
+          const withScores = campaignsData.filter(c => c.quality_score);
+          const avgQualityScore = withScores.length > 0 
+            ? withScores.reduce((sum, c) => sum + c.quality_score, 0) / withScores.length
+            : 0;
+
+          setCampaignStats({
+            totalCampaigns: campaignsData.length,
+            totalLeads,
+            totalSpend,
+            avgQualityScore,
+            qualificationRate: totalLeads > 0 ? (totalQualified / totalLeads) * 100 : 0,
+            conversionRate: totalQualified > 0 ? (totalConverted / totalQualified) * 100 : 0,
+          });
+        }
+
       } catch (error) {
-        console.error("Falha ao carregar dados do cliente:", error);
+        console.error("Erro ao carregar dados do cliente:", error);
         toast({
           title: "Erro",
-          description: "Falha ao carregar dados do cliente",
+          description: "Não foi possível carregar os dados do cliente",
           variant: "destructive",
         });
       } finally {
@@ -82,7 +166,7 @@ export default function ClientDetail() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 0,
     }).format(value);
   };
 
@@ -93,8 +177,10 @@ export default function ClientDetail() {
         variant="outline" 
         className={`
           ${channel === 'Meta' 
-            ? 'border-primary text-primary bg-primary/10' 
-            : 'border-muted-foreground text-muted-foreground bg-secondary/50'
+            ? 'border-blue-500 text-blue-600 bg-blue-50' 
+            : channel === 'Google'
+            ? 'border-red-500 text-red-600 bg-red-50'
+            : 'border-gray-500 text-gray-600 bg-gray-50'
           }
         `}
       >
@@ -103,20 +189,29 @@ export default function ClientDetail() {
     ));
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Ativo': return 'bg-green-500/20 text-green-600 border-green-500/50';
+      case 'Pausado': return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/50';
+      case 'Arquivado': return 'bg-gray-500/20 text-gray-600 border-gray-500/50';
+      default: return 'bg-gray-500/20 text-gray-600 border-gray-500/50';
+    }
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
         <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-8 w-64" />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
               <Skeleton key={i} className="h-32" />
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Skeleton className="h-80" />
-            <Skeleton className="h-80" />
-          </div>
+          <Skeleton className="h-96" />
         </div>
       </AppLayout>
     );
@@ -139,6 +234,8 @@ export default function ClientDetail() {
     );
   }
 
+  const manager = gestores[client.gestor_id as keyof typeof gestores] || gestores['gest1'];
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -153,251 +250,439 @@ export default function ClientDetail() {
           </Button>
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl font-bold">{client.name}</h1>
+              <h1 className="text-3xl font-bold">{client.nome_cliente}</h1>
+              <Badge className={getStatusColor(client.status)}>
+                {client.status}
+              </Badge>
               <div className="flex gap-2">
-                {getChannelBadges(client.channels)}
+                {getChannelBadges(client.canais)}
               </div>
             </div>
             <div className="flex items-center gap-4 text-muted-foreground">
               <span className="flex items-center gap-2">
-                <span className="text-lg">{client.manager.avatar}</span>
-                Gerenciado por {client.manager.name}
+                <span className="text-lg">{manager.avatar}</span>
+                Gerenciado por {manager.name}
               </span>
               <span>•</span>
-              <span>Criado em {new Date(client.createdOn).toLocaleDateString('pt-BR')}</span>
+              <span>{client.nome_empresa}</span>
+              <span>•</span>
+              <span>Criado em {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">Editar Cliente</Button>
-            <Button variant="apple">Sincronizar Agora</Button>
+            <Button variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Editar Cliente
+            </Button>
+            <Button variant="default">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Sincronizar
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Arquivar Cliente
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        {/* Summary Cards */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="surface-elevated">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Meta Saldo
+                <DollarSign className="h-4 w-4 text-green-500" />
+                Saldo Meta
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(client.metaBalance)}
+                {formatCurrency((client.saldo_meta || 0) / 100)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Saldo atual da conta</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Saldo atual da conta
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Play className="h-4 w-4" />
-                Campanhas Ativas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{client.activeCampaigns}</div>
-              <p className="text-xs text-muted-foreground mt-1">Executando atualmente</p>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Target className="h-4 w-4" />
+                <Target className="h-4 w-4 text-blue-500" />
                 Total de Leads
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Math.floor(Math.random() * 150) + 50}</div>
-              <p className="text-xs text-muted-foreground mt-1">Este mês</p>
+              <div className="text-2xl font-bold">
+                {campaignStats.totalLeads}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Leads capturados
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                CPL Médio
+                <TrendingUp className="h-4 w-4 text-purple-500" />
+                Taxa Qualificação
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(Math.random() * 50 + 20)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Custo por lead</p>
+              <div className="text-2xl font-bold">
+                {campaignStats.qualificationRate.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Leads qualificados
+              </p>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Performance Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="surface-elevated">
-            <CardContent className="p-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{(Math.random() * 5 + 1).toFixed(2)}%</div>
-                <p className="text-muted-foreground">CTR Médio</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="surface-elevated">
-            <CardContent className="p-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{formatCurrency(Math.random() * 1000 + 500)}</div>
-                <p className="text-muted-foreground">Gasto Atual</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="surface-elevated">
-            <CardContent className="p-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{(Math.random() * 15 + 5).toFixed(1)}%</div>
-                <p className="text-muted-foreground">Taxa de Gancho</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="surface-elevated">
-            <CardHeader>
-              <CardTitle>Leads ao Longo do Tempo</CardTitle>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-orange-500" />
+                Gasto Total
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={mockChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "12px"
-                    }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="leads" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={3}
-                    dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-elevated">
-            <CardHeader>
-              <CardTitle>Gasto Diário</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={mockChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "12px"
-                    }}
-                  />
-                  <Bar 
-                    dataKey="spend" 
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="text-2xl font-bold">
+                {formatCurrency(campaignStats.totalSpend)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Investimento total
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Campaigns Table */}
-        <Card className="surface-elevated">
-          <CardHeader>
-            <CardTitle>Campaigns ({campaigns.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {campaigns.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📢</div>
-                <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
-                <p className="text-muted-foreground">Este cliente ainda não possui campanhas.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome da Campanha</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Orçamento Diário</TableHead>
-                    <TableHead>Impressões</TableHead>
-                    <TableHead>CTR</TableHead>
-                    <TableHead>CPC</TableHead>
-                    <TableHead>Leads</TableHead>
-                    <TableHead>CPL</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaigns.map((campaign) => (
-                    <TableRow key={campaign.id}>
-                      <TableCell className="font-medium">{campaign.name}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={campaign.status === "Active" ? "default" : "secondary"}
-                          className={`flex items-center gap-1 w-fit ${
-                            campaign.status === "Active" 
-                              ? "bg-green-500/20 text-green-400 border-green-500/50" 
-                              : "bg-yellow-500/20 text-yellow-400 border-yellow-500/50"
-                          }`}
-                        >
-                          {campaign.status === "Active" ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-                          {campaign.status === "Active" ? "Ativo" : "Pausado"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatCurrency(campaign.dailyBudget)}</TableCell>
-                      <TableCell>{campaign.impressions.toLocaleString()}</TableCell>
-                      <TableCell>{campaign.ctr.toFixed(2)}%</TableCell>
-                      <TableCell>{formatCurrency(campaign.cpc)}</TableCell>
-                      <TableCell>{campaign.leads}</TableCell>
-                      <TableCell>{formatCurrency(campaign.cpl)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover border-border">
-                            <DropdownMenuItem>Ver Campanha</DropdownMenuItem>
-                            <DropdownMenuItem>Editar Campanha</DropdownMenuItem>
-                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        {/* Tabs com informações detalhadas */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+            <TabsTrigger value="settings">Configurações</TabsTrigger>
+            <TabsTrigger value="integrations">Integrações</TabsTrigger>
+          </TabsList>
+
+          {/* Aba Visão Geral */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Informações do Cliente */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Informações do Cliente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Empresa:</span>
+                      <p className="font-medium">{client.nome_empresa}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Telefone:</span>
+                      <p className="font-medium">{client.telefone}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Email:</span>
+                      <p className="font-medium">{client.email || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge className={getStatusColor(client.status)}>
+                        {client.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  {client.observacoes && (
+                    <div>
+                      <span className="text-muted-foreground text-sm">Observações:</span>
+                      <p className="text-sm mt-1 p-2 bg-muted/50 rounded">
+                        {client.observacoes}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Performance das Campanhas */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <LineChart className="h-5 w-5" />
+                    Performance Geral
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-700">
+                        {campaignStats.totalCampaigns}
+                      </div>
+                      <div className="text-xs text-blue-600">Campanhas</div>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-700">
+                        {campaignStats.avgQualityScore.toFixed(1)}
+                      </div>
+                      <div className="text-xs text-green-600">Nota Média</div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Taxa de Qualificação</span>
+                      <span className="font-medium">{campaignStats.qualificationRate.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all" 
+                        style={{ width: `${Math.min(campaignStats.qualificationRate, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Taxa de Conversão</span>
+                      <span className="font-medium">{campaignStats.conversionRate.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-600 h-2 rounded-full transition-all" 
+                        style={{ width: `${Math.min(campaignStats.conversionRate, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Aba Campanhas */}
+          <TabsContent value="campaigns" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Campanhas Recentes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {campaigns.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
+                    <p className="text-muted-foreground">
+                      As campanhas deste cliente aparecerão aqui quando houver dados disponíveis.
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Campanha</TableHead>
+                        <TableHead>Plataforma</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Leads</TableHead>
+                        <TableHead>Gasto</TableHead>
+                        <TableHead>Qualificação</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {campaigns.slice(0, 10).map((campaign) => (
+                        <TableRow key={campaign.id}>
+                          <TableCell>
+                            <div className="font-medium">{campaign.campaign_name}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
+                              campaign.platform === 'Meta' 
+                                ? 'border-blue-500 text-blue-600 bg-blue-50'
+                                : 'border-red-500 text-red-600 bg-red-50'
+                            }>
+                              {campaign.platform}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(campaign.date).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>{campaign.leads_count}</TableCell>
+                          <TableCell>{formatCurrency(campaign.spend)}</TableCell>
+                          <TableCell>
+                            {campaign.qualified_leads || 0}/{campaign.leads_count}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
+                              campaign.kanban_status === 'Concluído' 
+                                ? 'border-green-500 text-green-600 bg-green-50'
+                                : 'border-yellow-500 text-yellow-600 bg-yellow-50'
+                            }>
+                              {campaign.kanban_status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Aba Configurações */}
+          <TabsContent value="settings" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Configurações de Campanhas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Meta Ads</p>
+                      <p className="text-sm text-muted-foreground">Campanhas do Facebook e Instagram</p>
+                    </div>
+                    <Badge variant={client.usa_meta_ads ? "default" : "secondary"}>
+                      {client.usa_meta_ads ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Google Ads</p>
+                      <p className="text-sm text-muted-foreground">Campanhas do Google</p>
+                    </div>
+                    <Badge variant={client.usa_google_ads ? "default" : "secondary"}>
+                      {client.usa_google_ads ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+
+                  {client.budget_mensal_meta && (
+                    <div className="p-3 bg-muted/50 rounded">
+                      <p className="text-sm text-muted-foreground">Budget Mensal Meta</p>
+                      <p className="font-medium">{formatCurrency(client.budget_mensal_meta)}</p>
+                    </div>
+                  )}
+
+                  {client.budget_mensal_google && (
+                    <div className="p-3 bg-muted/50 rounded">
+                      <p className="text-sm text-muted-foreground">Budget Mensal Google</p>
+                      <p className="font-medium">{formatCurrency(client.budget_mensal_google)}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Rastreamento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Rastreamento Ativo</p>
+                      <p className="text-sm text-muted-foreground">Status geral do tracking</p>
+                    </div>
+                    <Badge variant={client.traqueamento_ativo ? "default" : "secondary"}>
+                      {client.traqueamento_ativo ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+
+                  {client.pixel_meta && (
+                    <div className="p-3 bg-muted/50 rounded">
+                      <p className="text-sm text-muted-foreground">Pixel Meta</p>
+                      <p className="font-mono text-xs">{client.pixel_meta}</p>
+                    </div>
+                  )}
+
+                  {client.ga4_stream_id && (
+                    <div className="p-3 bg-muted/50 rounded">
+                      <p className="text-sm text-muted-foreground">GA4 Stream ID</p>
+                      <p className="font-mono text-xs">{client.ga4_stream_id}</p>
+                    </div>
+                  )}
+
+                  {client.gtm_id && (
+                    <div className="p-3 bg-muted/50 rounded">
+                      <p className="text-sm text-muted-foreground">GTM ID</p>
+                      <p className="font-mono text-xs">{client.gtm_id}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Aba Integrações */}
+          <TabsContent value="integrations" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5" />
+                    Typebot
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Status</p>
+                      <p className="text-sm text-muted-foreground">Chatbot automatizado</p>
+                    </div>
+                    <Badge variant={client.typebot_ativo ? "default" : "secondary"}>
+                      {client.typebot_ativo ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+
+                  {client.typebot_url && (
+                    <div className="p-3 bg-muted/50 rounded">
+                      <p className="text-sm text-muted-foreground">URL do Typebot</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="font-mono text-xs truncate">{client.typebot_url}</p>
+                        <Button size="sm" variant="ghost" asChild>
+                          <a href={client.typebot_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Outros
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">Outras integrações disponíveis em breve</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
