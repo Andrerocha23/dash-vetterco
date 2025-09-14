@@ -97,50 +97,99 @@ export default function Clients() {
     loadClients();
   }, []);
 
-  // Salvar cliente
-  const handleSaveClient = async (clientData: ClienteFormData) => {
-    try {
-      const supabaseData = {
-        nome_cliente: clientData.nomeCliente,
-        nome_empresa: clientData.nomeEmpresa,
-        telefone: clientData.telefone,
-        email: clientData.email || null,
-        gestor_id: clientData.gestorId,
-        canais: clientData.canais,
-        status: clientData.status,
-        observacoes: clientData.observacoes || null,
-        usa_meta_ads: clientData.usaMetaAds,
-        usa_google_ads: clientData.usaGoogleAds,
-        traqueamento_ativo: clientData.traqueamentoAtivo,
-        saldo_meta: clientData.saldoMeta ? clientData.saldoMeta * 100 : null,
-        budget_mensal_meta: clientData.budgetMensalMeta || null,
-        budget_mensal_google: clientData.budgetMensalGoogle || null,
-      };
+// Salvar cliente
+const handleSaveClient = async (clientData: ClienteFormData) => {
+  try {
+    const supabaseData = {
+      nome_cliente: clientData.nomeCliente,
+      nome_empresa: clientData.nomeEmpresa,
+      telefone: clientData.telefone,
+      email: clientData.email || null,
+      gestor_id: clientData.gestorId,
+      canais: clientData.canais,
+      status: clientData.status,
+      observacoes: clientData.observacoes || null,
+      id_grupo: clientData.idGrupo || null,
+      usa_crm_externo: clientData.usaCrmExterno || false,
+      url_crm: clientData.urlCrm || null,
+      
+      // Meta Ads - CAMPOS CORRIGIDOS
+      usa_meta_ads: clientData.usaMetaAds,
+      ativar_campanhas_meta: clientData.ativarCampanhasMeta || false,
+      meta_account_id: clientData.metaAccountId || null,
+      meta_business_id: clientData.metaBusinessId || null,
+      meta_page_id: clientData.metaPageId || null,
+      modo_saldo_meta: clientData.modoSaldoMeta || null,
+      monitorar_saldo_meta: clientData.monitorarSaldoMeta || false,
+      saldo_meta: clientData.saldoMeta ? clientData.saldoMeta * 100 : null,
+      alerta_saldo_baixo: clientData.alertaSaldoBaixo ? clientData.alertaSaldoBaixo * 100 : null,
+      budget_mensal_meta: clientData.budgetMensalMeta || null,
+      link_meta: clientData.linkMeta || null,
+      utm_padrao: clientData.utmPadrao || null,
+      webhook_meta: clientData.webhookMeta || null,
+      
+      // Google Ads - CAMPOS CORRIGIDOS
+      usa_google_ads: clientData.usaGoogleAds,
+      google_ads_id: clientData.googleAdsId || null,
+      budget_mensal_google: clientData.budgetMensalGoogle || null,
+      conversoes: clientData.conversoes || null,
+      link_google: clientData.linkGoogle || null,
+      webhook_google: clientData.webhookGoogle || null,
+      
+      // Comunicação & Automação
+      canal_relatorio: clientData.canalRelatorio || null,
+      horario_relatorio: clientData.horarioRelatorio || null,
+      templates_padrao: clientData.templatesPadrao || null,
+      notificacao_saldo_baixo: clientData.notificacaoSaldoBaixo || false,
+      notificacao_erro_sync: clientData.notificacaoErroSync || false,
+      notificacao_leads_diarios: clientData.notificacaoLeadsDiarios || false,
+      
+      // Rastreamento & Analytics
+      traqueamento_ativo: clientData.traqueamentoAtivo,
+      pixel_meta: clientData.pixelMeta || null,
+      ga4_stream_id: clientData.ga4StreamId || null,
+      gtm_id: clientData.gtmId || null,
+      typebot_ativo: clientData.typebotAtivo || false,
+      typebot_url: clientData.typebotUrl || null,
+      
+      // Financeiro & Orçamento
+      budget_mensal_global: clientData.budgetMensalGlobal || null,
+      forma_pagamento: clientData.formaPagamento || null,
+      centro_custo: clientData.centroCusto || null,
+      contrato_inicio: clientData.contratoInicio || null,
+      contrato_renovacao: clientData.contratoRenovacao || null,
+      
+      // Permissões & Atribuições
+      papel_padrao: clientData.papelPadrao || null,
+      usuarios_vinculados: clientData.usuariosVinculados || null,
+      ocultar_ranking: clientData.ocultarRanking || false,
+      somar_metricas: clientData.somarMetricas || false,
+    };
 
-      const { error } = await supabase
-        .from('clients')
-        .insert(supabaseData);
+    const { error } = await supabase
+      .from('clients')
+      .insert(supabaseData);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      toast({
-        title: "Sucesso!",
-        description: "Cliente criado com sucesso",
-      });
+    toast({
+      title: "Sucesso!",
+      description: "Cliente criado com sucesso",
+    });
 
-      await loadClients();
-      setShowCreateModal(false);
+    await loadClients();
+    setShowCreateModal(false);
 
-    } catch (error) {
-      console.error('Erro ao salvar cliente:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o cliente",
-        variant: "destructive",
-      });
-    }
-  };
-
+  } catch (error) {
+    console.error('Erro ao salvar cliente:', error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível salvar o cliente",
+      variant: "destructive",
+    });
+  }
+};
+  
   // Filtros simples
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase());
