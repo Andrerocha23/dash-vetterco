@@ -7,6 +7,16 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus,
   Search,
   Mail,
@@ -29,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { managersService, type ManagerWithStats } from "@/services/managersService";
+import { ManagerFormModal } from "@/components/forms/ManagerFormModal";
 import { pt } from "@/i18n/pt";
 
 export default function Managers() {
@@ -36,6 +47,11 @@ export default function Managers() {
   const [managers, setManagers] = useState<ManagerWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedManager, setSelectedManager] = useState<ManagerWithStats | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [managerToDelete, setManagerToDelete] = useState<ManagerWithStats | null>(null);
 
   // Carregar gestores
   const loadManagers = async () => {
@@ -43,10 +59,10 @@ export default function Managers() {
       setLoading(true);
       const data = await managersService.getManagers();
       setManagers(data);
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro ao carregar gestores",
+        title: "❌ Erro",
+        description: error.message || "Erro ao carregar gestores",
         variant: "destructive"
       });
     } finally {
@@ -64,6 +80,51 @@ export default function Managers() {
     manager.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (manager.department && manager.department.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  // Handlers
+  const handleCreateManager = () => {
+    setSelectedManager(null);
+    setShowCreateModal(true);
+  };
+
+  const handleEditManager = (manager: ManagerWithStats) => {
+    setSelectedManager(manager);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteManager = (manager: ManagerWithStats) => {
+    setManagerToDelete(manager);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteManager = async () => {
+    if (!managerToDelete) return;
+
+    try {
+      await managersService.deleteManager(managerToDelete.id);
+      await loadManagers();
+      setShowDeleteDialog(false);
+      setManagerToDelete(null);
+      
+      toast({
+        title: "✅ Sucesso",
+        description: `Gestor ${managerToDelete.name} removido com sucesso`
+      });
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro",
+        description: error.message || "Erro ao remover gestor",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleModalSuccess = () => {
+    loadManagers();
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setSelectedManager(null);
+  };
 
   // Função para obter cor do badge de satisfação
   const getSatisfactionColor = (satisfaction: string) => {
@@ -150,9 +211,9 @@ export default function Managers() {
             <h1 className="text-3xl font-bold">{pt.managers.title}</h1>
             <p className="text-muted-foreground mt-1">{pt.managers.subtitle}</p>
           </div>
-          <Button disabled className="sm:w-auto">
+          <Button onClick={handleCreateManager} className="sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
-            Novo Gestor (Em breve)
+            Novo Gestor
           </Button>
         </div>
 
@@ -260,7 +321,7 @@ export default function Managers() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditManager(manager)}>
                         <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
@@ -268,7 +329,10 @@ export default function Managers() {
                         <UserPlus className="h-4 w-4 mr-2" />
                         Gerenciar Clientes
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteManager(manager)}
+                        className="text-red-600"
+                      >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Remover
                       </DropdownMenuItem>
@@ -306,7 +370,7 @@ export default function Managers() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <div className="text-lg font-semibold">{formatCurrency(manager.avgCPL)}</div>
+                    <div className="text-lg font-semibold">{manager.avgCPL > 0 ? formatCurrency(manager.avgCPL) : "R$ 0,00"}</div>
                     <div className="text-xs text-muted-foreground">CPL Médio</div>
                   </div>
                   <div className="text-center">
@@ -355,18 +419,62 @@ export default function Managers() {
               <p className="text-muted-foreground text-center mb-4">
                 {searchQuery 
                   ? "Nenhum gestor corresponde aos critérios de busca." 
-                  : "Os gestores serão exibidos aqui."
+                  : "Comece adicionando seu primeiro gestor."
                 }
               </p>
-              {searchQuery && (
+              {searchQuery ? (
                 <Button variant="outline" onClick={() => setSearchQuery("")}>
                   Limpar Busca
+                </Button>
+              ) : (
+                <Button onClick={handleCreateManager}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Primeiro Gestor
                 </Button>
               )}
             </CardContent>
           </Card>
         )}
       </div>
+
+      {/* Modals */}
+      <ManagerFormModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={handleModalSuccess}
+      />
+
+      <ManagerFormModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        manager={selectedManager}
+        onSuccess={handleModalSuccess}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover o gestor <strong>{managerToDelete?.name}</strong>?
+              <br />
+              <br />
+              <span className="text-red-600 font-medium">
+                ⚠️ Atenção: Todos os clientes atribuídos a este gestor ficarão sem gestor responsável.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteManager}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sim, Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
-}
