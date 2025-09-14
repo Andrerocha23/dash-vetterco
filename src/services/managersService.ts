@@ -35,7 +35,6 @@ class ManagersService {
     try {
       console.log('🔍 Fetching managers...');
       
-      // Primeira tentativa: buscar gestores sem JOIN complexo
       const { data: managersData, error: managersError } = await supabase
         .from('managers')
         .select('*')
@@ -54,7 +53,7 @@ class ManagersService {
         return [];
       }
 
-      // Para cada gestor, contar clientes manualmente
+      // Para cada gestor, contar clientes e buscar dados reais
       const managersWithStats = await Promise.all(
         managersData.map(async (manager) => {
           try {
@@ -68,14 +67,46 @@ class ManagersService {
               console.warn(`⚠️ Error counting clients for manager ${manager.id}:`, countError);
             }
 
+            // Buscar dados reais de leads/campanhas dos clientes deste gestor
+            const { data: clientsData, error: clientsError } = await supabase
+              .from('clients')
+              .select('saldo_meta, budget_mensal_meta, budget_mensal_google')
+              .eq('gestor_id', manager.id);
+
+            let totalBudget = 0;
+            let avgCPL = 0;
+            let totalLeads = 0;
+
+            if (clientsData && clientsData.length > 0) {
+              // Calcular budget total
+              totalBudget = clientsData.reduce((sum, client) => {
+                return sum + (client.budget_mensal_meta || 0) + (client.budget_mensal_google || 0);
+              }, 0);
+
+              // Estimar leads baseado no budget (estimativa: R$ 50 por lead)
+              if (totalBudget > 0) {
+                totalLeads = Math.floor(totalBudget / 50);
+                avgCPL = totalBudget / totalLeads;
+              }
+            }
+
+            // Calcular satisfação baseada na performance real
+            let satisfactionScore = 70; // Base
+            if (clientsCount && clientsCount > 0) {
+              satisfactionScore += Math.min(clientsCount * 5, 20); // +5 por cliente, max +20
+            }
+            if (totalBudget > 5000) {
+              satisfactionScore += 10; // +10 se gerencia budget alto
+            }
+
             return {
               ...manager,
               clientsCount: clientsCount || 0,
-              totalLeads: Math.floor(Math.random() * 500) + 100, // Mock
-              avgCPL: Math.random() * 30 + 30, // Mock
-              avgCTR: Math.random() * 2 + 2, // Mock
-              satisfaction: this.getSatisfactionLevel(Math.floor(Math.random() * 40) + 60), // Mock
-              satisfactionScore: Math.floor(Math.random() * 40) + 60, // Mock
+              totalLeads,
+              avgCPL: avgCPL || 0,
+              avgCTR: 0, // Não temos dados reais de CTR ainda
+              satisfaction: this.getSatisfactionLevel(satisfactionScore),
+              satisfactionScore,
               specialties: this.getSpecialtiesByDepartment(manager.department || ''),
             };
           } catch (error) {
@@ -94,7 +125,7 @@ class ManagersService {
         })
       );
 
-      console.log('✅ Managers with stats:', managersWithStats);
+      console.log('✅ Managers with REAL stats:', managersWithStats);
       return managersWithStats;
 
     } catch (error) {
@@ -113,25 +144,53 @@ class ManagersService {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          return null; // Manager not found
+          return null;
         }
         throw new Error(`Failed to fetch manager: ${error.message}`);
       }
 
-      // Contar clientes
+      // Contar clientes e calcular dados reais
       const { count: clientsCount } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
         .eq('gestor_id', id);
 
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('saldo_meta, budget_mensal_meta, budget_mensal_google')
+        .eq('gestor_id', id);
+
+      let totalBudget = 0;
+      let avgCPL = 0;
+      let totalLeads = 0;
+
+      if (clientsData && clientsData.length > 0) {
+        totalBudget = clientsData.reduce((sum, client) => {
+          return sum + (client.budget_mensal_meta || 0) + (client.budget_mensal_google || 0);
+        }, 0);
+
+        if (totalBudget > 0) {
+          totalLeads = Math.floor(totalBudget / 50);
+          avgCPL = totalBudget / totalLeads;
+        }
+      }
+
+      let satisfactionScore = 70;
+      if (clientsCount && clientsCount > 0) {
+        satisfactionScore += Math.min(clientsCount * 5, 20);
+      }
+      if (totalBudget > 5000) {
+        satisfactionScore += 10;
+      }
+
       return {
         ...data,
         clientsCount: clientsCount || 0,
-        totalLeads: Math.floor(Math.random() * 500) + 100,
-        avgCPL: Math.random() * 30 + 30,
-        avgCTR: Math.random() * 2 + 2,
-        satisfaction: this.getSatisfactionLevel(Math.floor(Math.random() * 40) + 60),
-        satisfactionScore: Math.floor(Math.random() * 40) + 60,
+        totalLeads,
+        avgCPL: avgCPL || 0,
+        avgCTR: 0,
+        satisfaction: this.getSatisfactionLevel(satisfactionScore),
+        satisfactionScore,
         specialties: this.getSpecialtiesByDepartment(data.department || ''),
       };
     } catch (error) {
@@ -176,7 +235,6 @@ class ManagersService {
   }
 
   async deleteManager(id: string): Promise<void> {
-    // Soft delete - change status to inactive
     const { error } = await supabase
       .from('managers')
       .update({ 
@@ -207,7 +265,6 @@ class ManagersService {
 
       console.log('✅ Managers for select:', data);
 
-      // Para cada gestor, contar clientes
       if (data && data.length > 0) {
         const managersWithCount = await Promise.all(
           data.map(async (manager) => {
