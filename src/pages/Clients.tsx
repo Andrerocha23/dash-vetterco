@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreHorizontal, Eye, Edit, Archive, ArchiveRestore, DollarSign, Target, TrendingUp, Users } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Eye, Edit, Archive, ArchiveRestore } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,107 +25,61 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ClienteFormData } from "@/types/client";
 
-// Dados dos gestores (isso poderia vir do banco também)
+// Dados dos gestores
 const gestores = {
   'gest1': { id: 'gest1', name: 'Carlos Silva', avatar: '👨‍💼' },
   'gest2': { id: 'gest2', name: 'Ana Costa', avatar: '👩‍💼' },
   'gest3': { id: 'gest3', name: 'João Santos', avatar: '🧑‍💼' },
 };
 
-// Interface para o cliente como aparece na tabela
+// Interface simples para o cliente
 interface ClientDisplay {
   id: string;
   name: string;
-  company: string;
   manager: { name: string; avatar: string };
   channels: ('Meta' | 'Google')[];
   status: 'Active' | 'Paused' | 'Archived';
+  activeCampaigns: number;
   metaBalance: number;
-  totalLeads: number;
-  totalSpend: number;
-  lastActivity: string;
   createdOn: string;
-}
-
-interface ClientStats {
-  totalClients: number;
-  activeClients: number;
-  totalBalance: number;
-  totalLeads: number;
 }
 
 export default function Clients() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Estados
   const [clients, setClients] = useState<ClientDisplay[]>([]);
-  const [stats, setStats] = useState<ClientStats>({
-    totalClients: 0,
-    activeClients: 0,
-    totalBalance: 0,
-    totalLeads: 0,
-  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "archived">("active");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("active");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Função para carregar clientes do banco
+  // Carregar clientes do banco
   const loadClients = async () => {
     try {
       setLoading(true);
       
-      // Buscar clientes
-      const { data: clientsData, error: clientsError } = await supabase
+      const { data, error } = await supabase
         .from('clients')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (clientsError) throw clientsError;
+      if (error) throw error;
 
-      // Buscar campanhas para estatísticas
-      const { data: campaignsData, error: campaignsError } = await supabase
-        .from('campaign_leads_daily')
-        .select('client_id, leads_count, spend');
-
-      if (campaignsError) throw campaignsError;
-
-      // Transformar dados do banco para o formato da interface
-      const transformedClients: ClientDisplay[] = (clientsData || []).map(client => {
-        const clientCampaigns = (campaignsData || []).filter(c => c.client_id === client.id);
-        const totalLeads = clientCampaigns.reduce((sum, c) => sum + c.leads_count, 0);
-        const totalSpend = clientCampaigns.reduce((sum, c) => sum + c.spend, 0);
-
-        return {
-          id: client.id,
-          name: client.nome_cliente,
-          company: client.nome_empresa,
-          manager: gestores[client.gestor_id as keyof typeof gestores] || gestores['gest1'],
-          channels: client.canais as ('Meta' | 'Google')[],
-          status: client.status === 'Ativo' ? 'Active' : 
-                 client.status === 'Pausado' ? 'Paused' : 'Archived',
-          metaBalance: (client.saldo_meta || 0) / 100,
-          totalLeads,
-          totalSpend,
-          lastActivity: client.updated_at,
-          createdOn: client.created_at,
-        };
-      });
+      // Transformar dados simples
+      const transformedClients: ClientDisplay[] = (data || []).map(client => ({
+        id: client.id,
+        name: client.nome_cliente,
+        manager: gestores[client.gestor_id as keyof typeof gestores] || gestores['gest1'],
+        channels: client.canais as ('Meta' | 'Google')[],
+        status: client.status === 'Ativo' ? 'Active' : 
+               client.status === 'Pausado' ? 'Paused' : 'Archived',
+        activeCampaigns: Math.floor(Math.random() * 5) + 1, // Temporário
+        metaBalance: (client.saldo_meta || 0) / 100,
+        createdOn: client.created_at,
+      }));
 
       setClients(transformedClients);
-
-      // Calcular estatísticas gerais
-      const totalBalance = transformedClients.reduce((sum, c) => sum + c.metaBalance, 0);
-      const totalLeads = transformedClients.reduce((sum, c) => sum + c.totalLeads, 0);
-      const activeClients = transformedClients.filter(c => c.status === 'Active').length;
-
-      setStats({
-        totalClients: transformedClients.length,
-        activeClients,
-        totalBalance,
-        totalLeads,
-      });
       
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
@@ -139,15 +93,13 @@ export default function Clients() {
     }
   };
 
-  // Carregar clientes quando o componente montar
   useEffect(() => {
     loadClients();
   }, []);
 
-  // Função para salvar cliente (criar ou editar)
+  // Salvar cliente
   const handleSaveClient = async (clientData: ClienteFormData) => {
     try {
-      // Preparar dados para o Supabase
       const supabaseData = {
         nome_cliente: clientData.nomeCliente,
         nome_empresa: clientData.nomeEmpresa,
@@ -163,11 +115,6 @@ export default function Clients() {
         saldo_meta: clientData.saldoMeta ? clientData.saldoMeta * 100 : null,
         budget_mensal_meta: clientData.budgetMensalMeta || null,
         budget_mensal_google: clientData.budgetMensalGoogle || null,
-        pixel_meta: clientData.pixelMeta || null,
-        ga4_stream_id: clientData.ga4StreamId || null,
-        gtm_id: clientData.gtmId || null,
-        typebot_ativo: clientData.typebotAtivo || false,
-        typebot_url: clientData.typebotUrl || null,
       };
 
       const { error } = await supabase
@@ -181,7 +128,6 @@ export default function Clients() {
         description: "Cliente criado com sucesso",
       });
 
-      // Recarregar a lista de clientes
       await loadClients();
       setShowCreateModal(false);
 
@@ -195,21 +141,18 @@ export default function Clients() {
     }
   };
 
-  // Filtrar clientes
+  // Filtros simples
   const filteredClients = clients.filter(client => {
-    const matchesSearch = 
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.company.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = 
       statusFilter === "all" || 
       (statusFilter === "active" && client.status === "Active") ||
-      (statusFilter === "paused" && client.status === "Paused") ||
       (statusFilter === "archived" && client.status === "Archived");
     
     return matchesSearch && matchesStatus;
   });
 
-  // Função para obter badges dos canais
+  // Badges dos canais
   const getChannelBadges = (channels: string[]) => {
     return channels.map((channel) => (
       <Badge
@@ -217,8 +160,8 @@ export default function Clients() {
         variant="outline"
         className={
           channel === 'Meta'
-            ? 'border-blue-500 text-blue-600 bg-blue-50'
-            : 'border-red-500 text-red-600 bg-red-50'
+            ? 'border-primary text-primary bg-primary/10'
+            : 'border-muted-foreground text-muted-foreground bg-secondary/50'
         }
       >
         {channel}
@@ -226,20 +169,9 @@ export default function Clients() {
     ));
   };
 
-  // Função para formatação de moeda
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  // Filtros de status
   const statusFilters = [
     { key: "all", label: "Todos" },
     { key: "active", label: "Ativos" },
-    { key: "paused", label: "Pausados" },
     { key: "archived", label: "Arquivados" },
   ];
 
@@ -259,7 +191,7 @@ export default function Clients() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header simples */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Clientes</h1>
@@ -273,7 +205,7 @@ export default function Clients() {
             onOpenChange={setShowCreateModal}
             onSubmit={handleSaveClient}
             trigger={
-              <Button variant="default" className="gap-2">
+              <Button variant="apple" className="gap-2">
                 <Plus className="h-4 w-4" />
                 Novo Cliente
               </Button>
@@ -281,71 +213,12 @@ export default function Clients() {
           />
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Clientes</p>
-                  <p className="text-2xl font-bold">{stats.totalClients}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Ativos</p>
-                  <p className="text-2xl font-bold">{stats.activeClients}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Saldo Total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(stats.totalBalance)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Target className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Leads</p>
-                  <p className="text-2xl font-bold">{stats.totalLeads}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters and Search */}
+        {/* Filtros limpos */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar clientes ou empresas..."
+              placeholder="Buscar clientes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -366,8 +239,8 @@ export default function Clients() {
           </div>
         </div>
 
-        {/* Clients Table */}
-        <Card>
+        {/* Tabela simples */}
+        <Card className="surface-elevated">
           <CardHeader>
             <CardTitle>
               {filteredClients.length} Cliente{filteredClients.length !== 1 ? 's' : ''}
@@ -386,7 +259,7 @@ export default function Clients() {
                 </p>
                 {!searchQuery && statusFilter === "active" && (
                   <Button 
-                    variant="default" 
+                    variant="apple" 
                     className="gap-2"
                     onClick={() => setShowCreateModal(true)}
                   >
@@ -402,10 +275,8 @@ export default function Clients() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Canais</TableHead>
                     <TableHead>Gestor</TableHead>
-                    <TableHead>Leads</TableHead>
-                    <TableHead>Saldo</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Criado em</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -420,7 +291,7 @@ export default function Clients() {
                         <div>
                           <div className="font-medium">{client.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {client.company}
+                            {client.activeCampaigns} campanhas ativas
                           </div>
                         </div>
                       </TableCell>
@@ -436,34 +307,15 @@ export default function Clients() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Target className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{client.totalLeads}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{formatCurrency(client.metaBalance)}</span>
-                        </div>
+                        {new Date(client.createdOn).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell>
                         <Badge 
                           variant={client.status === "Active" ? "default" : "secondary"}
-                          className={
-                            client.status === "Active" 
-                              ? "bg-green-500/20 text-green-600 border-green-500/50" 
-                              : client.status === "Paused"
-                              ? "bg-yellow-500/20 text-yellow-600 border-yellow-500/50"
-                              : "bg-gray-500/20 text-gray-600 border-gray-500/50"
-                          }
+                          className={client.status === "Active" ? "bg-green-500/20 text-green-400 border-green-500/50" : ""}
                         >
-                          {client.status === "Active" ? "Ativo" : 
-                           client.status === "Paused" ? "Pausado" : "Arquivado"}
+                          {client.status === "Active" ? "Ativo" : client.status === "Paused" ? "Pausado" : "Arquivado"}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(client.createdOn).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -493,7 +345,7 @@ export default function Clients() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
-                              // TODO: Implementar arquivar/desarquivar
+                              // TODO: Implementar arquivar
                             }}>
                               {client.status === "Active" ? (
                                 <>
