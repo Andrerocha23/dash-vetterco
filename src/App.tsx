@@ -21,6 +21,7 @@ import Settings from "./pages/Settings";
 import Feedbacks from "./pages/Feedbacks";
 import RelatorioN8n from "./pages/RelatorioN8n";
 import NotFound from "./pages/NotFound";
+import MetaConfigPage from './pages/MetaConfigPage';
 
 const queryClient = new QueryClient();
 
@@ -112,6 +113,11 @@ const App = () => (
             <Route path="/feedbacks" element={
               <ProtectedRoute>
                 <Feedbacks />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings/meta" element={
+              <ProtectedRoute>
+                <MetaConfigPage />
               </ProtectedRoute>
             } />
             <Route path="/relatorio-n8n" element={
