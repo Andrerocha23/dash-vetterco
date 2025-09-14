@@ -43,7 +43,7 @@ export function AppSidebar() {
             <span className="text-white font-bold text-lg">M</span>
           </div>
           {!isCollapsed && (
-            <span className="font-semibold text-xl text-white truncate">MetaFlow</span>
+            <span className="font-semibold text-xl text-white truncate">Vetter Co.</span>
           )}
         </div>
       </SidebarHeader>
