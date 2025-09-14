@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
-  ArrowLeft, DollarSign, Target, TrendingUp, Play, Pause, MoreHorizontal, 
-  Settings, Users, BarChart3, Calendar, Globe, Shield, ExternalLink,
-  Edit, Archive, RefreshCw, Zap, LineChart
+  ArrowLeft, DollarSign, Target, TrendingUp, Edit, Archive, RefreshCw,
+  Users, BarChart3, Calendar, Settings, Shield
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -19,14 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ClienteFormData } from "@/types/client";
 
 // Interfaces
 interface ClientData {
@@ -60,7 +55,6 @@ interface CampaignStats {
   totalSpend: number;
   avgQualityScore: number;
   qualificationRate: number;
-  conversionRate: number;
 }
 
 // Dados dos gestores
@@ -83,84 +77,163 @@ export default function ClientDetail() {
     totalSpend: 0,
     avgQualityScore: 0,
     qualificationRate: 0,
-    conversionRate: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const loadClientData = async () => {
+    if (!id) return;
+    
+    setIsLoading(true);
+    try {
+      // Buscar dados do cliente
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (clientError) {
+        if (clientError.code === 'PGRST116') {
+          toast({
+            title: "Cliente não encontrado",
+            description: "O cliente solicitado não foi encontrado",
+            variant: "destructive",
+          });
+          navigate("/clients");
+          return;
+        }
+        throw clientError;
+      }
+
+      setClient(clientData);
+
+      // Buscar campanhas do cliente
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaign_leads_daily')
+        .select('*')
+        .eq('client_id', id)
+        .order('date', { ascending: false });
+
+      if (campaignsError) throw campaignsError;
+
+      setCampaigns(campaignsData || []);
+
+      // Calcular estatísticas das campanhas
+      if (campaignsData && campaignsData.length > 0) {
+        const totalLeads = campaignsData.reduce((sum, c) => sum + c.leads_count, 0);
+        const totalSpend = campaignsData.reduce((sum, c) => sum + c.spend, 0);
+        const totalQualified = campaignsData.reduce((sum, c) => sum + (c.qualified_leads || 0), 0);
+        const withScores = campaignsData.filter(c => c.quality_score);
+        const avgQualityScore = withScores.length > 0 
+          ? withScores.reduce((sum, c) => sum + c.quality_score, 0) / withScores.length
+          : 0;
+
+        setCampaignStats({
+          totalCampaigns: campaignsData.length,
+          totalLeads,
+          totalSpend,
+          avgQualityScore,
+          qualificationRate: totalLeads > 0 ? (totalQualified / totalLeads) * 100 : 0,
+        });
+      }
+
+    } catch (error) {
+      console.error("Erro ao carregar dados do cliente:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os dados do cliente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadClientData = async () => {
-      if (!id) return;
-      
-      setIsLoading(true);
-      try {
-        // Buscar dados do cliente
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (clientError) {
-          if (clientError.code === 'PGRST116') {
-            toast({
-              title: "Cliente não encontrado",
-              description: "O cliente solicitado não foi encontrado",
-              variant: "destructive",
-            });
-            navigate("/clients");
-            return;
-          }
-          throw clientError;
-        }
-
-        setClient(clientData);
-
-        // Buscar campanhas do cliente
-        const { data: campaignsData, error: campaignsError } = await supabase
-          .from('campaign_leads_daily')
-          .select('*')
-          .eq('client_id', id)
-          .order('date', { ascending: false });
-
-        if (campaignsError) throw campaignsError;
-
-        setCampaigns(campaignsData || []);
-
-        // Calcular estatísticas das campanhas
-        if (campaignsData && campaignsData.length > 0) {
-          const totalLeads = campaignsData.reduce((sum, c) => sum + c.leads_count, 0);
-          const totalSpend = campaignsData.reduce((sum, c) => sum + c.spend, 0);
-          const totalQualified = campaignsData.reduce((sum, c) => sum + (c.qualified_leads || 0), 0);
-          const totalConverted = campaignsData.reduce((sum, c) => sum + (c.converted_leads || 0), 0);
-          const withScores = campaignsData.filter(c => c.quality_score);
-          const avgQualityScore = withScores.length > 0 
-            ? withScores.reduce((sum, c) => sum + c.quality_score, 0) / withScores.length
-            : 0;
-
-          setCampaignStats({
-            totalCampaigns: campaignsData.length,
-            totalLeads,
-            totalSpend,
-            avgQualityScore,
-            qualificationRate: totalLeads > 0 ? (totalQualified / totalLeads) * 100 : 0,
-            conversionRate: totalQualified > 0 ? (totalConverted / totalQualified) * 100 : 0,
-          });
-        }
-
-      } catch (error) {
-        console.error("Erro ao carregar dados do cliente:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar os dados do cliente",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadClientData();
   }, [id, navigate, toast]);
+
+  // Função para editar cliente
+  const handleEditClient = async (clientData: ClienteFormData) => {
+    if (!client) return;
+
+    try {
+      const supabaseData = {
+        nome_cliente: clientData.nomeCliente,
+        nome_empresa: clientData.nomeEmpresa,
+        telefone: clientData.telefone,
+        email: clientData.email || null,
+        gestor_id: clientData.gestorId,
+        canais: clientData.canais,
+        status: clientData.status,
+        observacoes: clientData.observacoes || null,
+        usa_meta_ads: clientData.usaMetaAds,
+        usa_google_ads: clientData.usaGoogleAds,
+        traqueamento_ativo: clientData.traqueamentoAtivo,
+        saldo_meta: clientData.saldoMeta ? clientData.saldoMeta * 100 : null,
+        budget_mensal_meta: clientData.budgetMensalMeta || null,
+        budget_mensal_google: clientData.budgetMensalGoogle || null,
+        pixel_meta: clientData.pixelMeta || null,
+        ga4_stream_id: clientData.ga4StreamId || null,
+        gtm_id: clientData.gtmId || null,
+        typebot_ativo: clientData.typebotAtivo || false,
+        typebot_url: clientData.typebotUrl || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('clients')
+        .update(supabaseData)
+        .eq('id', client.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: "Cliente atualizado com sucesso",
+      });
+
+      setShowEditModal(false);
+      await loadClientData(); // Recarregar dados
+
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o cliente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Converter dados do cliente para o formato do formulário
+  const getClientFormData = (): ClienteFormData => {
+    if (!client) return {} as ClienteFormData;
+
+    return {
+      id: client.id,
+      nomeCliente: client.nome_cliente,
+      nomeEmpresa: client.nome_empresa,
+      telefone: client.telefone,
+      email: client.email || '',
+      gestorId: client.gestor_id,
+      canais: client.canais as ('Meta' | 'Google')[],
+      status: client.status as 'Ativo' | 'Pausado' | 'Arquivado',
+      observacoes: client.observacoes || '',
+      usaMetaAds: client.usa_meta_ads,
+      usaGoogleAds: client.usa_google_ads,
+      traqueamentoAtivo: client.traqueamento_ativo,
+      saldoMeta: client.saldo_meta ? client.saldo_meta / 100 : 0,
+      budgetMensalMeta: client.budget_mensal_meta || 0,
+      budgetMensalGoogle: client.budget_mensal_google || 0,
+      pixelMeta: client.pixel_meta || '',
+      ga4StreamId: client.ga4_stream_id || '',
+      gtmId: client.gtm_id || '',
+      typebotAtivo: client.typebot_ativo || false,
+      typebotUrl: client.typebot_url || '',
+    };
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -175,14 +248,11 @@ export default function ClientDetail() {
       <Badge 
         key={channel}
         variant="outline" 
-        className={`
-          ${channel === 'Meta' 
+        className={
+          channel === 'Meta' 
             ? 'border-blue-500 text-blue-600 bg-blue-50' 
-            : channel === 'Google'
-            ? 'border-red-500 text-red-600 bg-red-50'
-            : 'border-gray-500 text-gray-600 bg-gray-50'
-          }
-        `}
+            : 'border-red-500 text-red-600 bg-red-50'
+        }
       >
         {channel}
       </Badge>
@@ -239,7 +309,7 @@ export default function ClientDetail() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header Simples */}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -270,7 +340,7 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setShowEditModal(true)}>
               <Edit className="h-4 w-4 mr-2" />
               Editar Cliente
             </Button>
@@ -278,28 +348,15 @@ export default function ClientDetail() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Sincronizar
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Archive className="h-4 w-4 mr-2" />
-                  Arquivar Cliente
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPIs Simples */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
+          <Card className="surface-elevated">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-green-500" />
+                <DollarSign className="h-4 w-4" />
                 Saldo Meta
               </CardTitle>
             </CardHeader>
@@ -307,16 +364,14 @@ export default function ClientDetail() {
               <div className="text-2xl font-bold">
                 {formatCurrency((client.saldo_meta || 0) / 100)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Saldo atual da conta
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Saldo atual</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="surface-elevated">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Target className="h-4 w-4 text-blue-500" />
+                <Target className="h-4 w-4" />
                 Total de Leads
               </CardTitle>
             </CardHeader>
@@ -324,16 +379,14 @@ export default function ClientDetail() {
               <div className="text-2xl font-bold">
                 {campaignStats.totalLeads}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Leads capturados
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Leads capturados</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="surface-elevated">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-purple-500" />
+                <TrendingUp className="h-4 w-4" />
                 Taxa Qualificação
               </CardTitle>
             </CardHeader>
@@ -341,16 +394,14 @@ export default function ClientDetail() {
               <div className="text-2xl font-bold">
                 {campaignStats.qualificationRate.toFixed(1)}%
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Leads qualificados
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Leads qualificados</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="surface-elevated">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-orange-500" />
+                <BarChart3 className="h-4 w-4" />
                 Gasto Total
               </CardTitle>
             </CardHeader>
@@ -358,331 +409,164 @@ export default function ClientDetail() {
               <div className="text-2xl font-bold">
                 {formatCurrency(campaignStats.totalSpend)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Investimento total
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Investimento</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs com informações detalhadas */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-            <TabsTrigger value="settings">Configurações</TabsTrigger>
-            <TabsTrigger value="integrations">Integrações</TabsTrigger>
-          </TabsList>
+        {/* Informações do Cliente */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="surface-elevated">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Informações do Cliente
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Empresa:</span>
+                  <p className="font-medium">{client.nome_empresa}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Telefone:</span>
+                  <p className="font-medium">{client.telefone}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Email:</span>
+                  <p className="font-medium">{client.email || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Status:</span>
+                  <Badge className={getStatusColor(client.status)}>
+                    {client.status}
+                  </Badge>
+                </div>
+              </div>
+              {client.observacoes && (
+                <div>
+                  <span className="text-muted-foreground text-sm">Observações:</span>
+                  <p className="text-sm mt-1 p-2 bg-muted/50 rounded">
+                    {client.observacoes}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Aba Visão Geral */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Informações do Cliente */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Informações do Cliente
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Empresa:</span>
-                      <p className="font-medium">{client.nome_empresa}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Telefone:</span>
-                      <p className="font-medium">{client.telefone}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Email:</span>
-                      <p className="font-medium">{client.email || '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Status:</span>
-                      <Badge className={getStatusColor(client.status)}>
-                        {client.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  {client.observacoes && (
-                    <div>
-                      <span className="text-muted-foreground text-sm">Observações:</span>
-                      <p className="text-sm mt-1 p-2 bg-muted/50 rounded">
-                        {client.observacoes}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+          <Card className="surface-elevated">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Configurações
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Meta Ads</p>
+                  <p className="text-sm text-muted-foreground">Facebook e Instagram</p>
+                </div>
+                <Badge variant={client.usa_meta_ads ? "default" : "secondary"}>
+                  {client.usa_meta_ads ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Google Ads</p>
+                  <p className="text-sm text-muted-foreground">Campanhas do Google</p>
+                </div>
+                <Badge variant={client.usa_google_ads ? "default" : "secondary"}>
+                  {client.usa_google_ads ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
 
-              {/* Performance das Campanhas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <LineChart className="h-5 w-5" />
-                    Performance Geral
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-700">
-                        {campaignStats.totalCampaigns}
-                      </div>
-                      <div className="text-xs text-blue-600">Campanhas</div>
-                    </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-700">
-                        {campaignStats.avgQualityScore.toFixed(1)}
-                      </div>
-                      <div className="text-xs text-green-600">Nota Média</div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Taxa de Qualificação</span>
-                      <span className="font-medium">{campaignStats.qualificationRate.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all" 
-                        style={{ width: `${Math.min(campaignStats.qualificationRate, 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Rastreamento</p>
+                  <p className="text-sm text-muted-foreground">Pixel e Analytics</p>
+                </div>
+                <Badge variant={client.traqueamento_ativo ? "default" : "secondary"}>
+                  {client.traqueamento_ativo ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Taxa de Conversão</span>
-                      <span className="font-medium">{campaignStats.conversionRate.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full transition-all" 
-                        style={{ width: `${Math.min(campaignStats.conversionRate, 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+        {/* Campanhas Recentes */}
+        <Card className="surface-elevated">
+          <CardHeader>
+            <CardTitle>Campanhas Recentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {campaigns.length === 0 ? (
+              <div className="text-center py-8">
+                <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
+                <p className="text-muted-foreground">
+                  As campanhas deste cliente aparecerão aqui quando houver dados disponíveis.
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Campanha</TableHead>
+                    <TableHead>Plataforma</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Leads</TableHead>
+                    <TableHead>Gasto</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {campaigns.slice(0, 10).map((campaign) => (
+                    <TableRow key={campaign.id}>
+                      <TableCell>
+                        <div className="font-medium">{campaign.campaign_name}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={
+                          campaign.platform === 'Meta' 
+                            ? 'border-blue-500 text-blue-600 bg-blue-50'
+                            : 'border-red-500 text-red-600 bg-red-50'
+                        }>
+                          {campaign.platform}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(campaign.date).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>{campaign.leads_count}</TableCell>
+                      <TableCell>{formatCurrency(campaign.spend)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={
+                          campaign.kanban_status === 'Concluído' 
+                            ? 'border-green-500 text-green-600 bg-green-50'
+                            : 'border-yellow-500 text-yellow-600 bg-yellow-50'
+                        }>
+                          {campaign.kanban_status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Aba Campanhas */}
-          <TabsContent value="campaigns" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Campanhas Recentes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {campaigns.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
-                    <p className="text-muted-foreground">
-                      As campanhas deste cliente aparecerão aqui quando houver dados disponíveis.
-                    </p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Campanha</TableHead>
-                        <TableHead>Plataforma</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Leads</TableHead>
-                        <TableHead>Gasto</TableHead>
-                        <TableHead>Qualificação</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {campaigns.slice(0, 10).map((campaign) => (
-                        <TableRow key={campaign.id}>
-                          <TableCell>
-                            <div className="font-medium">{campaign.campaign_name}</div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={
-                              campaign.platform === 'Meta' 
-                                ? 'border-blue-500 text-blue-600 bg-blue-50'
-                                : 'border-red-500 text-red-600 bg-red-50'
-                            }>
-                              {campaign.platform}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(campaign.date).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell>{campaign.leads_count}</TableCell>
-                          <TableCell>{formatCurrency(campaign.spend)}</TableCell>
-                          <TableCell>
-                            {campaign.qualified_leads || 0}/{campaign.leads_count}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={
-                              campaign.kanban_status === 'Concluído' 
-                                ? 'border-green-500 text-green-600 bg-green-50'
-                                : 'border-yellow-500 text-yellow-600 bg-yellow-50'
-                            }>
-                              {campaign.kanban_status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Aba Configurações */}
-          <TabsContent value="settings" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Configurações de Campanhas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Meta Ads</p>
-                      <p className="text-sm text-muted-foreground">Campanhas do Facebook e Instagram</p>
-                    </div>
-                    <Badge variant={client.usa_meta_ads ? "default" : "secondary"}>
-                      {client.usa_meta_ads ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Google Ads</p>
-                      <p className="text-sm text-muted-foreground">Campanhas do Google</p>
-                    </div>
-                    <Badge variant={client.usa_google_ads ? "default" : "secondary"}>
-                      {client.usa_google_ads ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </div>
-
-                  {client.budget_mensal_meta && (
-                    <div className="p-3 bg-muted/50 rounded">
-                      <p className="text-sm text-muted-foreground">Budget Mensal Meta</p>
-                      <p className="font-medium">{formatCurrency(client.budget_mensal_meta)}</p>
-                    </div>
-                  )}
-
-                  {client.budget_mensal_google && (
-                    <div className="p-3 bg-muted/50 rounded">
-                      <p className="text-sm text-muted-foreground">Budget Mensal Google</p>
-                      <p className="font-medium">{formatCurrency(client.budget_mensal_google)}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    Rastreamento
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Rastreamento Ativo</p>
-                      <p className="text-sm text-muted-foreground">Status geral do tracking</p>
-                    </div>
-                    <Badge variant={client.traqueamento_ativo ? "default" : "secondary"}>
-                      {client.traqueamento_ativo ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </div>
-
-                  {client.pixel_meta && (
-                    <div className="p-3 bg-muted/50 rounded">
-                      <p className="text-sm text-muted-foreground">Pixel Meta</p>
-                      <p className="font-mono text-xs">{client.pixel_meta}</p>
-                    </div>
-                  )}
-
-                  {client.ga4_stream_id && (
-                    <div className="p-3 bg-muted/50 rounded">
-                      <p className="text-sm text-muted-foreground">GA4 Stream ID</p>
-                      <p className="font-mono text-xs">{client.ga4_stream_id}</p>
-                    </div>
-                  )}
-
-                  {client.gtm_id && (
-                    <div className="p-3 bg-muted/50 rounded">
-                      <p className="text-sm text-muted-foreground">GTM ID</p>
-                      <p className="font-mono text-xs">{client.gtm_id}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Aba Integrações */}
-          <TabsContent value="integrations" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5" />
-                    Typebot
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Status</p>
-                      <p className="text-sm text-muted-foreground">Chatbot automatizado</p>
-                    </div>
-                    <Badge variant={client.typebot_ativo ? "default" : "secondary"}>
-                      {client.typebot_ativo ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </div>
-
-                  {client.typebot_url && (
-                    <div className="p-3 bg-muted/50 rounded">
-                      <p className="text-sm text-muted-foreground">URL do Typebot</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="font-mono text-xs truncate">{client.typebot_url}</p>
-                        <Button size="sm" variant="ghost" asChild>
-                          <a href={client.typebot_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    Outros
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-sm">Outras integrações disponíveis em breve</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+        {/* Modal de Edição */}
+        <ClienteFormModal
+          mode="edit"
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          onSubmit={handleEditClient}
+          initialValues={getClientFormData()}
+        />
       </div>
     </AppLayout>
   );
