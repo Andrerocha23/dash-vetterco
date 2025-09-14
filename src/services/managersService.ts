@@ -32,66 +32,112 @@ export interface CreateManagerData {
 
 class ManagersService {
   async getManagers(): Promise<ManagerWithStats[]> {
-    const { data, error } = await supabase
-      .from('managers')
-      .select(`
-        *,
-        clients!clients_gestor_id_fkey(count)
-      `)
-      .eq('status', 'active')
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching managers:', error);
-      throw new Error(`Failed to fetch managers: ${error.message}`);
-    }
-
-    // Transformar dados e adicionar estatísticas mockadas por enquanto
-    return (data || []).map(manager => {
-      const clientsCount = Array.isArray(manager.clients) ? manager.clients.length : 0;
+    try {
+      console.log('🔍 Fetching managers...');
       
-      return {
-        ...manager,
-        clientsCount,
-        totalLeads: Math.floor(Math.random() * 500) + 100, // Mock
-        avgCPL: Math.random() * 30 + 30, // Mock
-        avgCTR: Math.random() * 2 + 2, // Mock
-        satisfaction: this.getSatisfactionLevel(Math.floor(Math.random() * 40) + 60), // Mock
-        satisfactionScore: Math.floor(Math.random() * 40) + 60, // Mock
-        specialties: this.getSpecialtiesByDepartment(manager.department || ''),
-      };
-    });
+      // Primeira tentativa: buscar gestores sem JOIN complexo
+      const { data: managersData, error: managersError } = await supabase
+        .from('managers')
+        .select('*')
+        .eq('status', 'active')
+        .order('name');
+
+      if (managersError) {
+        console.error('❌ Error fetching managers:', managersError);
+        throw new Error(`Failed to fetch managers: ${managersError.message}`);
+      }
+
+      console.log('✅ Managers data:', managersData);
+
+      if (!managersData || managersData.length === 0) {
+        console.log('⚠️ No managers found');
+        return [];
+      }
+
+      // Para cada gestor, contar clientes manualmente
+      const managersWithStats = await Promise.all(
+        managersData.map(async (manager) => {
+          try {
+            // Contar clientes por gestor
+            const { count: clientsCount, error: countError } = await supabase
+              .from('clients')
+              .select('*', { count: 'exact', head: true })
+              .eq('gestor_id', manager.id);
+
+            if (countError) {
+              console.warn(`⚠️ Error counting clients for manager ${manager.id}:`, countError);
+            }
+
+            return {
+              ...manager,
+              clientsCount: clientsCount || 0,
+              totalLeads: Math.floor(Math.random() * 500) + 100, // Mock
+              avgCPL: Math.random() * 30 + 30, // Mock
+              avgCTR: Math.random() * 2 + 2, // Mock
+              satisfaction: this.getSatisfactionLevel(Math.floor(Math.random() * 40) + 60), // Mock
+              satisfactionScore: Math.floor(Math.random() * 40) + 60, // Mock
+              specialties: this.getSpecialtiesByDepartment(manager.department || ''),
+            };
+          } catch (error) {
+            console.error(`❌ Error processing manager ${manager.id}:`, error);
+            return {
+              ...manager,
+              clientsCount: 0,
+              totalLeads: 0,
+              avgCPL: 0,
+              avgCTR: 0,
+              satisfaction: 'poor' as const,
+              satisfactionScore: 0,
+              specialties: [],
+            };
+          }
+        })
+      );
+
+      console.log('✅ Managers with stats:', managersWithStats);
+      return managersWithStats;
+
+    } catch (error) {
+      console.error('❌ Critical error in getManagers:', error);
+      throw error;
+    }
   }
 
   async getManagerById(id: string): Promise<ManagerWithStats | null> {
-    const { data, error } = await supabase
-      .from('managers')
-      .select(`
-        *,
-        clients!clients_gestor_id_fkey(count)
-      `)
-      .eq('id', id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('managers')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // Manager not found
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null; // Manager not found
+        }
+        throw new Error(`Failed to fetch manager: ${error.message}`);
       }
-      throw new Error(`Failed to fetch manager: ${error.message}`);
+
+      // Contar clientes
+      const { count: clientsCount } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('gestor_id', id);
+
+      return {
+        ...data,
+        clientsCount: clientsCount || 0,
+        totalLeads: Math.floor(Math.random() * 500) + 100,
+        avgCPL: Math.random() * 30 + 30,
+        avgCTR: Math.random() * 2 + 2,
+        satisfaction: this.getSatisfactionLevel(Math.floor(Math.random() * 40) + 60),
+        satisfactionScore: Math.floor(Math.random() * 40) + 60,
+        specialties: this.getSpecialtiesByDepartment(data.department || ''),
+      };
+    } catch (error) {
+      console.error('Error in getManagerById:', error);
+      throw error;
     }
-
-    const clientsCount = Array.isArray(data.clients) ? data.clients.length : 0;
-
-    return {
-      ...data,
-      clientsCount,
-      totalLeads: Math.floor(Math.random() * 500) + 100,
-      avgCPL: Math.random() * 30 + 30,
-      avgCTR: Math.random() * 2 + 2,
-      satisfaction: this.getSatisfactionLevel(Math.floor(Math.random() * 40) + 60),
-      satisfactionScore: Math.floor(Math.random() * 40) + 60,
-      specialties: this.getSpecialtiesByDepartment(data.department || ''),
-    };
   }
 
   async createManager(managerData: CreateManagerData): Promise<Manager> {
@@ -145,29 +191,46 @@ class ManagersService {
   }
 
   async getManagersForSelect(): Promise<{ id: string; name: string; avatar_url?: string; department?: string; clientsCount?: number }[]> {
-    const { data, error } = await supabase
-      .from('managers')
-      .select(`
-        id, 
-        name, 
-        avatar_url, 
-        department,
-        clients!clients_gestor_id_fkey(count)
-      `)
-      .eq('status', 'active')
-      .order('name');
+    try {
+      console.log('🔍 Fetching managers for select...');
+      
+      const { data, error } = await supabase
+        .from('managers')
+        .select('id, name, avatar_url, department')
+        .eq('status', 'active')
+        .order('name');
 
-    if (error) {
-      throw new Error(`Failed to fetch managers for select: ${error.message}`);
+      if (error) {
+        console.error('❌ Error fetching managers for select:', error);
+        throw new Error(`Failed to fetch managers for select: ${error.message}`);
+      }
+
+      console.log('✅ Managers for select:', data);
+
+      // Para cada gestor, contar clientes
+      if (data && data.length > 0) {
+        const managersWithCount = await Promise.all(
+          data.map(async (manager) => {
+            const { count } = await supabase
+              .from('clients')
+              .select('*', { count: 'exact', head: true })
+              .eq('gestor_id', manager.id);
+
+            return {
+              ...manager,
+              clientsCount: count || 0
+            };
+          })
+        );
+
+        return managersWithCount;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error in getManagersForSelect:', error);
+      throw error;
     }
-
-    return (data || []).map(manager => ({
-      id: manager.id,
-      name: manager.name,
-      avatar_url: manager.avatar_url,
-      department: manager.department,
-      clientsCount: Array.isArray(manager.clients) ? manager.clients.length : 0
-    }));
   }
 
   // Métodos de utilidade

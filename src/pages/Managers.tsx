@@ -2,21 +2,9 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Plus,
-  Search,
-  Mail,
-  Phone,
-  Users,
-  TrendingUp,
-  Target,
-  Award,
-  Building2
-} from "lucide-react";
+import { Users, AlertTriangle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { managersService, type ManagerWithStats } from "@/services/managersService";
 import { pt } from "@/i18n/pt";
@@ -25,18 +13,43 @@ export default function Managers() {
   const { toast } = useToast();
   const [managers, setManagers] = useState<ManagerWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
-  // Carregar gestores
+  // Carregar gestores com debug
   const loadManagers = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('🚀 Starting to load managers...');
+      
       const data = await managersService.getManagers();
+      
+      console.log('✅ Managers loaded successfully:', data);
+      
       setManagers(data);
-    } catch (error) {
+      setDebugInfo({
+        success: true,
+        managersCount: data.length,
+        loadTime: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error loading managers:', error);
+      
+      const errorMessage = error?.message || 'Erro desconhecido ao carregar gestores';
+      setError(errorMessage);
+      setDebugInfo({
+        success: false,
+        error: errorMessage,
+        errorDetails: error,
+        loadTime: new Date().toISOString()
+      });
+      
       toast({
         title: "Erro",
-        description: "Erro ao carregar gestores",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -48,35 +61,35 @@ export default function Managers() {
     loadManagers();
   }, []);
 
-  // Filtrar gestores por busca
-  const filteredManagers = managers.filter(manager =>
-    manager.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    manager.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (manager.department && manager.department.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  // Função para obter cor do badge de satisfação
-  const getSatisfactionColor = (satisfaction: string) => {
-    switch (satisfaction) {
-      case 'excellent': return 'bg-green-500/20 text-green-400 border-green-500/50';
-      case 'good': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';
-      case 'average': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
-      case 'poor': return 'bg-red-500/20 text-red-400 border-red-500/50';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
+  // Função para testar conexão básica
+  const testConnection = async () => {
+    try {
+      setLoading(true);
+      
+      // Teste simples de conectividade
+      const { data, error } = await window.supabase
+        .from('managers')
+        .select('count')
+        .limit(1);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: "Conexão com banco funcionando!",
+      });
+      
+    } catch (error: any) {
+      toast({
+        title: "Erro de Conexão",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  };
-
-  // Função para formatar moeda
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  // Função para obter iniciais do nome
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (loading) {
@@ -92,7 +105,7 @@ export default function Managers() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
+            {[...Array(3)].map((_, i) => (
               <Skeleton key={i} className="h-64" />
             ))}
           </div>
@@ -110,191 +123,93 @@ export default function Managers() {
             <h1 className="text-3xl font-bold">{pt.managers.title}</h1>
             <p className="text-muted-foreground mt-1">{pt.managers.subtitle}</p>
           </div>
-          <Button disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Gestor (Em breve)
-          </Button>
-        </div>
-
-        {/* Search */}
-        <div className="flex gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Buscar gestores..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={testConnection}>
+              Testar Conexão
+            </Button>
+            <Button onClick={loadManagers}>
+              Recarregar
+            </Button>
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Total de Gestores
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{managers.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {managers.filter(m => m.status === 'active').length} ativos
-              </p>
-            </CardContent>
-          </Card>
+        {/* Debug Info */}
+        {debugInfo && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Debug Info:</strong>
+              <pre className="mt-2 text-xs bg-muted p-2 rounded">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </AlertDescription>
+          </Alert>
+        )}
 
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Clientes Gerenciados
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {managers.reduce((total, m) => total + m.clientsCount, 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Total de clientes</p>
-            </CardContent>
-          </Card>
+        {/* Error State */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Erro:</strong> {error}
+              <br />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={loadManagers}
+              >
+                Tentar Novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Award className="h-4 w-4" />
-                Satisfação Média
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {Math.round(managers.reduce((total, m) => total + m.satisfactionScore, 0) / managers.length || 0)}%
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Score de satisfação</p>
-            </CardContent>
-          </Card>
+        {/* Success - Show Managers */}
+        {!error && managers.length > 0 && (
+          <>
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                ✅ {managers.length} gestores carregados com sucesso!
+              </AlertDescription>
+            </Alert>
 
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                CPL Médio
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(managers.reduce((total, m) => total + m.avgCPL, 0) / managers.length || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Custo por lead médio</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Managers Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredManagers.map((manager) => (
-            <Card key={manager.id} className="surface-elevated hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={manager.avatar_url} alt={manager.name} />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                      {getInitials(manager.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-lg">{manager.name}</h3>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Building2 className="h-3 w-3" />
-                      {manager.department}
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Contact Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    {manager.email}
-                  </div>
-                  {manager.phone && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      {manager.phone}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {managers.map((manager) => (
+                <Card key={manager.id} className="surface-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      {manager.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      <p><strong>Email:</strong> {manager.email}</p>
+                      <p><strong>Departamento:</strong> {manager.department || 'N/A'}</p>
+                      <p><strong>Clientes:</strong> {manager.clientsCount}</p>
+                      <p><strong>Status:</strong> {manager.status}</p>
                     </div>
-                  )}
-                </div>
-
-                {/* Performance Metrics */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{manager.clientsCount}</div>
-                    <div className="text-xs text-muted-foreground">Clientes</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-500">{manager.totalLeads}</div>
-                    <div className="text-xs text-muted-foreground">Leads</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-lg font-semibold">{formatCurrency(manager.avgCPL)}</div>
-                    <div className="text-xs text-muted-foreground">CPL Médio</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-semibold">{manager.avgCTR.toFixed(1)}%</div>
-                    <div className="text-xs text-muted-foreground">CTR Médio</div>
-                  </div>
-                </div>
-
-                {/* Satisfaction Badge */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Satisfação:</span>
-                  <Badge className={getSatisfactionColor(manager.satisfaction)}>
-                    {manager.satisfactionScore}% - {pt.managers[manager.satisfaction]}
-                  </Badge>
-                </div>
-
-                {/* Specialties */}
-                {manager.specialties && manager.specialties.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium mb-2">Especialidades:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {manager.specialties.slice(0, 3).map((specialty, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {specialty}
-                        </Badge>
-                      ))}
-                      {manager.specialties.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{manager.specialties.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Empty State */}
-        {filteredManagers.length === 0 && !loading && (
+        {!error && managers.length === 0 && !loading && (
           <Card className="surface-elevated">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">Nenhum gestor encontrado</h3>
               <p className="text-muted-foreground text-center mb-4">
-                {searchQuery 
-                  ? "Nenhum gestor corresponde aos critérios de busca." 
-                  : "Os gestores serão exibidos aqui."
-                }
+                Verifique se os gestores foram criados no banco de dados.
               </p>
+              <Button onClick={loadManagers}>
+                Recarregar Gestores
+              </Button>
             </CardContent>
           </Card>
         )}
