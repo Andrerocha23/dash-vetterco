@@ -21,7 +21,23 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { navigationItems } from "./navigationConfig";
 import { pt } from "@/i18n/pt";
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  /** Logo para estado expandido (horizontal). Ex: "/logo-vetterco-horizontal.svg" */
+  logoSrc?: string;
+  /** Logo para estado colapsado (apenas o símbolo/mark). Ex: "/logo-vetterco-mark.svg" */
+  logoCollapsedSrc?: string;
+  /** Texto de fallback caso a logo não carregue */
+  brandName?: string;
+  /** Callback opcional para logout */
+  onLogout?: () => void;
+};
+
+export function AppSidebar({
+  logoSrc = "/Logo-branca.webp", // coloque seu arquivo em /public/logo.svg
+  logoCollapsedSrc = "/logo-mark.svg", // opcional: símbolo para colapsado
+  brandName = "Vetter Co.",
+  onLogout,
+}: AppSidebarProps) {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -38,14 +54,36 @@ export function AppSidebar() {
     <Sidebar className={`hidden lg:flex ${isCollapsed ? "w-16" : "w-64"} transition-all duration-300 bg-gray-900 border-r border-gray-800`}>
       {/* Header */}
       <SidebarHeader className="p-4 border-b border-gray-800">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-lg">M</span>
+        <NavLink to="/" className="flex items-center gap-3 group">
+          {/* Logo */}
+          <div className="flex items-center">
+            <img
+              src={isCollapsed ? (logoCollapsedSrc || logoSrc) : logoSrc}
+              alt={brandName}
+              className={isCollapsed ? "h-6 w-auto" : "h-8 w-auto"}
+              onError={(e) => {
+                // fallback para inicial se a logo não carregar
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                const sibling = e.currentTarget.nextElementSibling as HTMLElement | null;
+                if (sibling) sibling.style.display = "inline-flex";
+              }}
+            />
+            {/* Fallback mark (bolinha com inicial) */}
+            <div
+              className="ml-0 h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold items-center justify-center hidden"
+              aria-hidden
+            >
+              <span className="text-sm">V</span>
+            </div>
           </div>
+
+          {/* Nome/brand (opcional — pode remover se quiser só a logo) */}
           {!isCollapsed && (
-            <span className="font-semibold text-xl text-white truncate">Vetter Co.</span>
+            <span className="font-semibold text-xl text-white truncate">
+              {brandName}
+            </span>
           )}
-        </div>
+        </NavLink>
       </SidebarHeader>
 
       {/* Content */}
@@ -82,23 +120,15 @@ export function AppSidebar() {
                             const active = isActive(item.url) || linkActive;
                             return (
                               <>
-                                {/* Indicador de ativo no lado esquerdo */}
                                 {active && !isCollapsed && (
                                   <div className="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-r-full" />
                                 )}
-                                
-                                {/* Ícone */}
                                 <div className={`flex items-center justify-center ${isCollapsed ? "w-6 h-6" : "w-5 h-5"} flex-shrink-0`}>
                                   <item.icon className={`
                                     w-full h-full transition-all duration-200
-                                    ${active
-                                      ? "text-white"
-                                      : "text-gray-400 group-hover:text-white"
-                                    }
+                                    ${active ? "text-white" : "text-gray-400 group-hover:text-white"}
                                   `} />
                                 </div>
-                                
-                                {/* Texto */}
                                 {!isCollapsed && (
                                   <span className="transition-colors duration-200 truncate">
                                     {item.title}
@@ -161,9 +191,7 @@ export function AppSidebar() {
                   w-full transition-all duration-200 text-gray-300 hover:text-red-400 hover:bg-red-500/10
                   ${isCollapsed ? "h-10 px-0 justify-center" : "justify-start px-3 h-10"}
                 `}
-                onClick={() => {
-                  console.log("Logout clicked");
-                }}
+                onClick={() => onLogout ? onLogout() : console.log("Logout clicked")}
               >
                 <LogOut className={`${isCollapsed ? "h-5 w-5" : "h-4 w-4"}`} />
                 {!isCollapsed && <span className="ml-2 text-sm">Sair</span>}
