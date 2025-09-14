@@ -67,7 +67,7 @@ export type Database = {
           usa_crm_externo: boolean | null
           usa_google_ads: boolean | null
           usa_meta_ads: boolean | null
-          user_id: string | null
+          user_id: string
           usuarios_vinculados: string[] | null
           utm_padrao: string | null
           webhook_google: string | null
@@ -125,7 +125,7 @@ export type Database = {
           usa_crm_externo?: boolean | null
           usa_google_ads?: boolean | null
           usa_meta_ads?: boolean | null
-          user_id?: string | null
+          user_id?: string
           usuarios_vinculados?: string[] | null
           utm_padrao?: string | null
           webhook_google?: string | null
@@ -183,11 +183,38 @@ export type Database = {
           usa_crm_externo?: boolean | null
           usa_google_ads?: boolean | null
           usa_meta_ads?: boolean | null
-          user_id?: string | null
+          user_id?: string
           usuarios_vinculados?: string[] | null
           utm_padrao?: string | null
           webhook_google?: string | null
           webhook_meta?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
