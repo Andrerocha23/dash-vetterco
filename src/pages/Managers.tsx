@@ -1,75 +1,303 @@
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Briefcase, Users, Target, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Plus,
+  Search,
+  Mail,
+  Phone,
+  Users,
+  TrendingUp,
+  Target,
+  Award,
+  Building2
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { managersService, type ManagerWithStats } from "@/services/managersService";
 import { pt } from "@/i18n/pt";
 
 export default function Managers() {
-  const mockManagers = [
-    { id: "1", name: "Ana Silva", clientsCount: 8, leads: 1250, cpl: 42.50, ctr: 3.8, satisfaction: "excellent" },
-    { id: "2", name: "Carlos Santos", clientsCount: 6, leads: 890, cpl: 48.30, ctr: 3.2, satisfaction: "good" },
-    { id: "3", name: "Mariana Costa", clientsCount: 5, leads: 720, cpl: 39.80, ctr: 4.1, satisfaction: "excellent" }
-  ];
+  const { toast } = useToast();
+  const [managers, setManagers] = useState<ManagerWithStats[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Carregar gestores
+  const loadManagers = async () => {
+    try {
+      setLoading(true);
+      const data = await managersService.getManagers();
+      setManagers(data);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar gestores",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadManagers();
+  }, []);
+
+  // Filtrar gestores por busca
+  const filteredManagers = managers.filter(manager =>
+    manager.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    manager.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (manager.department && manager.department.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Função para obter cor do badge de satisfação
+  const getSatisfactionColor = (satisfaction: string) => {
+    switch (satisfaction) {
+      case 'excellent': return 'bg-green-500/20 text-green-400 border-green-500/50';
+      case 'good': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';
+      case 'average': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
+      case 'poor': return 'bg-red-500/20 text-red-400 border-red-500/50';
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
+    }
+  };
+
+  // Função para formatar moeda
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  // Função para obter iniciais do nome
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64 mt-2" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-64" />
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">{pt.managers.title}</h1>
             <p className="text-muted-foreground mt-1">{pt.managers.subtitle}</p>
           </div>
-          <Button>
-            <Users className="h-4 w-4 mr-2" />
-            {pt.managers.assignClient}
+          <Button disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Gestor (Em breve)
           </Button>
         </div>
 
+        {/* Search */}
+        <div className="flex gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar gestores..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="surface-elevated">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Total de Gestores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{managers.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {managers.filter(m => m.status === 'active').length} ativos
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Clientes Gerenciados
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {managers.reduce((total, m) => total + m.clientsCount, 0)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Total de clientes</p>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Award className="h-4 w-4" />
+                Satisfação Média
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {Math.round(managers.reduce((total, m) => total + m.satisfactionScore, 0) / managers.length || 0)}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Score de satisfação</p>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                CPL Médio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(managers.reduce((total, m) => total + m.avgCPL, 0) / managers.length || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Custo por lead médio</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Managers Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockManagers.map((manager) => (
-            <Card key={manager.id} className="surface-elevated">
-              <CardHeader>
+          {filteredManagers.map((manager) => (
+            <Card key={manager.id} className="surface-elevated hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback>{manager.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={manager.avatar_url} alt={manager.name} />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                      {getInitials(manager.name)}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-lg">{manager.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{manager.clientsCount} {pt.managers.clientsCount}</p>
+                    <h3 className="font-semibold text-lg">{manager.name}</h3>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      {manager.department}
+                    </p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-primary" />
-                      <span className="text-sm">Leads</span>
-                    </div>
-                    <span className="font-semibold">{manager.leads.toLocaleString()}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                      <span className="text-sm">CTR</span>
-                    </div>
-                    <span className="font-semibold">{manager.ctr}%</span>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">{pt.managers.satisfaction}</span>
-                    <Badge variant={manager.satisfaction === "excellent" ? "default" : "secondary"}>
-                      {pt.managers[manager.satisfaction as keyof typeof pt.managers]}
-                    </Badge>
+              <CardContent className="space-y-4">
+                {/* Contact Info */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    {manager.email}
+                  </div>
+                  {manager.phone && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      {manager.phone}
+                    </div>
+                  )}
+                </div>
+
+                {/* Performance Metrics */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">{manager.clientsCount}</div>
+                    <div className="text-xs text-muted-foreground">Clientes</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-500">{manager.totalLeads}</div>
+                    <div className="text-xs text-muted-foreground">Leads</div>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold">{formatCurrency(manager.avgCPL)}</div>
+                    <div className="text-xs text-muted-foreground">CPL Médio</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold">{manager.avgCTR.toFixed(1)}%</div>
+                    <div className="text-xs text-muted-foreground">CTR Médio</div>
+                  </div>
+                </div>
+
+                {/* Satisfaction Badge */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Satisfação:</span>
+                  <Badge className={getSatisfactionColor(manager.satisfaction)}>
+                    {manager.satisfactionScore}% - {pt.managers[manager.satisfaction]}
+                  </Badge>
+                </div>
+
+                {/* Specialties */}
+                {manager.specialties && manager.specialties.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium mb-2">Especialidades:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {manager.specialties.slice(0, 3).map((specialty, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {specialty}
+                        </Badge>
+                      ))}
+                      {manager.specialties.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{manager.specialties.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {/* Empty State */}
+        {filteredManagers.length === 0 && !loading && (
+          <Card className="surface-elevated">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum gestor encontrado</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                {searchQuery 
+                  ? "Nenhum gestor corresponde aos critérios de busca." 
+                  : "Os gestores serão exibidos aqui."
+                }
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );
