@@ -1,6 +1,9 @@
 import { RelatorioN8n, RelatorioFilters, ConfigurarDisparoPayload } from "@/types/n8n";
 import { supabase } from "@/integrations/supabase/client";
 
+// Armazenar o estado dos disparos em memória
+const estadoDisparos = new Map<string, boolean>();
+
 export const n8nService = {
   async listRelatorios(filters: RelatorioFilters = {}): Promise<RelatorioN8n[]> {
     const { data: clients, error } = await supabase
@@ -18,7 +21,7 @@ export const n8nService = {
       idGrupo: client.id_grupo || "",
       metaAccountId: client.meta_account_id || "",
       googleAdsId: client.google_ads_id || "",
-      ativo: true, // Por padrão ativo
+      ativo: estadoDisparos.get(client.id) ?? true, // Por padrão ativo
       ultimoEnvio: null,
       horarioPadrao: "09:00"
     }));
@@ -43,8 +46,6 @@ export const n8nService = {
   },
 
   async updateRelatorio(contaId: string, payload: Partial<RelatorioN8n>): Promise<void> {
-    // Para este mock, não fazemos nada por enquanto
-    // Em uma implementação real, atualizaríamos uma tabela de configurações n8n
     await new Promise(resolve => setTimeout(resolve, 400));
   },
 
@@ -61,7 +62,6 @@ export const n8nService = {
       return { ok: false, message: "Conta não encontrada" };
     }
     
-    // Simular sucesso/erro aleatório
     const success = Math.random() > 0.2; // 80% de sucesso
     
     if (success) {
@@ -80,12 +80,10 @@ export const n8nService = {
   async configurarDisparo(contaId: string, payload: ConfigurarDisparoPayload): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Atualizar o id_grupo na tabela clients
     const { error } = await supabase
       .from('clients')
       .update({
         id_grupo: payload.idGrupo,
-        // horario_relatorio poderia ser adicionado à tabela se necessário
       })
       .eq('id', contaId);
 
@@ -97,8 +95,13 @@ export const n8nService = {
   async toggleAtivo(contaId: string): Promise<boolean> {
     await new Promise(resolve => setTimeout(resolve, 200));
     
-    // Para este mock, sempre retorna o oposto do estado atual
-    // Em uma implementação real, isso seria armazenado em uma tabela de configurações
-    return Math.random() > 0.5;
+    // Pegar o estado atual e inverter
+    const estadoAtual = estadoDisparos.get(contaId) ?? true;
+    const novoEstado = !estadoAtual;
+    
+    // Salvar o novo estado
+    estadoDisparos.set(contaId, novoEstado);
+    
+    return novoEstado;
   }
 };
