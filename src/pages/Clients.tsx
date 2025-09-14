@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreHorizontal, Eye, Edit, Archive, ArchiveRestore } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Eye, Edit, Archive, Unarchive } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MobileTableCard } from "@/components/table/MobileTableCard";
 import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -365,7 +364,7 @@ export default function Clients() {
                                 </>
                               ) : (
                                 <>
-                                  <ArchiveRestore className="h-4 w-4 mr-2" />
+                                  <Unarchive className="h-4 w-4 mr-2" />
                                   Desarquivar
                                 </>
                               )}
