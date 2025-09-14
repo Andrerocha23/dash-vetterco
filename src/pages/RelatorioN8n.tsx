@@ -18,11 +18,6 @@ import { type RelatorioN8n, RelatorioFilters, ConfigurarDisparoPayload } from "@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const canalColors = {
-  "WhatsApp": "bg-green-500/10 text-green-700 border-green-500/20",
-  "Email": "bg-blue-500/10 text-blue-700 border-blue-500/20",
-  "Ambos": "bg-purple-500/10 text-purple-700 border-purple-500/20"
-};
 
 export default function RelatorioN8n() {
   const [relatorios, setRelatorios] = useState<RelatorioN8n[]>([]);
@@ -32,7 +27,6 @@ export default function RelatorioN8n() {
   const [configModal, setConfigModal] = useState(false);
   const [configForm, setConfigForm] = useState<ConfigurarDisparoPayload>({
     idGrupo: "",
-    canal: "WhatsApp",
     horarioPadrao: "09:00"
   });
   const [testingDisparo, setTestingDisparo] = useState<string | null>(null);
@@ -107,7 +101,6 @@ export default function RelatorioN8n() {
     setSelectedRelatorio(relatorio);
     setConfigForm({
       idGrupo: relatorio.idGrupo,
-      canal: relatorio.canal,
       horarioPadrao: relatorio.horarioPadrao || "09:00"
     });
     setConfigModal(true);
@@ -184,7 +177,8 @@ export default function RelatorioN8n() {
               <TableRow>
                 <TableHead>Conta</TableHead>
                 <TableHead>ID do Grupo</TableHead>
-                <TableHead>Canal</TableHead>
+                <TableHead>Meta Account ID</TableHead>
+                <TableHead>Google Ads ID</TableHead>
                 <TableHead>Ativo</TableHead>
                 <TableHead>Último Envio</TableHead>
                 <TableHead>Ações</TableHead>
@@ -193,13 +187,13 @@ export default function RelatorioN8n() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     Carregando...
                   </TableCell>
                 </TableRow>
-              ) : relatorios.length === 0 ? (
+                ) : relatorios.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     Nenhum relatório encontrado
                   </TableCell>
                 </TableRow>
@@ -227,9 +221,15 @@ export default function RelatorioN8n() {
                     </TableCell>
                     
                     <TableCell>
-                      <Badge variant="outline" className={canalColors[relatorio.canal]}>
-                        {relatorio.canal}
-                      </Badge>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {relatorio.metaAccountId || "—"}
+                      </code>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {relatorio.googleAdsId || "—"}
+                      </code>
                     </TableCell>
                     
                     <TableCell>
@@ -318,19 +318,6 @@ export default function RelatorioN8n() {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="canal">Canal de Relatório</Label>
-                    <Select value={configForm.canal} onValueChange={(value: any) => setConfigForm({...configForm, canal: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                        <SelectItem value="Email">Email</SelectItem>
-                        <SelectItem value="Ambos">Ambos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   <div>
                     <Label htmlFor="horario">Horário Padrão</Label>

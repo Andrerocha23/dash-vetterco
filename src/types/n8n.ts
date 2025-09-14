@@ -2,7 +2,8 @@ export interface RelatorioN8n {
   contaId: string;
   contaNome: string;
   idGrupo: string;
-  canal: "WhatsApp" | "Email" | "Ambos";
+  metaAccountId?: string;
+  googleAdsId?: string;
   ativo: boolean;
   ultimoEnvio?: string; // ISO
   horarioPadrao?: string;
@@ -15,6 +16,5 @@ export interface RelatorioFilters {
 
 export interface ConfigurarDisparoPayload {
   idGrupo: string;
-  canal: "WhatsApp" | "Email" | "Ambos";
   horarioPadrao: string;
 }
