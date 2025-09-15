@@ -1,30 +1,52 @@
 import { RelatorioN8n, RelatorioFilters, ConfigurarDisparoPayload } from "@/types/n8n";
 import { supabase } from "@/integrations/supabase/client";
 
-// Armazenar o estado dos disparos em memória
-const estadoDisparos = new Map<string, boolean>();
-
 export const n8nService = {
   async listRelatorios(filters: RelatorioFilters = {}): Promise<RelatorioN8n[]> {
-    const { data: clients, error } = await supabase
+    // Query com JOIN para pegar dados completos
+    const { data: results, error } = await supabase
       .from('clients')
-      .select('id, nome_cliente, nome_empresa, id_grupo, meta_account_id, google_ads_id, status')
-      .eq('status', 'Ativo');
+      .select(`
+        id,
+        nome_cliente,
+        nome_empresa,
+        id_grupo,
+        meta_account_id,
+        google_ads_id,
+        status,
+        relatorio_config:relatorio_config!inner(
+          ativo,
+          horario_disparo
+        ),
+        relatorio_disparos!left(
+          status,
+          horario_disparo,
+          data_disparo
+        )
+      `)
+      .eq('status', 'Ativo')
+      .eq('relatorio_disparos.data_disparo', new Date().toISOString().split('T')[0]);
 
     if (error) {
       throw new Error(`Failed to fetch clients: ${error.message}`);
     }
 
-    let relatorios: RelatorioN8n[] = (clients || []).map(client => ({
-      contaId: client.id,
-      contaNome: client.nome_cliente,
-      idGrupo: client.id_grupo || "",
-      metaAccountId: client.meta_account_id || "",
-      googleAdsId: client.google_ads_id || "",
-      ativo: estadoDisparos.get(client.id) ?? true, // Por padrão ativo
-      ultimoEnvio: null,
-      horarioPadrao: "09:00"
-    }));
+    let relatorios: RelatorioN8n[] = (results || []).map(client => {
+      const config = Array.isArray(client.relatorio_config) ? client.relatorio_config[0] : client.relatorio_config;
+      const disparo = Array.isArray(client.relatorio_disparos) ? client.relatorio_disparos[0] : client.relatorio_disparos;
+      
+      return {
+        contaId: client.id,
+        contaNome: client.nome_cliente,
+        idGrupo: client.id_grupo || "",
+        metaAccountId: client.meta_account_id || "",
+        googleAdsId: client.google_ads_id || "",
+        ativo: config?.ativo ?? false,
+        ultimoEnvio: disparo?.horario_disparo || null,
+        statusEnvio: disparo?.status || null,
+        horarioPadrao: config?.horario_disparo || "09:00"
+      };
+    });
 
     // Aplicar filtros
     if (filters.busca) {
@@ -45,8 +67,31 @@ export const n8nService = {
     return relatorios.sort((a, b) => a.contaNome.localeCompare(b.contaNome));
   },
 
-  async updateRelatorio(contaId: string, payload: Partial<RelatorioN8n>): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 400));
+  async toggleAtivo(contaId: string): Promise<boolean> {
+    // Primeiro, buscar o estado atual
+    const { data: currentConfig, error: fetchError } = await supabase
+      .from('relatorio_config')
+      .select('ativo')
+      .eq('client_id', contaId)
+      .single();
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch current config: ${fetchError.message}`);
+    }
+
+    const novoStatus = !currentConfig.ativo;
+
+    // Atualizar no banco
+    const { error: updateError } = await supabase
+      .from('relatorio_config')
+      .update({ ativo: novoStatus, updated_at: new Date().toISOString() })
+      .eq('client_id', contaId);
+
+    if (updateError) {
+      throw new Error(`Failed to update config: ${updateError.message}`);
+    }
+
+    return novoStatus;
   },
 
   async testarDisparo(contaId: string): Promise<{ ok: boolean; message: string }> {
@@ -80,28 +125,29 @@ export const n8nService = {
   async configurarDisparo(contaId: string, payload: ConfigurarDisparoPayload): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const { error } = await supabase
+    // Atualizar o id_grupo na tabela clients
+    const { error: clientError } = await supabase
       .from('clients')
       .update({
         id_grupo: payload.idGrupo,
       })
       .eq('id', contaId);
 
-    if (error) {
-      throw new Error(`Failed to update client configuration: ${error.message}`);
+    if (clientError) {
+      throw new Error(`Failed to update client: ${clientError.message}`);
     }
-  },
 
-  async toggleAtivo(contaId: string): Promise<boolean> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    // Pegar o estado atual e inverter
-    const estadoAtual = estadoDisparos.get(contaId) ?? true;
-    const novoEstado = !estadoAtual;
-    
-    // Salvar o novo estado
-    estadoDisparos.set(contaId, novoEstado);
-    
-    return novoEstado;
+    // Atualizar horário na configuração
+    const { error: configError } = await supabase
+      .from('relatorio_config')
+      .update({
+        horario_disparo: payload.horarioPadrao,
+        updated_at: new Date().toISOString()
+      })
+      .eq('client_id', contaId);
+
+    if (configError) {
+      throw new Error(`Failed to update config: ${configError.message}`);
+    }
   }
 };
