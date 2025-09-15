@@ -5,6 +5,23 @@ export type ModoSaldo = "Cartão" | "Pix" | "Pré-pago (crédito)";
 export type CanalRelatorio = "WhatsApp" | "Email" | "Ambos";
 export type PapelPadrao = "Usuário padrão" | "Gestor" | "Administrador";
 
+export interface ClientWithManager {
+  id: string;
+  name: string;
+  manager: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+    email?: string;
+  };
+  channels: ('Meta' | 'Google')[];
+  status: 'Active' | 'Paused' | 'Archived';
+  activeCampaigns: number;
+  metaBalance: number;
+  createdOn: string;
+  rawData?: any;
+}
+
 export interface ClienteFormData {
   id?: string;
 

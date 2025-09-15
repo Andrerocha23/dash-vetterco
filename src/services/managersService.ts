@@ -7,7 +7,7 @@ export interface Manager {
   avatar_url?: string;
   phone?: string;
   department?: string;
-  status: 'active' | 'inactive';
+  status: string;
   created_at: string;
   updated_at: string;
 }

@@ -67,10 +67,9 @@ export default function Managers() {
       setLoading(true);
       
       // Teste simples de conectividade
-      const { data, error } = await window.supabase
-        .from('managers')
-        .select('count')
-        .limit(1);
+      const managers = await managersService.getManagers();
+      const error = null;
+      const data = managers;
         
       if (error) {
         throw error;
