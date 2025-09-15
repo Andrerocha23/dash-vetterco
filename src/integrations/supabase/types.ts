@@ -14,6 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_leads_daily: {
+        Row: {
+          campaign_id: string
+          campaign_name: string
+          clicks: number | null
+          client_id: string
+          client_notes: string | null
+          converted_leads: number | null
+          cpc: number | null
+          cpm: number | null
+          created_at: string
+          ctr: number | null
+          date: string
+          disqualified_leads: number | null
+          feedback_status: string | null
+          id: string
+          impressions: number | null
+          kanban_status: string | null
+          leads_count: number
+          no_response_leads: number | null
+          platform: string
+          qualified_leads: number | null
+          quality_score: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scheduled_leads: number | null
+          spend: number | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          campaign_name: string
+          clicks?: number | null
+          client_id: string
+          client_notes?: string | null
+          converted_leads?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr?: number | null
+          date: string
+          disqualified_leads?: number | null
+          feedback_status?: string | null
+          id?: string
+          impressions?: number | null
+          kanban_status?: string | null
+          leads_count?: number
+          no_response_leads?: number | null
+          platform: string
+          qualified_leads?: number | null
+          quality_score?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_leads?: number | null
+          spend?: number | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          campaign_name?: string
+          clicks?: number | null
+          client_id?: string
+          client_notes?: string | null
+          converted_leads?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr?: number | null
+          date?: string
+          disqualified_leads?: number | null
+          feedback_status?: string | null
+          id?: string
+          impressions?: number | null
+          kanban_status?: string | null
+          leads_count?: number
+          no_response_leads?: number | null
+          platform?: string
+          qualified_leads?: number | null
+          quality_score?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_leads?: number | null
+          spend?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "leads_stats"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           alerta_saldo_baixo: number | null
@@ -191,6 +300,166 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          campanha: string | null
+          client_id: string
+          created_at: string
+          data_conversao: string | null
+          email: string | null
+          id: string
+          interesse: string | null
+          ip_address: unknown | null
+          landing_page: string | null
+          nome: string
+          nota_qualificacao: number | null
+          observacoes: string | null
+          orcamento_max: number | null
+          orcamento_min: number | null
+          origem: string
+          prazo: string | null
+          proxima_acao: string | null
+          qualificacao: string | null
+          referrer: string | null
+          responsavel_id: string | null
+          status: string
+          telefone: string | null
+          ultima_interacao: string | null
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          valor_conversao: number | null
+        }
+        Insert: {
+          campanha?: string | null
+          client_id: string
+          created_at?: string
+          data_conversao?: string | null
+          email?: string | null
+          id?: string
+          interesse?: string | null
+          ip_address?: unknown | null
+          landing_page?: string | null
+          nome: string
+          nota_qualificacao?: number | null
+          observacoes?: string | null
+          orcamento_max?: number | null
+          orcamento_min?: number | null
+          origem: string
+          prazo?: string | null
+          proxima_acao?: string | null
+          qualificacao?: string | null
+          referrer?: string | null
+          responsavel_id?: string | null
+          status?: string
+          telefone?: string | null
+          ultima_interacao?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          valor_conversao?: number | null
+        }
+        Update: {
+          campanha?: string | null
+          client_id?: string
+          created_at?: string
+          data_conversao?: string | null
+          email?: string | null
+          id?: string
+          interesse?: string | null
+          ip_address?: unknown | null
+          landing_page?: string | null
+          nome?: string
+          nota_qualificacao?: number | null
+          observacoes?: string | null
+          orcamento_max?: number | null
+          orcamento_min?: number | null
+          origem?: string
+          prazo?: string | null
+          proxima_acao?: string | null
+          qualificacao?: string | null
+          referrer?: string | null
+          responsavel_id?: string | null
+          status?: string
+          telefone?: string | null
+          ultima_interacao?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          valor_conversao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "leads_stats"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      managers: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          department: string | null
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -218,9 +487,153 @@ export type Database = {
         }
         Relationships: []
       }
+      relatorio_config: {
+        Row: {
+          ativo: boolean | null
+          client_id: string
+          created_at: string
+          dias_semana: number[] | null
+          horario_disparo: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          client_id: string
+          created_at?: string
+          dias_semana?: number[] | null
+          horario_disparo?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          client_id?: string
+          created_at?: string
+          dias_semana?: number[] | null
+          horario_disparo?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorio_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "relatorio_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorio_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "leads_stats"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      relatorio_disparos: {
+        Row: {
+          client_id: string
+          created_at: string
+          dados_enviados: Json | null
+          data_disparo: string
+          horario_disparo: string
+          id: string
+          mensagem_erro: string | null
+          status: string
+          webhook_response: Json | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          dados_enviados?: Json | null
+          data_disparo: string
+          horario_disparo?: string
+          id?: string
+          mensagem_erro?: string | null
+          status?: string
+          webhook_response?: Json | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          dados_enviados?: Json | null
+          data_disparo?: string
+          horario_disparo?: string
+          id?: string
+          mensagem_erro?: string | null
+          status?: string
+          webhook_response?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorio_disparos_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "relatorio_disparos_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorio_disparos_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "leads_stats"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      campaign_performance_stats: {
+        Row: {
+          avg_quality_score: number | null
+          client_id: string | null
+          conversion_rate: number | null
+          nome_cliente: string | null
+          pending_feedback: number | null
+          qualification_rate: number | null
+          total_campaign_days: number | null
+          total_converted: number | null
+          total_disqualified: number | null
+          total_leads: number | null
+          total_qualified: number | null
+          total_spend: number | null
+        }
+        Relationships: []
+      }
+      leads_stats: {
+        Row: {
+          client_id: string | null
+          leads_contatados: number | null
+          leads_convertidos: number | null
+          leads_desqualificados: number | null
+          leads_google: number | null
+          leads_meta: number | null
+          leads_novos: number | null
+          leads_organico: number | null
+          leads_qualificados: number | null
+          nome_cliente: string | null
+          nota_media: number | null
+          total_leads: number | null
+          valor_total_conversoes: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
