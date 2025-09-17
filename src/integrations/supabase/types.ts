@@ -123,6 +123,61 @@ export type Database = {
           },
         ]
       }
+      client_accounts: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          id: string
+          observacoes: string | null
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "leads_stats"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           alerta_saldo_baixo: number | null
@@ -486,6 +541,127 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      public_client_registrations: {
+        Row: {
+          campanhas_ativas: boolean | null
+          campanhas_detalhes: string | null
+          cidade_regiao: string
+          client_id: string | null
+          cnpj_creci: string | null
+          created_at: string
+          crm_utilizado: string | null
+          diferenciais: string | null
+          email: string
+          forma_receber_relatorios: string | null
+          id: string
+          instagram: string | null
+          meta_mensal_vendas: number | null
+          nome_completo: string
+          nome_gestor_marketing: string | null
+          nome_imobiliaria: string
+          num_imoveis_ativos: number | null
+          objetivos_marketing: string | null
+          observacoes_adicionais: string | null
+          pixel_analytics_configurado: boolean | null
+          processed_at: string | null
+          publico_alvo: string
+          redes_sociais_adicionais: string[] | null
+          site_institucional: string | null
+          status: string | null
+          telefone: string
+          ticket_medio: number | null
+          tipo_imoveis: string
+          updated_at: string
+          valor_mensal_anuncios: number | null
+        }
+        Insert: {
+          campanhas_ativas?: boolean | null
+          campanhas_detalhes?: string | null
+          cidade_regiao: string
+          client_id?: string | null
+          cnpj_creci?: string | null
+          created_at?: string
+          crm_utilizado?: string | null
+          diferenciais?: string | null
+          email: string
+          forma_receber_relatorios?: string | null
+          id?: string
+          instagram?: string | null
+          meta_mensal_vendas?: number | null
+          nome_completo: string
+          nome_gestor_marketing?: string | null
+          nome_imobiliaria: string
+          num_imoveis_ativos?: number | null
+          objetivos_marketing?: string | null
+          observacoes_adicionais?: string | null
+          pixel_analytics_configurado?: boolean | null
+          processed_at?: string | null
+          publico_alvo: string
+          redes_sociais_adicionais?: string[] | null
+          site_institucional?: string | null
+          status?: string | null
+          telefone: string
+          ticket_medio?: number | null
+          tipo_imoveis: string
+          updated_at?: string
+          valor_mensal_anuncios?: number | null
+        }
+        Update: {
+          campanhas_ativas?: boolean | null
+          campanhas_detalhes?: string | null
+          cidade_regiao?: string
+          client_id?: string | null
+          cnpj_creci?: string | null
+          created_at?: string
+          crm_utilizado?: string | null
+          diferenciais?: string | null
+          email?: string
+          forma_receber_relatorios?: string | null
+          id?: string
+          instagram?: string | null
+          meta_mensal_vendas?: number | null
+          nome_completo?: string
+          nome_gestor_marketing?: string | null
+          nome_imobiliaria?: string
+          num_imoveis_ativos?: number | null
+          objetivos_marketing?: string | null
+          observacoes_adicionais?: string | null
+          pixel_analytics_configurado?: boolean | null
+          processed_at?: string | null
+          publico_alvo?: string
+          redes_sociais_adicionais?: string[] | null
+          site_institucional?: string | null
+          status?: string | null
+          telefone?: string
+          ticket_medio?: number | null
+          tipo_imoveis?: string
+          updated_at?: string
+          valor_mensal_anuncios?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_client_registrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "public_client_registrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_client_registrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "leads_stats"
+            referencedColumns: ["client_id"]
+          },
+        ]
       }
       relatorio_config: {
         Row: {
