@@ -21,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
-import { ManagersSection } from "@/components/managers/ManagersSection";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ClienteFormData } from "@/types/client";
@@ -288,9 +287,6 @@ const handleSaveClient = async (clientData: ClienteFormData) => {
             ))}
           </div>
         </div>
-
-        {/* Seção de Gestores */}
-        <ManagersSection />
 
         {/* Tabela simples */}
         <Card className="surface-elevated">

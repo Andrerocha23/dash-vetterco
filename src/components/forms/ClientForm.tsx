@@ -39,6 +39,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { managersService } from "@/services/managersService";
 
 const clientSchema = z.object({
   // Informações Básicas
@@ -117,11 +118,6 @@ interface ClientFormProps {
   isSubmitting?: boolean;
 }
 
-const mockGestores = [
-  { id: "gest1", nome: "Sarah Chen", avatar: "👩‍💼" },
-  { id: "gest2", nome: "Marcus Johnson", avatar: "👨‍💼" },
-  { id: "gest3", nome: "Elena Rodriguez", avatar: "👩‍💼" },
-];
 
 const mockTemplates = [
   { id: "tpl1", nome: "Relatório Diário", categoria: "Relatórios" },
@@ -139,6 +135,8 @@ export function ClientForm({
 }: ClientFormProps) {
   const { toast } = useToast();
   const [showPasswordFields, setShowPasswordFields] = useState<Record<string, boolean>>({});
+  const [availableManagers, setAvailableManagers] = useState<any[]>([]);
+  const [loadingManagers, setLoadingManagers] = useState(true);
   const [sectionStates, setSectionStates] = useState({
     basico: true,
     meta: client?.usaMetaAds || false,
@@ -220,6 +218,28 @@ export function ClientForm({
   const typebotAtivo = form.watch("typebotAtivo");
   const budgetMeta = form.watch("budgetMensalMeta");
   const budgetGoogle = form.watch("budgetMensalGoogle");
+
+  // Load managers
+  useEffect(() => {
+    const loadManagers = async () => {
+      try {
+        setLoadingManagers(true);
+        const managers = await managersService.getManagersForSelect();
+        setAvailableManagers(managers);
+      } catch (error) {
+        console.error('Error loading managers:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os gestores",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingManagers(false);
+      }
+    };
+
+    loadManagers();
+  }, []);
 
   // Track dirty state
   const { isDirty } = form.formState;
@@ -369,18 +389,37 @@ export function ClientForm({
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Selecione um gestor" />
+                                    <SelectValue placeholder={loadingManagers ? "Carregando..." : "Selecione um gestor"} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {mockGestores.map((gestor) => (
-                                    <SelectItem key={gestor.id} value={gestor.id}>
+                                  {availableManagers.map((manager) => (
+                                    <SelectItem key={manager.id} value={manager.id}>
                                       <div className="flex items-center gap-2">
-                                        <span>{gestor.avatar}</span>
-                                        <span>{gestor.nome}</span>
+                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs">
+                                          {manager.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">{manager.name}</span>
+                                          {manager.department && (
+                                            <span className="text-xs text-muted-foreground ml-1">
+                                              ({manager.department})
+                                            </span>
+                                          )}
+                                          {manager.clientsCount !== undefined && (
+                                            <span className="text-xs text-muted-foreground ml-1">
+                                              - {manager.clientsCount} cliente{manager.clientsCount !== 1 ? 's' : ''}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </SelectItem>
                                   ))}
+                                  {availableManagers.length === 0 && !loadingManagers && (
+                                    <SelectItem value="none" disabled>
+                                      Nenhum gestor disponível
+                                    </SelectItem>
+                                  )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
