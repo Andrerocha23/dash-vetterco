@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
+import { AccountsSection } from "@/components/accounts/AccountsSection";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ClienteFormData } from "@/types/client";
@@ -496,68 +497,94 @@ export default function ClientDetail() {
           </Card>
         </div>
 
-        {/* Campanhas Recentes */}
-        <Card className="surface-elevated">
-          <CardHeader>
-            <CardTitle>Campanhas Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {campaigns.length === 0 ? (
-              <div className="text-center py-8">
-                <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
-                <p className="text-muted-foreground">
-                  As campanhas deste cliente aparecerão aqui quando houver dados disponíveis.
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Campanha</TableHead>
-                    <TableHead>Plataforma</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Leads</TableHead>
-                    <TableHead>Gasto</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaigns.slice(0, 10).map((campaign) => (
-                    <TableRow key={campaign.id}>
-                      <TableCell>
-                        <div className="font-medium">{campaign.campaign_name}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={
-                          campaign.platform === 'Meta' 
-                            ? 'border-blue-500 text-blue-600 bg-blue-50'
-                            : 'border-red-500 text-red-600 bg-red-50'
-                        }>
-                          {campaign.platform}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(campaign.date).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell>{campaign.leads_count}</TableCell>
-                      <TableCell>{formatCurrency(campaign.spend)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={
-                          campaign.kanban_status === 'Concluído' 
-                            ? 'border-green-500 text-green-600 bg-green-50'
-                            : 'border-yellow-500 text-yellow-600 bg-yellow-50'
-                        }>
-                          {campaign.kanban_status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        {/* Tabs para diferentes seções */}
+        <Tabs defaultValue="campaigns" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+            <TabsTrigger value="accounts">Contas</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="campaigns" className="space-y-4">
+            <Card className="surface-elevated">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Campanhas Recentes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {campaigns.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma campanha encontrada</p>
+                    <p className="text-sm">As campanhas aparecerão aqui quando disponíveis</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Campanha</TableHead>
+                          <TableHead>Platform</TableHead>
+                          <TableHead>Leads</TableHead>
+                          <TableHead>Gasto</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {campaigns.slice(0, 10).map((campaign) => (
+                          <TableRow key={`${campaign.date}-${campaign.campaign_id}`}>
+                            <TableCell>
+                              {new Date(campaign.date).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium">{campaign.campaign_name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                ID: {campaign.campaign_id}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant="outline"
+                                className={
+                                  campaign.platform === 'Meta' 
+                                    ? 'border-blue-500 text-blue-600' 
+                                    : 'border-red-500 text-red-600'
+                                }
+                              >
+                                {campaign.platform}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{campaign.leads_count}</TableCell>
+                            <TableCell>{formatCurrency(campaign.spend)}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                className={
+                                  campaign.feedback_status === 'Aprovado' 
+                                    ? 'bg-green-500/20 text-green-600' 
+                                    : campaign.feedback_status === 'Pendente'
+                                    ? 'bg-yellow-500/20 text-yellow-600'
+                                    : 'bg-gray-500/20 text-gray-600'
+                                }
+                              >
+                                {campaign.feedback_status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="accounts" className="space-y-4">
+            <AccountsSection clientId={client.id} />
+          </TabsContent>
+        </Tabs>
 
         {/* Modal de Edição */}
         <ClienteFormModal

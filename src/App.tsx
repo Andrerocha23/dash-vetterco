@@ -22,6 +22,8 @@ import Feedbacks from "./pages/Feedbacks";
 import RelatorioN8n from "./pages/RelatorioN8n";
 import NotFound from "./pages/NotFound";
 import MetaConfigPage from './pages/MetaConfigPage';
+import PublicClientRegistration from './pages/PublicClientRegistration';
+import ClientRegistrations from './pages/ClientRegistrations';
 
 const queryClient = new QueryClient();
 
@@ -123,6 +125,12 @@ const App = () => (
             <Route path="/relatorio-n8n" element={
               <ProtectedRoute>
                 <RelatorioN8n />
+              </ProtectedRoute>
+            } />
+            <Route path="/cadastro-cliente" element={<PublicClientRegistration />} />
+            <Route path="/cadastros" element={
+              <ProtectedRoute>
+                <ClientRegistrations />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

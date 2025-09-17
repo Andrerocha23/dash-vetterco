@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
 import { useToast } from "@/hooks/use-toast";
+import { useClientManagers } from "@/hooks/useClientManagers";
 import { supabase } from "@/integrations/supabase/client";
 import { ClienteFormData } from "@/types/client";
 
@@ -47,6 +48,7 @@ interface ClientDisplay {
 export default function Clients() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { managers, getManagerName, getManagerAvatar } = useClientManagers();
   
   const [clients, setClients] = useState<ClientDisplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,10 @@ export default function Clients() {
       const transformedClients: ClientDisplay[] = (data || []).map(client => ({
         id: client.id,
         name: client.nome_cliente,
-        manager: gestores[client.gestor_id as keyof typeof gestores] || gestores['gest1'],
+        manager: { 
+          name: getManagerName(client.gestor_id),
+          avatar: getManagerAvatar(client.gestor_id)
+        },
         channels: client.canais as ('Meta' | 'Google')[],
         status: client.status === 'Ativo' ? 'Active' : 
                client.status === 'Pausado' ? 'Paused' : 'Archived',
@@ -351,7 +356,9 @@ const handleSaveClient = async (clientData: ClienteFormData) => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{client.manager.avatar}</span>
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                            {client.manager.avatar}
+                          </div>
                           <span className="font-medium">{client.manager.name}</span>
                         </div>
                       </TableCell>
