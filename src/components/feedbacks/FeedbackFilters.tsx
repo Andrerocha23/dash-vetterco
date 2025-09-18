@@ -10,6 +10,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { LeadFilters, LeadStatus, Origem } from "@/types/feedback";
+import { useClientManagers } from "@/hooks/useClientManagers";
 
 interface FeedbackFiltersProps {
   filters: LeadFilters;
@@ -22,12 +23,9 @@ const contasMock = [
   { id: "cli_003", nome: "Imóveis Beta" }
 ];
 
-const gestoresMock = [
-  { id: "usr_002", nome: "Carlos Silva" },
-  { id: "usr_003", nome: "Ana Santos" }
-];
-
 export function FeedbackFilters({ filters, onFiltersChange }: FeedbackFiltersProps) {
+  const { managers, loading: loadingManagers } = useClientManagers();
+  
   const updateFilter = (key: keyof LeadFilters, value: string) => {
     onFiltersChange({ ...filters, [key]: value || undefined });
   };
@@ -91,9 +89,10 @@ export function FeedbackFilters({ filters, onFiltersChange }: FeedbackFiltersPro
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {gestoresMock.map(gestor => (
-                <SelectItem key={gestor.id} value={gestor.id}>{gestor.nome}</SelectItem>
+              {!loadingManagers && managers.map(manager => (
+                <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
               ))}
+              {loadingManagers && <SelectItem value="loading" disabled>Carregando...</SelectItem>}
             </SelectContent>
           </Select>
         </div>
@@ -166,9 +165,10 @@ export function FeedbackFilters({ filters, onFiltersChange }: FeedbackFiltersPro
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      {gestoresMock.map(gestor => (
-                        <SelectItem key={gestor.id} value={gestor.id}>{gestor.nome}</SelectItem>
+                      {!loadingManagers && managers.map(manager => (
+                        <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
                       ))}
+                      {loadingManagers && <SelectItem value="loading" disabled>Carregando...</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>

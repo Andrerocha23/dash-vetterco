@@ -23,6 +23,7 @@ import { AccountsSection } from "@/components/accounts/AccountsSection";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ClienteFormData } from "@/types/client";
+import { useClientManagers } from "@/hooks/useClientManagers";
 
 // Interfaces
 interface ClientData {
@@ -58,17 +59,12 @@ interface CampaignStats {
   qualificationRate: number;
 }
 
-// Dados dos gestores
-const gestores = {
-  'gest1': { id: 'gest1', name: 'Carlos Silva', avatar: '👨‍💼' },
-  'gest2': { id: 'gest2', name: 'Ana Costa', avatar: '👩‍💼' },
-  'gest3': { id: 'gest3', name: 'João Santos', avatar: '🧑‍💼' },
-};
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { getManagerName, getManagerAvatar } = useClientManagers();
   
   const [client, setClient] = useState<ClientData | null>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -305,7 +301,8 @@ export default function ClientDetail() {
     );
   }
 
-  const manager = gestores[client.gestor_id as keyof typeof gestores] || gestores['gest1'];
+  const managerName = getManagerName(client.gestor_id);
+  const managerAvatar = getManagerAvatar(client.gestor_id);
 
   return (
     <AppLayout>
@@ -330,10 +327,10 @@ export default function ClientDetail() {
               </div>
             </div>
             <div className="flex items-center gap-4 text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <span className="text-lg">{manager.avatar}</span>
-                Gerenciado por {manager.name}
-              </span>
+               <span className="flex items-center gap-2">
+                 <span className="text-lg">{managerAvatar}</span>
+                 Gerenciado por {managerName}
+               </span>
               <span>•</span>
               <span>{client.nome_empresa}</span>
               <span>•</span>

@@ -8,6 +8,7 @@ import { MobileTableCard } from "@/components/ui/mobile-table-card";
 import { Lead } from "@/types/feedback";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useClientManagers } from "@/hooks/useClientManagers";
 
 interface FeedbackTableProps {
   leads: Lead[];
@@ -35,12 +36,9 @@ const contasMock = [
   { id: "cli_003", nome: "Imóveis Beta" }
 ];
 
-const gestoresMock = [
-  { id: "usr_002", nome: "Carlos Silva" },
-  { id: "usr_003", nome: "Ana Santos" }
-];
 
 export function FeedbackTable({ leads, loading, onOpenFeedback }: FeedbackTableProps) {
+  const { managers, getManagerName } = useClientManagers();
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
@@ -65,7 +63,7 @@ export function FeedbackTable({ leads, loading, onOpenFeedback }: FeedbackTableP
         ) : (
           leads.map((lead) => {
             const conta = contasMock.find(c => c.id === lead.contaId);
-            const responsavel = gestoresMock.find(g => g.id === lead.responsavelId);
+            const responsavel = lead.responsavelId ? getManagerName(lead.responsavelId) : null;
             
             return (
               <MobileTableCard
@@ -106,12 +104,12 @@ export function FeedbackTable({ leads, loading, onOpenFeedback }: FeedbackTableP
                   {responsavel && (
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Responsável:</span>
-                      <Avatar className="w-4 h-4">
-                        <AvatarFallback className="text-xs">
-                          {responsavel.nome.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{responsavel.nome}</span>
+                       <Avatar className="w-4 h-4">
+                         <AvatarFallback className="text-xs">
+                           {responsavel.split(' ').map((n: string) => n[0]).join('')}
+                         </AvatarFallback>
+                       </Avatar>
+                       <span>{responsavel}</span>
                     </div>
                   )}
                   {lead.feedback ? (
@@ -167,7 +165,7 @@ export function FeedbackTable({ leads, loading, onOpenFeedback }: FeedbackTableP
             ) : (
               leads.map((lead) => {
                 const conta = contasMock.find(c => c.id === lead.contaId);
-                const responsavel = gestoresMock.find(g => g.id === lead.responsavelId);
+                const responsavel = lead.responsavelId ? getManagerName(lead.responsavelId) : null;
                 
                 return (
                   <TableRow key={lead.id}>
@@ -213,12 +211,12 @@ export function FeedbackTable({ leads, loading, onOpenFeedback }: FeedbackTableP
                     <TableCell>
                       {responsavel && (
                         <div className="flex items-center gap-2">
-                          <Avatar className="w-6 h-6">
-                            <AvatarFallback className="text-xs">
-                              {responsavel.nome.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">{responsavel.nome}</span>
+                           <Avatar className="w-6 h-6">
+                             <AvatarFallback className="text-xs">
+                               {responsavel.split(' ').map((n: string) => n[0]).join('')}
+                             </AvatarFallback>
+                           </Avatar>
+                           <span className="text-sm">{responsavel}</span>
                         </div>
                       )}
                     </TableCell>

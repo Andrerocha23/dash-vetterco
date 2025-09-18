@@ -39,7 +39,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { managersService } from "@/services/managersService";
+import { ManagerSelect } from "@/components/managers/ManagerSelect";
 
 const clientSchema = z.object({
   // Informações Básicas
@@ -135,8 +135,6 @@ export function ClientForm({
 }: ClientFormProps) {
   const { toast } = useToast();
   const [showPasswordFields, setShowPasswordFields] = useState<Record<string, boolean>>({});
-  const [availableManagers, setAvailableManagers] = useState<any[]>([]);
-  const [loadingManagers, setLoadingManagers] = useState(true);
   const [sectionStates, setSectionStates] = useState({
     basico: true,
     meta: client?.usaMetaAds || false,
@@ -219,27 +217,6 @@ export function ClientForm({
   const budgetMeta = form.watch("budgetMensalMeta");
   const budgetGoogle = form.watch("budgetMensalGoogle");
 
-  // Load managers
-  useEffect(() => {
-    const loadManagers = async () => {
-      try {
-        setLoadingManagers(true);
-        const managers = await managersService.getManagersForSelect();
-        setAvailableManagers(managers);
-      } catch (error) {
-        console.error('Error loading managers:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar os gestores",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingManagers(false);
-      }
-    };
-
-    loadManagers();
-  }, []);
 
   // Track dirty state
   const { isDirty } = form.formState;
@@ -415,7 +392,7 @@ export function ClientForm({
                                       </div>
                                     </SelectItem>
                                   ))}
-                                  {availableManagers.length === 0 && !loadingManagers && (
+                                  {["Cartão de Crédito", "Pix", "Boleto", "Transferência"].length === 0 && (
                                     <SelectItem value="none" disabled>
                                       Nenhum gestor disponível
                                     </SelectItem>
