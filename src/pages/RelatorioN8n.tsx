@@ -137,12 +137,6 @@ export default function RelatorioN8n() {
           </div>
         </div>
 
-        {/* Banner informativo */}
-        <Alert>
-          <AlertDescription>
-            Este painel controla apenas a superfície de configuração. O envio real é orquestrado pelo n8n.
-          </AlertDescription>
-        </Alert>
 
         {/* Filtros */}
         <Card className="p-4">
