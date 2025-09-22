@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const n8nService = {
   async listRelatorios(filters: RelatorioFilters = {}): Promise<RelatorioN8n[]> {
-    // Query com JOIN para pegar dados completos
+    // Query simplificada e mais eficiente
     const { data: results, error } = await supabase
       .from('clients')
       .select(`
@@ -14,26 +14,35 @@ export const n8nService = {
         meta_account_id,
         google_ads_id,
         status,
-        relatorio_config:relatorio_config!inner(
+        relatorio_config!inner(
           ativo,
           horario_disparo
-        ),
-        relatorio_disparos!left(
-          status,
-          horario_disparo,
-          data_disparo
         )
       `)
       .eq('status', 'Ativo')
-      .eq('relatorio_disparos.data_disparo', new Date().toISOString().split('T')[0]);
+      .order('nome_cliente');
 
     if (error) {
       throw new Error(`Failed to fetch clients: ${error.message}`);
     }
 
+    // Buscar último disparo separadamente para evitar problemas de JOIN
+    const { data: ultimosDisparos } = await supabase
+      .from('relatorio_disparos')
+      .select('client_id, horario_disparo, status')
+      .order('horario_disparo', { ascending: false });
+
+    // Criar mapa dos últimos disparos por cliente
+    const disparosMap = new Map();
+    ultimosDisparos?.forEach(disparo => {
+      if (!disparosMap.has(disparo.client_id)) {
+        disparosMap.set(disparo.client_id, disparo);
+      }
+    });
+
     let relatorios: RelatorioN8n[] = (results || []).map(client => {
       const config = Array.isArray(client.relatorio_config) ? client.relatorio_config[0] : client.relatorio_config;
-      const disparo = Array.isArray(client.relatorio_disparos) ? client.relatorio_disparos[0] : client.relatorio_disparos;
+      const ultimoDisparo = disparosMap.get(client.id);
       
       return {
         contaId: client.id,
@@ -41,10 +50,9 @@ export const n8nService = {
         idGrupo: client.id_grupo || "",
         metaAccountId: client.meta_account_id || "",
         googleAdsId: client.google_ads_id || "",
-        ativo: config?.ativo ?? false,
-        ultimoEnvio: disparo?.horario_disparo || null,
-        statusEnvio: disparo?.status || null,
-        horarioPadrao: config?.horario_disparo || "09:00"
+        ativo: config?.ativo ?? true,
+        ultimoEnvio: ultimoDisparo?.horario_disparo || null,
+        horarioPadrao: config?.horario_disparo?.toString().slice(0, 5) || "09:00"
       };
     });
 
@@ -53,9 +61,9 @@ export const n8nService = {
       const searchTerm = filters.busca.toLowerCase();
       relatorios = relatorios.filter(relatorio =>
         relatorio.contaNome.toLowerCase().includes(searchTerm) ||
-        relatorio.idGrupo.includes(searchTerm) ||
-        (relatorio.metaAccountId && relatorio.metaAccountId.includes(searchTerm)) ||
-        (relatorio.googleAdsId && relatorio.googleAdsId.includes(searchTerm))
+        relatorio.idGrupo.toLowerCase().includes(searchTerm) ||
+        (relatorio.metaAccountId && relatorio.metaAccountId.toLowerCase().includes(searchTerm)) ||
+        (relatorio.googleAdsId && relatorio.googleAdsId.toLowerCase().includes(searchTerm))
       );
     }
     
@@ -64,7 +72,7 @@ export const n8nService = {
       relatorios = relatorios.filter(relatorio => relatorio.ativo === isAtivo);
     }
     
-    return relatorios.sort((a, b) => a.contaNome.localeCompare(b.contaNome));
+    return relatorios;
   },
 
   async toggleAtivo(contaId: string): Promise<boolean> {
@@ -123,13 +131,12 @@ export const n8nService = {
   },
 
   async configurarDisparo(contaId: string, payload: ConfigurarDisparoPayload): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
     // Atualizar o id_grupo na tabela clients
     const { error: clientError } = await supabase
       .from('clients')
       .update({
         id_grupo: payload.idGrupo,
+        updated_at: new Date().toISOString()
       })
       .eq('id', contaId);
 
@@ -137,17 +144,39 @@ export const n8nService = {
       throw new Error(`Failed to update client: ${clientError.message}`);
     }
 
-    // Atualizar horário na configuração
-    const { error: configError } = await supabase
+    // Atualizar horário na configuração - verificar se existe primeiro
+    const { data: existingConfig } = await supabase
       .from('relatorio_config')
-      .update({
-        horario_disparo: payload.horarioPadrao,
-        updated_at: new Date().toISOString()
-      })
-      .eq('client_id', contaId);
+      .select('id')
+      .eq('client_id', contaId)
+      .single();
 
-    if (configError) {
-      throw new Error(`Failed to update config: ${configError.message}`);
+    if (existingConfig) {
+      // Atualizar configuração existente
+      const { error: configError } = await supabase
+        .from('relatorio_config')
+        .update({
+          horario_disparo: payload.horarioPadrao + ':00',
+          updated_at: new Date().toISOString()
+        })
+        .eq('client_id', contaId);
+
+      if (configError) {
+        throw new Error(`Failed to update config: ${configError.message}`);
+      }
+    } else {
+      // Criar nova configuração se não existir
+      const { error: insertError } = await supabase
+        .from('relatorio_config')
+        .insert({
+          client_id: contaId,
+          horario_disparo: payload.horarioPadrao + ':00',
+          ativo: true
+        });
+
+      if (insertError) {
+        throw new Error(`Failed to create config: ${insertError.message}`);
+      }
     }
   }
 };
