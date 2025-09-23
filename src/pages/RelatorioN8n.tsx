@@ -131,10 +131,6 @@ export default function RelatorioN8n() {
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Relatório n8n</h1>
-            <p className="text-muted-foreground">Configuração de disparos automáticos por conta</p>
-          </div>
         </div>
 
 
