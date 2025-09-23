@@ -199,7 +199,7 @@ export default function RelatorioN8n() {
                         </Avatar>
                         <div>
                           <div className="font-medium">{relatorio.contaNome}</div>
-                          <div className="text-sm text-muted-foreground">ID: {relatorio.contaId}</div>
+                          <div className="text-xs text-muted-foreground">ID: {relatorio.contaId}</div>
                         </div>
                       </div>
                     </TableCell>
