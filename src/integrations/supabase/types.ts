@@ -121,6 +121,13 @@ export type Database = {
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
+          {
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "relatorio_n8n_consolidated"
+            referencedColumns: ["conta_id"]
+          },
         ]
       }
       client_accounts: {
@@ -175,6 +182,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "relatorio_n8n_consolidated"
+            referencedColumns: ["conta_id"]
           },
         ]
       }
@@ -477,6 +491,13 @@ export type Database = {
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "relatorio_n8n_consolidated"
+            referencedColumns: ["conta_id"]
+          },
         ]
       }
       managers: {
@@ -661,6 +682,13 @@ export type Database = {
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
+          {
+            foreignKeyName: "public_client_registrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "relatorio_n8n_consolidated"
+            referencedColumns: ["conta_id"]
+          },
         ]
       }
       relatorio_config: {
@@ -712,6 +740,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "relatorio_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "relatorio_n8n_consolidated"
+            referencedColumns: ["conta_id"]
           },
         ]
       }
@@ -771,6 +806,13 @@ export type Database = {
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
+          {
+            foreignKeyName: "relatorio_disparos_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "relatorio_n8n_consolidated"
+            referencedColumns: ["conta_id"]
+          },
         ]
       }
     }
@@ -810,9 +852,68 @@ export type Database = {
         }
         Relationships: []
       }
+      relatorio_n8n_consolidated: {
+        Row: {
+          ativo: boolean | null
+          canal_relatorio: string | null
+          cliente_status: string | null
+          config_atualizado_em: string | null
+          config_criado_em: string | null
+          conta_id: string | null
+          conta_nome: string | null
+          dias_semana: number[] | null
+          email: string | null
+          google_ads_id: string | null
+          horario_padrao: string | null
+          id_grupo: string | null
+          leads_convertidos_30d: number | null
+          meta_account_id: string | null
+          notificacao_erro_sync: boolean | null
+          notificacao_leads_diarios: boolean | null
+          notificacao_saldo_baixo: boolean | null
+          telefone: string | null
+          total_leads_30d: number | null
+          ultimo_envio: string | null
+          ultimo_erro: string | null
+          ultimo_status: string | null
+          valor_conversoes_30d: number | null
+          webhook_google: string | null
+          webhook_meta: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_relatorio_n8n_data: {
+        Args: { client_id_param?: string; only_active?: boolean }
+        Returns: {
+          ativo: boolean
+          canal_relatorio: string
+          cliente_status: string
+          config_atualizado_em: string
+          config_criado_em: string
+          conta_id: string
+          conta_nome: string
+          dias_semana: number[]
+          email: string
+          google_ads_id: string
+          horario_padrao: string
+          id_grupo: string
+          leads_convertidos_30d: number
+          meta_account_id: string
+          notificacao_erro_sync: boolean
+          notificacao_leads_diarios: boolean
+          notificacao_saldo_baixo: boolean
+          telefone: string
+          total_leads_30d: number
+          ultimo_envio: string
+          ultimo_erro: string
+          ultimo_status: string
+          valor_conversoes_30d: number
+          webhook_google: string
+          webhook_meta: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
