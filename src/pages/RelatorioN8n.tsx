@@ -127,6 +127,50 @@ export default function RelatorioN8n() {
     }
   };
 
+  const handleAtivarTodos = async () => {
+    try {
+      const promises = relatorios
+        .filter(rel => !rel.ativo)
+        .map(rel => n8nService.toggleAtivo(rel.contaId));
+      
+      await Promise.all(promises);
+      await loadRelatorios();
+      
+      toast({
+        title: "Sucesso",
+        description: "Todos os relatórios foram ativados"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao ativar relatórios",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDesativarTodos = async () => {
+    try {
+      const promises = relatorios
+        .filter(rel => rel.ativo)
+        .map(rel => n8nService.toggleAtivo(rel.contaId));
+      
+      await Promise.all(promises);
+      await loadRelatorios();
+      
+      toast({
+        title: "Sucesso",
+        description: "Todos os relatórios foram desativados"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao desativar relatórios",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -136,27 +180,49 @@ export default function RelatorioN8n() {
 
         {/* Filtros */}
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por conta ou ID do grupo..."
-                value={filters.busca || ""}
-                onChange={(e) => setFilters({...filters, busca: e.target.value})}
-                className="pl-9"
-              />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por conta ou ID do grupo..."
+                  value={filters.busca || ""}
+                  onChange={(e) => setFilters({...filters, busca: e.target.value})}
+                  className="pl-9"
+                />
+              </div>
+              
+              <Select value={filters.status || "Todos"} onValueChange={(value) => setFilters({...filters, status: value as any})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos">Todos</SelectItem>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
-            <Select value={filters.status || "Todos"} onValueChange={(value) => setFilters({...filters, status: value as any})}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todos">Todos</SelectItem>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Inativo">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* Ações em massa */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAtivarTodos}
+                disabled={loading || relatorios.every(rel => rel.ativo)}
+              >
+                Ativar Todos
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDesativarTodos}
+                disabled={loading || relatorios.every(rel => !rel.ativo)}
+              >
+                Desativar Todos
+              </Button>
+            </div>
           </div>
         </Card>
 
