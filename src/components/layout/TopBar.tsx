@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Bell, Menu, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +24,33 @@ export function TopBar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Sync com o estado da sidebar
+    const saved = localStorage.getItem('sidebar-collapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
+
   const location = useLocation();
   const { user } = useAuth();
+  
+  // Escutar mudanças no localStorage da sidebar
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      setSidebarCollapsed(saved ? JSON.parse(saved) : false);
+    };
+
+    // Escutar mudanças no localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Polling para mudanças locais (mesmo tab)
+    const interval = setInterval(handleStorageChange, 100);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
   
   const getPageInfo = () => {
     const path = location.pathname;
@@ -52,6 +77,7 @@ export function TopBar() {
     if (path.startsWith("/capacitacao")) return "Treinamento da equipe";
     if (path.startsWith("/gestores")) return "Gestão de equipes";
     if (path.startsWith("/usuarios")) return "Controle de acesso";
+    if (path.startsWith("/relatorio-n8n")) return "Relatórios automatizados";
     if (path.startsWith("/configuracao")) return "Configurações do sistema";
     return "";
   };
@@ -95,14 +121,24 @@ export function TopBar() {
 
   return (
     <>
-      {/* Desktop TopBar */}
-      <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-card border-b border-border">
+      {/* Desktop TopBar - Alinhada com sidebar */}
+      <header 
+        className={`
+          hidden lg:flex items-center justify-between h-16 bg-card border-b border-border
+          transition-all duration-500 ease-in-out
+          ${sidebarCollapsed ? 'ml-16' : 'ml-64'}
+        `}
+        style={{ 
+          paddingLeft: '1.5rem',
+          paddingRight: '1.5rem'
+        }}
+      >
         
         {/* Left Section - Page Info */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
             {PageIcon && (
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
                 <PageIcon className="h-5 w-5 text-primary" />
               </div>
             )}
@@ -131,7 +167,7 @@ export function TopBar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
-              className="input-professional pl-9 pr-4 w-80"
+              className="input-professional pl-9 pr-4 w-80 focus:w-96 transition-all duration-300"
             />
           </div>
 
@@ -144,20 +180,20 @@ export function TopBar() {
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="relative hover:bg-muted"
+                className="relative hover:bg-muted transition-all duration-200 hover:scale-105"
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <Badge 
                     variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs animate-pulse"
                   >
                     {unreadCount}
                   </Badge>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-96">
+            <DropdownMenuContent align="end" className="w-96 shadow-xl">
               <DropdownMenuLabel className="flex items-center justify-between">
                 <span>Notificações</span>
                 {unreadCount > 0 && (
@@ -168,12 +204,12 @@ export function TopBar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               
-              <div className="max-h-96 overflow-y-auto">
+              <div className="max-h-96 overflow-y-auto scrollbar-thin">
                 {mockNotifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
-                    className={`flex flex-col items-start p-4 gap-1 ${
-                      notification.unread ? 'bg-primary/5' : ''
+                    className={`flex flex-col items-start p-4 gap-1 hover:bg-muted/50 transition-colors ${
+                      notification.unread ? 'bg-primary/5 border-l-2 border-primary' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between w-full">
@@ -201,7 +237,7 @@ export function TopBar() {
               </div>
               
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-center text-primary cursor-pointer">
+              <DropdownMenuItem className="text-center text-primary cursor-pointer hover:bg-primary/10">
                 Ver todas as notificações
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -210,7 +246,7 @@ export function TopBar() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-3">
+              <Button variant="ghost" className="flex items-center gap-2 px-3 hover:bg-muted transition-all duration-200">
                 <div className="text-right">
                   <p className="text-sm font-medium text-foreground">
                     {user?.user_metadata?.full_name || "Usuário"}
@@ -222,17 +258,17 @@ export function TopBar() {
                 <ChevronDown className="h-4 w-4 text-text-tertiary" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 shadow-xl">
               <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-muted/50">
                 Perfil
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-muted/50">
                 Configurações
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem className="text-destructive hover:bg-destructive/10">
                 Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -240,7 +276,7 @@ export function TopBar() {
         </div>
       </header>
 
-      {/* Mobile TopBar */}
+      {/* Mobile TopBar - Mantém comportamento original */}
       <header className="lg:hidden flex items-center justify-between h-16 px-4 bg-card border-b border-border">
         
         {/* Left Section - Mobile Menu + Title */}

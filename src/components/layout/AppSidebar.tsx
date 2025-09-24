@@ -5,7 +5,6 @@ import {
   ChevronRight,
   LogOut,
   Settings,
-  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -58,20 +57,21 @@ export function AppSidebar({
     <TooltipProvider delayDuration={100}>
       <aside className={`
         hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border
-        transition-all duration-300 ease-in-out relative z-40
+        transition-all duration-500 ease-in-out relative z-40
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}>
         
-        {/* Toggle Button */}
+        {/* Toggle Button - Posicionamento refinado */}
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleCollapse}
           className={`
-            absolute -right-3 top-6 z-50 h-6 w-6 rounded-full 
-            bg-sidebar border border-sidebar-border shadow-md
-            hover:shadow-lg transition-all duration-200
+            absolute -right-3 top-8 z-50 h-6 w-6 rounded-full 
+            bg-sidebar border border-sidebar-border shadow-lg
+            hover:shadow-xl transition-all duration-300
             text-sidebar-foreground hover:bg-sidebar-accent
+            hover:scale-110
           `}
         >
           {isCollapsed ? (
@@ -81,49 +81,37 @@ export function AppSidebar({
           )}
         </Button>
 
-        {/* Header com Logo */}
+        {/* Header com Logo - Layout refinado */}
         <div className={`
           flex items-center border-b border-sidebar-border
-          ${isCollapsed ? 'p-3 justify-center' : 'p-4'}
-          transition-all duration-300
+          transition-all duration-500 ease-in-out
+          ${isCollapsed ? 'p-3 justify-center min-h-[64px]' : 'p-4 min-h-[64px]'}
         `}>
-          <NavLink to="/" className="flex items-center gap-3 group">
-            <div className="flex items-center justify-center">
-              {isCollapsed ? (
-                <div className="h-8 w-8 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                  <span className="text-white font-bold text-sm">V</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                    <span className="text-white font-bold text-sm">V</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-lg text-sidebar-foreground">
-                      {brandName}
-                    </span>
-                    <span className="text-xs text-text-tertiary">
-                      Marketing Dashboard
-                    </span>
-                  </div>
-                </div>
-              )}
+          <NavLink to="/" className="flex items-center gap-3 group w-full">
+            <div className="flex items-center justify-center flex-shrink-0">
+              <div className="h-8 w-8 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
+                <span className="text-white font-bold text-sm">V</span>
+              </div>
+            </div>
+            
+            {/* Texto que desaparece suavemente */}
+            <div className={`
+              flex flex-col overflow-hidden transition-all duration-500 ease-in-out
+              ${isCollapsed ? 'w-0 opacity-0' : 'w-full opacity-100'}
+            `}>
+              <span className="font-bold text-lg text-sidebar-foreground whitespace-nowrap">
+                {brandName}
+              </span>
+              <span className="text-xs text-text-tertiary whitespace-nowrap">
+                Marketing Dashboard
+              </span>
             </div>
           </NavLink>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 overflow-y-auto scrollbar-thin py-4">
-          <div className={`space-y-1 ${isCollapsed ? 'px-2' : 'px-3'}`}>
-            
-            {/* Label de seção - apenas quando expandido */}
-            {!isCollapsed && (
-              <div className="px-3 py-2">
-                <p className="text-overline text-text-muted">
-                  Navegação
-                </p>
-              </div>
-            )}
+        {/* Navigation Menu - SEM o label "Navegação" */}
+        <nav className="flex-1 overflow-y-auto scrollbar-thin py-6">
+          <div className={`space-y-2 transition-all duration-500 ${isCollapsed ? 'px-2' : 'px-3'}`}>
 
             {navigationItems.map((item, index) => {
               const active = isActive(item.url);
@@ -135,11 +123,11 @@ export function AppSidebar({
                       <NavLink
                         to={item.url}
                         className={`
-                          flex items-center justify-center h-11 w-11 mx-auto rounded-xl
-                          transition-all duration-200 group relative
+                          flex items-center justify-center h-12 w-12 mx-auto rounded-xl
+                          transition-all duration-300 ease-out group relative
                           ${active 
-                            ? 'bg-gradient-primary text-white shadow-glow' 
-                            : 'text-text-secondary hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                            ? 'bg-gradient-primary text-white shadow-glow scale-105' 
+                            : 'text-text-secondary hover:bg-sidebar-accent hover:text-sidebar-foreground hover:scale-105'
                           }
                         `}
                       >
@@ -149,7 +137,11 @@ export function AppSidebar({
                         )}
                       </NavLink>
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="font-medium">
+                    <TooltipContent 
+                      side="right" 
+                      className="font-medium shadow-lg border-sidebar-border"
+                      sideOffset={12}
+                    >
                       {item.title}
                     </TooltipContent>
                   </Tooltip>
@@ -161,22 +153,25 @@ export function AppSidebar({
                   key={item.title}
                   to={item.url}
                   className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-xl
-                    transition-all duration-200 group relative overflow-hidden
+                    flex items-center gap-3 px-4 py-3 rounded-xl
+                    transition-all duration-300 ease-out group relative overflow-hidden
                     ${active
-                      ? 'bg-gradient-primary text-white shadow-glow'
-                      : 'text-text-secondary hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                      ? 'bg-gradient-primary text-white shadow-glow scale-[1.02]'
+                      : 'text-text-secondary hover:bg-sidebar-accent hover:text-sidebar-foreground hover:scale-[1.02]'
                     }
                   `}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="font-medium truncate">
+                  <span className={`
+                    font-medium truncate transition-all duration-500
+                    ${isCollapsed ? 'w-0 opacity-0' : 'w-full opacity-100'}
+                  `}>
                     {item.title}
                   </span>
                   
                   {/* Indicador visual para item ativo */}
                   {active && (
-                    <div className="absolute right-2 w-2 h-2 bg-white/80 rounded-full animate-pulse" />
+                    <div className="absolute right-3 w-2 h-2 bg-white/80 rounded-full animate-pulse" />
                   )}
                 </NavLink>
               );
@@ -184,19 +179,19 @@ export function AppSidebar({
           </div>
         </nav>
 
-        {/* Footer com User Info */}
+        {/* Footer com User Info - Melhor transição */}
         <div className={`
           border-t border-sidebar-border bg-sidebar-accent/30
+          transition-all duration-500 ease-in-out
           ${isCollapsed ? 'p-2' : 'p-4'}
-          transition-all duration-300
         `}>
           {isCollapsed ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {/* User Avatar - Collapsed */}
               <Tooltip side="right">
                 <TooltipTrigger asChild>
                   <div className="flex justify-center">
-                    <Avatar className="h-8 w-8 border-2 border-sidebar-border">
+                    <Avatar className="h-10 w-10 border-2 border-sidebar-border hover:scale-105 transition-transform duration-200">
                       <AvatarFallback className="bg-gradient-primary text-white text-xs font-bold">
                         {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || 
                          user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -204,7 +199,7 @@ export function AppSidebar({
                     </Avatar>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="right">
+                <TooltipContent side="right" sideOffset={12}>
                   <div className="text-sm">
                     <div className="font-medium">
                       {user?.user_metadata?.full_name || 'Usuário'}
@@ -223,27 +218,30 @@ export function AppSidebar({
                     variant="ghost"
                     size="icon"
                     onClick={handleLogout}
-                    className="w-8 h-8 mx-auto text-text-secondary hover:text-destructive hover:bg-destructive/10"
+                    className="w-10 h-10 mx-auto text-text-secondary hover:text-destructive hover:bg-destructive/10 hover:scale-105 transition-all duration-200"
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">
-                  Sair
+                <TooltipContent side="right" sideOffset={12}>
+                  Sair do Sistema
                 </TooltipContent>
               </Tooltip>
             </div>
           ) : (
             <div className="space-y-3">
               {/* User Info - Expanded */}
-              <div className="flex items-center gap-3 p-2 rounded-xl bg-sidebar-accent/50">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent/50 hover:bg-sidebar-accent/70 transition-colors duration-200">
                 <Avatar className="h-10 w-10 border-2 border-sidebar-border">
                   <AvatarFallback className="bg-gradient-primary text-white text-sm font-bold">
                     {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || 
                      user?.email?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
+                <div className={`
+                  flex-1 min-w-0 transition-all duration-500
+                  ${isCollapsed ? 'w-0 opacity-0' : 'w-full opacity-100'}
+                `}>
                   <div className="text-sm font-semibold text-sidebar-foreground truncate">
                     {user?.user_metadata?.full_name || 'Usuário'}
                   </div>
@@ -254,11 +252,14 @@ export function AppSidebar({
               </div>
               
               {/* Action Buttons - Expanded */}
-              <div className="flex gap-2">
+              <div className={`
+                flex gap-2 transition-all duration-500
+                ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}
+              `}>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex-1 justify-start gap-2 text-text-secondary hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  className="flex-1 justify-start gap-2 text-text-secondary hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200"
                 >
                   <Settings className="h-4 w-4" />
                   Configurações
@@ -268,7 +269,7 @@ export function AppSidebar({
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  className="px-3 text-text-secondary hover:text-destructive hover:bg-destructive/10"
+                  className="px-3 text-text-secondary hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
