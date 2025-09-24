@@ -501,6 +501,7 @@ export default function RelatorioN8n() {
                       {client.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </div>
                     <div className="min-w-0 flex-1">
+                      {/* Informações básicas */}
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-foreground text-lg truncate">
                           {client.nome_cliente}
@@ -508,53 +509,67 @@ export default function RelatorioN8n() {
                         {getStatusIcon(client)}
                       </div>
                       {client.id_grupo && (
-                        <p className="text-text-tertiary text-sm truncate">
+                        <p className="text-text-tertiary text-sm truncate mb-2">
                           {client.id_grupo}
                         </p>
                       )}
-                      {/* Layout horizontal compacto - igual ao print */}
-                      <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-card border">
-                        <Clock className="h-4 w-4 text-text-muted" />
-                        <span className="text-sm font-medium text-text-secondary">
-                          {client.config?.horario_disparo?.slice(0, 5) || '09:00'}
-                        </span>
-                        <Calendar className="h-4 w-4 text-text-muted ml-2" />
-                        <WeekDaySelector 
-                          selectedDays={client.config?.dias_semana || [1, 2, 3, 4, 5]}
-                          onChange={(days) => handleUpdateDays(client.id, days)}
-                          disabled={!client.config?.ativo}
-                        />
+                      
+                      {/* TUDO EM UMA LINHA SÓ - Ultra compacto */}
+                      <div className="flex items-center gap-4 p-2 rounded-lg bg-card border">
+                        {/* Horário */}
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-text-muted" />
+                          <span className="text-sm font-medium">
+                            {client.config?.horario_disparo?.slice(0, 5) || '09:00'}
+                          </span>
+                        </div>
+                        
+                        {/* Separador */}
+                        <div className="w-px h-4 bg-border"></div>
+                        
+                        {/* Dias da semana */}
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 text-text-muted" />
+                          <WeekDaySelector 
+                            selectedDays={client.config?.dias_semana || [1, 2, 3, 4, 5]}
+                            onChange={(days) => handleUpdateDays(client.id, days)}
+                            disabled={!client.config?.ativo}
+                          />
+                        </div>
+                        
+                        {/* Separador */}
+                        <div className="w-px h-4 bg-border"></div>
+                        
+                        {/* Meta */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-primary"></div>
+                          <span className="font-medium text-sm">Meta</span>
+                          {client.meta_account_id ? (
+                            <Badge variant="secondary" className="text-xs">Config.</Badge>
+                          ) : (
+                            <span className="text-xs text-text-muted">Não config.</span>
+                          )}
+                        </div>
+                        
+                        {/* Separador */}
+                        <div className="w-px h-4 bg-border"></div>
+                        
+                        {/* Google */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-warning"></div>
+                          <span className="font-medium text-sm">Google</span>
+                          {client.google_ads_id ? (
+                            <Badge variant="secondary" className="text-xs">Config.</Badge>
+                          ) : (
+                            <span className="text-xs text-text-muted">Não config.</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Platform Controls - Layout horizontal compacto */}
-                  <div className="flex items-center gap-3">
-                    {/* Status das plataformas em linha */}
-                    <div className="flex items-center gap-3 p-2 rounded-lg bg-card border">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-primary"></div>
-                        <span className="font-medium text-sm">Meta</span>
-                        {client.meta_account_id ? (
-                          <Badge variant="secondary" className="text-xs ml-1">Config.</Badge>
-                        ) : (
-                          <span className="text-xs text-text-muted ml-1">Não config.</span>
-                        )}
-                      </div>
-                      
-                      <div className="w-px h-6 bg-border"></div>
-                      
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-warning"></div>
-                        <span className="font-medium text-sm">Google</span>
-                        {client.google_ads_id ? (
-                          <Badge variant="secondary" className="text-xs ml-1">Config.</Badge>
-                        ) : (
-                          <span className="text-xs text-text-muted ml-1">Não config.</span>
-                        )}
-                      </div>
-                    </div>
-
+                  {/* Apenas os controles finais */}
+                  <div className="flex items-center">
                     {/* Status & Controls - Compacto */}
                     <div className="flex items-center gap-3 p-2 rounded-lg bg-card border">
                       <div className="text-right">
