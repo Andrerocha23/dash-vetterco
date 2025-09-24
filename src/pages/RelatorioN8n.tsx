@@ -494,31 +494,31 @@ export default function RelatorioN8n() {
           {filteredClients.map((client) => (
             <Card key={client.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
               <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  {/* Client Avatar & Info - TUDO EM UMA LINHA */}
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-4">
+                  {/* Lado ESQUERDO - Avatar + Nome/ID vertical */}
+                  <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center text-white font-bold flex-shrink-0">
                       {client.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </div>
-                    
-                    {/* Nome + Status */}
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground text-lg whitespace-nowrap">
-                        {client.nome_cliente}
-                      </h3>
-                      {getStatusIcon(client)}
-                    </div>
-                    
-                    {/* ID do Grupo */}
-                    {client.id_grupo && (
-                      <div className="text-text-tertiary text-sm truncate">
-                        {client.id_grupo}
+                    <div>
+                      {/* Nome + Status */}
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground text-lg">
+                          {client.nome_cliente}
+                        </h3>
+                        {getStatusIcon(client)}
                       </div>
-                    )}
-                    
-                    {/* Separador */}
-                    <div className="w-px h-6 bg-border mx-2"></div>
-                    
+                      {/* ID do Grupo embaixo */}
+                      {client.id_grupo && (
+                        <p className="text-text-tertiary text-sm">
+                          {client.id_grupo}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Lado DIREITO - Todas as informações numa linha */}
+                  <div className="flex items-center gap-4">
                     {/* Horário */}
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-4 w-4 text-text-muted" />
@@ -538,7 +538,7 @@ export default function RelatorioN8n() {
                     </div>
                     
                     {/* Separador */}
-                    <div className="w-px h-6 bg-border mx-2"></div>
+                    <div className="w-px h-6 bg-border"></div>
                     
                     {/* Meta */}
                     <div className="flex items-center gap-1.5">
@@ -561,12 +561,12 @@ export default function RelatorioN8n() {
                         <span className="text-xs text-text-muted whitespace-nowrap">Não config.</span>
                       )}
                     </div>
-                  </div>
-
-                  {/* Apenas os controles finais */}
-                  <div className="flex items-center">
-                    {/* Status & Controls - Compacto */}
-                    <div className="flex items-center gap-3 p-2 rounded-lg bg-card border">
+                    
+                    {/* Separador */}
+                    <div className="w-px h-6 bg-border"></div>
+                    
+                    {/* Status & Controls */}
+                    <div className="flex items-center gap-3">
                       <div className="text-right">
                         <p className="text-xs text-text-muted">Último Envio</p>
                         <p className="text-xs font-medium">
