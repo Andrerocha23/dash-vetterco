@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Search, Bell, Menu } from "lucide-react";
+import React, { useState } from "react";
+import { Search, Bell, Menu, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +12,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { MobilePeriodSelector } from "@/components/ui/mobile-period-selector";
 import { MobileSearchDialog } from "@/components/ui/mobile-search-dialog";
@@ -25,9 +25,9 @@ export function TopBar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   
-  const getPageTitle = () => {
+  const getPageInfo = () => {
     const path = location.pathname;
     const currentItem = navigationItems.find(item => {
       if (item.url === "/dashboard") {
@@ -36,53 +36,102 @@ export function TopBar() {
       return path.startsWith(item.url);
     });
     
-    return currentItem?.title || "Dashboard";
+    return {
+      title: currentItem?.title || "Dashboard",
+      icon: currentItem?.icon,
+      subtitle: getPageSubtitle(path)
+    };
   };
 
-  const getPageIcon = () => {
-    const path = location.pathname;
-    const currentItem = navigationItems.find(item => {
-      if (item.url === "/dashboard") {
-        return path === "/" || path === "/dashboard" || path === "/boards";
-      }
-      return path.startsWith(item.url);
-    });
-    
-    return currentItem?.icon;
+  const getPageSubtitle = (path: string) => {
+    if (path === "/" || path === "/dashboard") return "Visão geral dos dados";
+    if (path.startsWith("/clientes")) return "Gestão de clientes";
+    if (path.startsWith("/analytics")) return "Análise de performance";
+    if (path.startsWith("/feedbacks")) return "Avaliações e comentários";
+    if (path.startsWith("/templates")) return "Biblioteca de mensagens";
+    if (path.startsWith("/capacitacao")) return "Treinamento da equipe";
+    if (path.startsWith("/gestores")) return "Gestão de equipes";
+    if (path.startsWith("/usuarios")) return "Controle de acesso";
+    if (path.startsWith("/configuracao")) return "Configurações do sistema";
+    return "";
   };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    // Handle search logic here
-    console.log("Search query:", query);
+    console.log("Buscar por:", query);
+    // Implementar lógica de busca aqui
   };
 
-  const PageIcon = getPageIcon();
+  const mockNotifications = [
+    {
+      id: 1,
+      title: "Saldo baixo detectado",
+      description: "Cliente Imóveis ABC com saldo abaixo de R$ 100",
+      time: "2 min atrás",
+      type: "warning",
+      unread: true
+    },
+    {
+      id: 2,
+      title: "Novo lead recebido",
+      description: "Lead qualificado para Casa & Cia Imóveis",
+      time: "15 min atrás", 
+      type: "success",
+      unread: true
+    },
+    {
+      id: 3,
+      title: "Relatório processado",
+      description: "Relatório diário enviado com sucesso",
+      time: "1h atrás",
+      type: "info",
+      unread: false
+    }
+  ];
+
+  const unreadCount = mockNotifications.filter(n => n.unread).length;
+  const pageInfo = getPageInfo();
+  const PageIcon = pageInfo.icon;
 
   return (
     <>
       {/* Desktop TopBar */}
-      <div className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200">
+      <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-card border-b border-border">
+        
+        {/* Left Section - Page Info */}
         <div className="flex items-center gap-4">
-          {/* Page Title with Icon */}
-          <div className="flex items-center gap-2">
-            {PageIcon && <PageIcon className="h-5 w-5 text-gray-600" />}
-            <h1 className="text-lg font-semibold text-gray-900">
-              {getPageTitle()}
-            </h1>
+          <div className="flex items-center gap-3">
+            {PageIcon && (
+              <div className="p-2 rounded-lg bg-primary/10">
+                <PageIcon className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                {pageInfo.title}
+              </h1>
+              {pageInfo.subtitle && (
+                <p className="text-sm text-text-secondary">
+                  {pageInfo.subtitle}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* Right Section - Actions */}
         <div className="flex items-center gap-4">
+          
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
             <Input
               type="text"
-              placeholder="Buscar..."
+              placeholder="Buscar clientes, campanhas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 w-64 bg-gray-50 border-gray-200 focus:bg-white"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
+              className="input-professional pl-9 pr-4 w-80"
             />
           </div>
 
@@ -92,49 +141,113 @@ export function TopBar() {
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="relative hover:bg-muted"
+              >
                 <Bell className="h-5 w-5" />
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs"
-                >
-                  3
-                </Badge>
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {unreadCount}
+                  </Badge>
+                )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-96">
+              <DropdownMenuLabel className="flex items-center justify-between">
+                <span>Notificações</span>
+                {unreadCount > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {unreadCount} nova{unreadCount > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <div className="max-h-96 overflow-y-auto">
+                {mockNotifications.map((notification) => (
+                  <DropdownMenuItem
+                    key={notification.id}
+                    className={`flex flex-col items-start p-4 gap-1 ${
+                      notification.unread ? 'bg-primary/5' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between w-full">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${
+                            notification.unread ? 'text-foreground' : 'text-text-secondary'
+                          }`}>
+                            {notification.title}
+                          </span>
+                          {notification.unread && (
+                            <div className="w-2 h-2 bg-primary rounded-full" />
+                          )}
+                        </div>
+                        <p className="text-xs text-text-tertiary mt-1">
+                          {notification.description}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-text-muted">
+                      {notification.time}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-center text-primary cursor-pointer">
+                Ver todas as notificações
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2 px-3">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-foreground">
+                    {user?.user_metadata?.full_name || "Usuário"}
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    Administrador
+                  </p>
+                </div>
+                <ChevronDown className="h-4 w-4 text-text-tertiary" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <div className="font-medium text-sm">Saldo baixo - Cliente ABC</div>
-                  <div className="text-xs text-gray-500">Há 2 horas</div>
-                </div>
+                Perfil
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <div className="font-medium text-sm">Novo lead - Imóveis XYZ</div>
-                  <div className="text-xs text-gray-500">Há 4 horas</div>
-                </div>
+                Configurações
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <div className="font-medium text-sm">Erro de sincronização</div>
-                  <div className="text-xs text-gray-500">Há 6 horas</div>
-                </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive">
+                Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </header>
 
       {/* Mobile TopBar */}
-      <div className="lg:hidden flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200">
+      <header className="lg:hidden flex items-center justify-between h-16 px-4 bg-card border-b border-border">
+        
+        {/* Left Section - Mobile Menu + Title */}
         <div className="flex items-center gap-3">
-          {/* Mobile Menu */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -143,16 +256,17 @@ export function TopBar() {
             </SheetContent>
           </Sheet>
 
-          {/* Page Title */}
           <div className="flex items-center gap-2">
-            {PageIcon && <PageIcon className="h-5 w-5 text-gray-600" />}
-            <h1 className="text-lg font-semibold text-gray-900">
-              {getPageTitle()}
+            {PageIcon && <PageIcon className="h-5 w-5 text-primary" />}
+            <h1 className="text-lg font-semibold text-foreground">
+              {pageInfo.title}
             </h1>
           </div>
         </div>
 
+        {/* Right Section - Mobile Actions */}
         <div className="flex items-center gap-2">
+          
           {/* Mobile Search */}
           <MobileSearchDialog
             open={searchOpen}
@@ -161,7 +275,7 @@ export function TopBar() {
           />
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => setSearchOpen(true)}
           >
             <Search className="h-5 w-5" />
@@ -173,35 +287,31 @@ export function TopBar() {
           {/* Mobile Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="relative">
+              <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs"
-                >
-                  3
-                </Badge>
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs"
+                  >
+                    {unreadCount}
+                  </Badge>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
               <DropdownMenuLabel>Notificações</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <div className="font-medium text-sm">Saldo baixo - Cliente ABC</div>
-                  <div className="text-xs text-gray-500">Há 2 horas</div>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <div className="font-medium text-sm">Novo lead - Imóveis XYZ</div>
-                  <div className="text-xs text-gray-500">Há 4 horas</div>
-                </div>
-              </DropdownMenuItem>
+              {mockNotifications.slice(0, 3).map((notification) => (
+                <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3 gap-1">
+                  <div className="font-medium text-sm">{notification.title}</div>
+                  <div className="text-xs text-text-secondary">{notification.time}</div>
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </header>
     </>
   );
 }
