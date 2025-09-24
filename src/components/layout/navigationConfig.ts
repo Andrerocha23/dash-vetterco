@@ -14,7 +14,6 @@ import { pt } from "@/i18n/pt";
 export const navigationItems = [
   { title: pt.nav.dashboard, url: "/dashboard", icon: LayoutDashboard },
   { title: pt.nav.clients, url: "/clientes", icon: Users },
-  { title: pt.nav.analytics, url: "/analytics", icon: LineChart },
   { title: pt.nav.training, url: "/capacitacao", icon: GraduationCap },
   { title: pt.nav.managers, url: "/gestores", icon: Briefcase },
   { title: pt.nav.users, url: "/usuarios", icon: ShieldCheck },
