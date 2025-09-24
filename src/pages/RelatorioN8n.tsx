@@ -512,89 +512,79 @@ export default function RelatorioN8n() {
                           {client.id_grupo}
                         </p>
                       )}
-                      <div className="flex items-center gap-4 mt-2">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-text-muted" />
-                          <span className="text-sm text-text-secondary">
-                            {client.config?.horario_disparo?.slice(0, 5) || '09:00'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-text-muted" />
-                          <WeekDaySelector 
-                            selectedDays={client.config?.dias_semana || [1, 2, 3, 4, 5]}
-                            onChange={(days) => handleUpdateDays(client.id, days)}
-                            disabled={!client.config?.ativo}
-                          />
-                        </div>
+                      {/* Layout horizontal compacto - igual ao print */}
+                      <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-card border">
+                        <Clock className="h-4 w-4 text-text-muted" />
+                        <span className="text-sm font-medium text-text-secondary">
+                          {client.config?.horario_disparo?.slice(0, 5) || '09:00'}
+                        </span>
+                        <Calendar className="h-4 w-4 text-text-muted ml-2" />
+                        <WeekDaySelector 
+                          selectedDays={client.config?.dias_semana || [1, 2, 3, 4, 5]}
+                          onChange={(days) => handleUpdateDays(client.id, days)}
+                          disabled={!client.config?.ativo}
+                        />
                       </div>
                     </div>
                   </div>
 
-                  {/* Platform Controls - Otimizado */}
-                  <div className="flex items-center gap-4">
-                    {/* Meta Ads */}
-                    <div className="flex flex-col items-center gap-2 p-2 rounded-xl bg-primary/5 border border-primary/20 min-w-[80px]">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-primary"></div>
-                        <span className="font-medium text-xs">Meta</span>
+                  {/* Platform Controls - Layout horizontal compacto */}
+                  <div className="flex items-center gap-3">
+                    {/* Status das plataformas em linha */}
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-card border">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-primary"></div>
+                        <span className="font-medium text-sm">Meta</span>
+                        {client.meta_account_id ? (
+                          <Badge variant="secondary" className="text-xs ml-1">Config.</Badge>
+                        ) : (
+                          <span className="text-xs text-text-muted ml-1">Não config.</span>
+                        )}
                       </div>
-                      {client.meta_account_id ? (
-                        <Badge variant="secondary" className="text-xs">
-                          Configurado
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-text-muted">Não config.</span>
-                      )}
+                      
+                      <div className="w-px h-6 bg-border"></div>
+                      
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-warning"></div>
+                        <span className="font-medium text-sm">Google</span>
+                        {client.google_ads_id ? (
+                          <Badge variant="secondary" className="text-xs ml-1">Config.</Badge>
+                        ) : (
+                          <span className="text-xs text-text-muted ml-1">Não config.</span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Google Ads */}
-                    <div className="flex flex-col items-center gap-2 p-2 rounded-xl bg-warning/5 border border-warning/20 min-w-[80px]">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-warning"></div>
-                        <span className="font-medium text-xs">Google</span>
-                      </div>
-                      {client.google_ads_id ? (
-                        <Badge variant="secondary" className="text-xs">
-                          Configurado
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-text-muted">Não config.</span>
-                      )}
-                    </div>
-
-                    {/* Status & Controls */}
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="text-center">
-                        <p className="text-xs text-text-muted mb-1">Último Envio</p>
+                    {/* Status & Controls - Compacto */}
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-card border">
+                      <div className="text-right">
+                        <p className="text-xs text-text-muted">Último Envio</p>
                         <p className="text-xs font-medium">
                           {formatLastSent(client.ultimo_disparo)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={client.config?.ativo || false}
-                          onCheckedChange={() => handleToggleClient(client.id)}
-                          className="data-[state=checked]:bg-success"
-                        />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2">
-                              <Edit className="h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
-                              <Zap className="h-4 w-4" />
-                              Enviar Agora
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <Switch
+                        checked={client.config?.ativo || false}
+                        onCheckedChange={() => handleToggleClient(client.id)}
+                        className="data-[state=checked]:bg-success"
+                      />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="gap-2">
+                            <Edit className="h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2">
+                            <Zap className="h-4 w-4" />
+                            Enviar Agora
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </div>
