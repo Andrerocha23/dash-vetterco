@@ -26,7 +26,8 @@ import {
   Target,
   Zap,
   RefreshCw,
-  Users
+  Users,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,6 +36,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface ClientReport {
   id: string;
@@ -75,6 +84,9 @@ export default function RelatorioN8n() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [editingClient, setEditingClient] = useState<ClientReport | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [sendingReport, setSendingReport] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Carregar dados reais do banco
@@ -250,39 +262,112 @@ export default function RelatorioN8n() {
     }
   };
 
-  // Atualizar dias da semana
-  const handleUpdateDays = async (clientId: string, newDays: number[]) => {
+  // Enviar relatório agora
+  const handleSendReport = async (clientId: string, clientName: string) => {
     try {
+      setSendingReport(clientId);
+
+      // Registrar disparo no banco
       const { error } = await supabase
-        .from('relatorio_config')
-        .update({ 
-          dias_semana: newDays,
-          updated_at: new Date().toISOString()
-        })
-        .eq('client_id', clientId);
+        .from('relatorio_disparos')
+        .insert({
+          client_id: clientId,
+          data_disparo: new Date().toISOString(),
+          horario_disparo: new Date().toTimeString().slice(0, 8),
+          status: 'enviado',
+          dados_enviados: {
+            trigger: 'manual',
+            user_action: true,
+            timestamp: new Date().toISOString()
+          }
+        });
 
       if (error) throw error;
 
-      // Atualizar estado local
-      setClients(prev => prev.map(client => 
-        client.id === clientId 
-          ? { 
-              ...client, 
-              config: {
-                ...client.config,
-                ativo: client.config?.ativo || false,
-                horario_disparo: client.config?.horario_disparo || '09:00:00',
-                dias_semana: newDays
-              }
-            }
-          : client
-      ));
+      // Recarregar dados para mostrar o último disparo
+      await loadClientsData();
+
+      toast({
+        title: "Relatório enviado!",
+        description: `Relatório de ${clientName} enviado com sucesso`,
+      });
 
     } catch (error) {
-      console.error('Erro ao atualizar dias:', error);
+      console.error('Erro ao enviar relatório:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar os dias",
+        description: "Não foi possível enviar o relatório",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingReport(null);
+    }
+  };
+
+  // Abrir modal de edição
+  const handleEditClient = (client: ClientReport) => {
+    setEditingClient(client);
+    setShowEditModal(true);
+  };
+
+  // Salvar edições do cliente
+  const handleSaveEdit = async (updatedData: {
+    horario_disparo: string;
+    dias_semana: number[];
+    ativo: boolean;
+  }) => {
+    if (!editingClient) return;
+
+    try {
+      // Verificar se já existe config
+      const { data: existingConfig } = await supabase
+        .from('relatorio_config')
+        .select('id')
+        .eq('client_id', editingClient.id)
+        .single();
+
+      if (existingConfig) {
+        // Atualizar existente
+        const { error } = await supabase
+          .from('relatorio_config')
+          .update({
+            horario_disparo: updatedData.horario_disparo + ':00',
+            dias_semana: updatedData.dias_semana,
+            ativo: updatedData.ativo,
+            updated_at: new Date().toISOString()
+          })
+          .eq('client_id', editingClient.id);
+
+        if (error) throw error;
+      } else {
+        // Criar nova config
+        const { error } = await supabase
+          .from('relatorio_config')
+          .insert({
+            client_id: editingClient.id,
+            horario_disparo: updatedData.horario_disparo + ':00',
+            dias_semana: updatedData.dias_semana,
+            ativo: updatedData.ativo
+          });
+
+        if (error) throw error;
+      }
+
+      // Recarregar dados
+      await loadClientsData();
+      setShowEditModal(false);
+      setEditingClient(null);
+
+      toast({
+        title: "Sucesso",
+        description: `Configurações de ${editingClient.nome_cliente} atualizadas`,
+      });
+
+    } catch (error) {
+      console.error('Erro ao salvar edições:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar as alterações",
         variant: "destructive",
       });
     }
@@ -356,6 +441,146 @@ export default function RelatorioN8n() {
     );
   };
 
+  // Atualizar dias da semana inline
+  const handleUpdateDays = async (clientId: string, newDays: number[]) => {
+    try {
+      const { error } = await supabase
+        .from('relatorio_config')
+        .update({ 
+          dias_semana: newDays,
+          updated_at: new Date().toISOString()
+        })
+        .eq('client_id', clientId);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setClients(prev => prev.map(client => 
+        client.id === clientId 
+          ? { 
+              ...client, 
+              config: {
+                ...client.config,
+                ativo: client.config?.ativo || false,
+                horario_disparo: client.config?.horario_disparo || '09:00:00',
+                dias_semana: newDays
+              }
+            }
+          : client
+      ));
+
+    } catch (error) {
+      console.error('Erro ao atualizar dias:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar os dias",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Componente do Modal de Edição
+  const EditClientModal = () => {
+    const [formData, setFormData] = useState({
+      horario_disparo: '',
+      dias_semana: [] as number[],
+      ativo: false
+    });
+
+    useEffect(() => {
+      if (editingClient) {
+        setFormData({
+          horario_disparo: editingClient.config?.horario_disparo?.slice(0, 5) || '09:00',
+          dias_semana: editingClient.config?.dias_semana || [1, 2, 3, 4, 5],
+          ativo: editingClient.config?.ativo || false
+        });
+      }
+    }, [editingClient]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      handleSaveEdit(formData);
+    };
+
+    return (
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Configurações</DialogTitle>
+            <DialogDescription>
+              Configurações de relatório para {editingClient?.nome_cliente}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Status Ativo */}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ativo">Relatórios Ativos</Label>
+              <Switch
+                id="ativo"
+                checked={formData.ativo}
+                onCheckedChange={(checked) => 
+                  setFormData(prev => ({ ...prev, ativo: checked }))
+                }
+              />
+            </div>
+
+            {/* Horário */}
+            <div className="space-y-2">
+              <Label htmlFor="horario">Horário de Disparo</Label>
+              <Input
+                id="horario"
+                type="time"
+                value={formData.horario_disparo}
+                onChange={(e) => 
+                  setFormData(prev => ({ ...prev, horario_disparo: e.target.value }))
+                }
+              />
+            </div>
+
+            {/* Dias da Semana */}
+            <div className="space-y-2">
+              <Label>Dias da Semana</Label>
+              <div className="flex gap-1">
+                {weekDays.map(day => (
+                  <Button
+                    key={day.id}
+                    type="button"
+                    variant={formData.dias_semana.includes(day.id) ? "default" : "outline"}
+                    size="sm"
+                    className="w-8 h-8 p-0 text-xs"
+                    onClick={() => {
+                      const newDays = formData.dias_semana.includes(day.id)
+                        ? formData.dias_semana.filter(d => d !== day.id)
+                        : [...formData.dias_semana, day.id].sort();
+                      setFormData(prev => ({ ...prev, dias_semana: newDays }));
+                    }}
+                  >
+                    {day.short}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex justify-end gap-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Salvar Alterações
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -402,8 +627,22 @@ export default function RelatorioN8n() {
           </div>
         </div>
 
-        {/* Stats Cards - Dados Reais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats Cards - Nova estrutura */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-accent/10">
+                  <Users className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Todos</p>
+                  <p className="text-2xl font-bold text-foreground">{clients.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="surface-elevated">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -421,11 +660,25 @@ export default function RelatorioN8n() {
           <Card className="surface-elevated">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-text-muted/10">
+                  <XCircle className="h-5 w-5 text-text-muted" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Desativados</p>
+                  <p className="text-2xl font-bold text-foreground">{clients.length - totalAtivos}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <BarChart3 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Meta Ads</p>
+                  <p className="text-text-secondary text-sm">Meta</p>
                   <p className="text-2xl font-bold text-foreground">{totalMeta}</p>
                 </div>
               </div>
@@ -439,22 +692,8 @@ export default function RelatorioN8n() {
                   <Target className="h-5 w-5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Google Ads</p>
+                  <p className="text-text-secondary text-sm">Google</p>
                   <p className="text-2xl font-bold text-foreground">{totalGoogle}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-elevated">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-accent/10">
-                  <Users className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <p className="text-text-secondary text-sm">Total Leads</p>
-                  <p className="text-2xl font-bold text-foreground">{totalLeads}</p>
                 </div>
               </div>
             </CardContent>
@@ -585,13 +824,24 @@ export default function RelatorioN8n() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="gap-2">
+                          <DropdownMenuItem 
+                            className="gap-2"
+                            onClick={() => handleEditClient(client)}
+                          >
                             <Edit className="h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2">
-                            <Zap className="h-4 w-4" />
-                            Enviar Agora
+                          <DropdownMenuItem 
+                            className="gap-2"
+                            onClick={() => handleSendReport(client.id, client.nome_cliente)}
+                            disabled={sendingReport === client.id}
+                          >
+                            {sendingReport === client.id ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Zap className="h-4 w-4" />
+                            )}
+                            {sendingReport === client.id ? 'Enviando...' : 'Enviar Agora'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
