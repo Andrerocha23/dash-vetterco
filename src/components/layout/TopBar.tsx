@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Bell, Menu, ChevronDown } from "lucide-react";
+import { Search, Bell, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { MobilePeriodSelector } from "@/components/ui/mobile-period-selector";
 import { MobileSearchDialog } from "@/components/ui/mobile-search-dialog";
@@ -281,16 +281,7 @@ export function TopBar() {
         
         {/* Left Section - Mobile Menu + Title */}
         <div className="flex items-center gap-3">
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-80 p-0">
-              <MobileDrawer onClose={() => setMobileMenuOpen(false)} />
-            </SheetContent>
-          </Sheet>
+          <MobileDrawer />
 
           <div className="flex items-center gap-2">
             {PageIcon && <PageIcon className="h-5 w-5 text-primary" />}

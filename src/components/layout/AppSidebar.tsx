@@ -115,7 +115,7 @@ export function AppSidebar({
               
               if (isCollapsed) {
                 return (
-                  <Tooltip key={item.title} side="right">
+                  <Tooltip key={item.title}>
                     <TooltipTrigger asChild>
                       <NavLink
                         to={item.url}
@@ -185,7 +185,7 @@ export function AppSidebar({
           {isCollapsed ? (
             <div className="space-y-3">
               {/* User Avatar - Collapsed */}
-              <Tooltip side="right">
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex justify-center">
                     <Avatar className="h-10 w-10 border-2 border-sidebar-border hover:scale-105 transition-transform duration-200">
@@ -209,7 +209,7 @@ export function AppSidebar({
               </Tooltip>
 
               {/* Logout Button - Collapsed */}
-              <Tooltip side="right">
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"

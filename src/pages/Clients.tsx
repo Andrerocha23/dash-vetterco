@@ -37,12 +37,13 @@ const gestores = {
 interface ClientDisplay {
   id: string;
   name: string;
-  manager: { name: string; avatar: string };
+  gestorId: string;
   channels: ('Meta' | 'Google')[];
   status: 'Active' | 'Paused' | 'Archived';
   activeCampaigns: number;
   metaBalance: number;
   createdOn: string;
+  rawData: any;
 }
 
 export default function Clients() {
@@ -55,6 +56,8 @@ export default function Clients() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("active");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingClient, setEditingClient] = useState<Partial<ClienteFormData> | null>(null);
 
   // Carregar clientes do banco
   const loadClients = async () => {
@@ -72,16 +75,14 @@ export default function Clients() {
       const transformedClients: ClientDisplay[] = (data || []).map(client => ({
         id: client.id,
         name: client.nome_cliente,
-        manager: { 
-          name: getManagerName(client.gestor_id),
-          avatar: getManagerAvatar(client.gestor_id)
-        },
+        gestorId: client.gestor_id,
         channels: client.canais as ('Meta' | 'Google')[],
         status: client.status === 'Ativo' ? 'Active' : 
                client.status === 'Pausado' ? 'Paused' : 'Archived',
         activeCampaigns: Math.floor(Math.random() * 5) + 1, // Temporário
         metaBalance: (client.saldo_meta || 0) / 100,
         createdOn: client.created_at,
+        rawData: client,
       }));
 
       setClients(transformedClients);
@@ -357,9 +358,9 @@ const handleSaveClient = async (clientData: ClienteFormData) => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                            {client.manager.avatar}
+                            {getManagerAvatar(client.gestorId)}
                           </div>
-                          <span className="font-medium">{client.manager.name}</span>
+                          <span className="font-medium">{getManagerName(client.gestorId)}</span>
                         </div>
                       </TableCell>
                       <TableCell>
