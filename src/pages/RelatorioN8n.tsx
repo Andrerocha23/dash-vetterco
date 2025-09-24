@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Search, 
   Filter, 
@@ -14,20 +16,17 @@ import {
   Settings, 
   Clock, 
   Calendar, 
-  TrendingUp, 
-  TrendingDown,
   CheckCircle, 
   XCircle, 
   AlertTriangle,
   MoreVertical,
-  Play,
-  Pause,
   Edit,
   Trash2,
   BarChart3,
-  DollarSign,
   Target,
-  Zap
+  Zap,
+  RefreshCw,
+  Users
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,81 +36,29 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-// Mock data - substitua pelos dados reais
-const mockClients = [
-  {
-    id: 1,
-    name: "Adde Negócios",
-    initials: "AN",
-    groupId: "123633750611388-group",
-    metaAccountId: null,
-    googleAdsId: null,
-    isActive: false,
-    metaBalance: 0,
-    googleBalance: 0,
-    metaReports: false,
-    googleReports: false,
-    scheduleActive: false,
-    scheduleDays: [1, 2, 3, 4, 5], // Segunda a Sexta
-    scheduleTime: "09:00",
-    lastSent: null,
-    status: "inactive"
-  },
-  {
-    id: 2,
-    name: "Alexandre CHBG",
-    initials: "AC",
-    groupId: "123634023181730-group",
-    metaAccountId: "542336538152315",
-    googleAdsId: null,
-    isActive: true,
-    metaBalance: 1250.50,
-    googleBalance: 0,
-    metaReports: true,
-    googleReports: false,
-    scheduleActive: true,
-    scheduleDays: [1, 2, 3, 4, 5],
-    scheduleTime: "08:30",
-    lastSent: "2025-01-26T08:30:00",
-    status: "active"
-  },
-  {
-    id: 3,
-    name: "ANA LIVIA",
-    initials: "AL",
-    groupId: "123633836413519-group",
-    metaAccountId: "491021061960049",
-    googleAdsId: null,
-    isActive: true,
-    metaBalance: 850.75,
-    googleBalance: 0,
-    metaReports: true,
-    googleReports: false,
-    scheduleActive: true,
-    scheduleDays: [1, 3, 5], // Segunda, Quarta, Sexta
-    scheduleTime: "09:15",
-    lastSent: "2025-01-26T09:15:00",
-    status: "active"
-  },
-  {
-    id: 4,
-    name: "BÁRBARA RICCI",
-    initials: "BR",
-    groupId: "123634110899527-group",
-    metaAccountId: "789842036470494",
-    googleAdsId: null,
-    isActive: true,
-    metaBalance: 2100.00,
-    googleBalance: 0,
-    metaReports: true,
-    googleReports: false,
-    scheduleActive: true,
-    scheduleDays: [1, 2, 3, 4, 5, 6], // Segunda a Sábado
-    scheduleTime: "10:00",
-    lastSent: "2025-01-26T10:00:00",
-    status: "active"
-  }
-];
+interface ClientReport {
+  id: string;
+  nome_cliente: string;
+  nome_empresa?: string;
+  id_grupo?: string;
+  meta_account_id?: string;
+  google_ads_id?: string;
+  status: string;
+  config?: {
+    ativo: boolean;
+    horario_disparo?: string;
+    dias_semana?: number[];
+  };
+  ultimo_disparo?: {
+    data_disparo: string;
+    status: string;
+    mensagem_erro?: string;
+  };
+  stats?: {
+    total_leads: number;
+    leads_convertidos: number;
+  };
+}
 
 const weekDays = [
   { id: 1, short: "S", full: "Segunda" },
@@ -124,72 +71,259 @@ const weekDays = [
 ];
 
 export default function RelatorioN8n() {
-  const [clients, setClients] = useState(mockClients);
+  const [clients, setClients] = useState<ClientReport[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [selectedClients, setSelectedClients] = useState<number[]>([]);
+  const { toast } = useToast();
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.groupId.includes(searchTerm);
-    const matchesFilter = filterStatus === "all" || 
-                         (filterStatus === "active" && client.isActive) ||
-                         (filterStatus === "inactive" && !client.isActive);
-    return matchesSearch && matchesFilter;
-  });
+  // Carregar dados reais do banco
+  const loadClientsData = async () => {
+    try {
+      setLoading(true);
 
-  const handleToggleClient = (clientId: number) => {
-    setClients(prev => prev.map(client => 
-      client.id === clientId 
-        ? { ...client, isActive: !client.isActive, status: !client.isActive ? "active" : "inactive" }
-        : client
-    ));
-  };
+      // Buscar clientes com suas configurações de relatório
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select(`
+          id,
+          nome_cliente,
+          nome_empresa,
+          id_grupo,
+          meta_account_id,
+          google_ads_id,
+          status
+        `)
+        .eq('status', 'Ativo')
+        .order('nome_cliente');
 
-  const handleToggleReports = (clientId: number, type: "meta" | "google") => {
-    setClients(prev => prev.map(client => 
-      client.id === clientId 
-        ? { 
-            ...client, 
-            [type === "meta" ? "metaReports" : "googleReports"]: !client[type === "meta" ? "metaReports" : "googleReports"]
-          }
-        : client
-    ));
-  };
+      if (clientsError) throw clientsError;
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      case "inactive":
-        return <XCircle className="h-4 w-4 text-text-muted" />;
-      case "warning":
-        return <AlertTriangle className="h-4 w-4 text-warning" />;
-      default:
-        return <XCircle className="h-4 w-4 text-text-muted" />;
+      // Buscar configurações de relatório
+      const { data: configsData, error: configsError } = await supabase
+        .from('relatorio_config')
+        .select('*');
+
+      if (configsError) throw configsError;
+
+      // Buscar últimos disparos
+      const { data: disparosData, error: disparosError } = await supabase
+        .from('relatorio_disparos')
+        .select('*')
+        .order('data_disparo', { ascending: false });
+
+      if (disparosError) throw disparosError;
+
+      // Buscar stats dos clientes
+      const { data: statsData, error: statsError } = await supabase
+        .from('leads_stats')
+        .select('client_id, total_leads, leads_convertidos');
+
+      if (statsError) throw statsError;
+
+      // Processar dados
+      const processedClients: ClientReport[] = (clientsData || []).map(client => {
+        const config = configsData?.find(c => c.client_id === client.id);
+        const stats = statsData?.find(s => s.client_id === client.id);
+        
+        // Encontrar último disparo do cliente
+        const ultimoDisparo = disparosData?.find(d => d.client_id === client.id);
+
+        return {
+          id: client.id,
+          nome_cliente: client.nome_cliente,
+          nome_empresa: client.nome_empresa,
+          id_grupo: client.id_grupo,
+          meta_account_id: client.meta_account_id,
+          google_ads_id: client.google_ads_id,
+          status: client.status,
+          config: config ? {
+            ativo: config.ativo || false,
+            horario_disparo: config.horario_disparo,
+            dias_semana: config.dias_semana || [1, 2, 3, 4, 5]
+          } : undefined,
+          ultimo_disparo: ultimoDisparo ? {
+            data_disparo: ultimoDisparo.data_disparo,
+            status: ultimoDisparo.status,
+            mensagem_erro: ultimoDisparo.mensagem_erro
+          } : undefined,
+          stats: stats ? {
+            total_leads: stats.total_leads || 0,
+            leads_convertidos: stats.leads_convertidos || 0
+          } : undefined
+        };
+      });
+
+      setClients(processedClients);
+
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os dados dos relatórios",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatBalance = (balance: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-    }).format(balance);
+  useEffect(() => {
+    loadClientsData();
+  }, []);
+
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = client.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (client.id_grupo && client.id_grupo.includes(searchTerm));
+    const matchesFilter = filterStatus === "all" || 
+                         (filterStatus === "active" && client.config?.ativo) ||
+                         (filterStatus === "inactive" && !client.config?.ativo);
+    return matchesSearch && matchesFilter;
+  });
+
+  // Toggle ativo/inativo
+  const handleToggleClient = async (clientId: string) => {
+    try {
+      const client = clients.find(c => c.id === clientId);
+      const isCurrentlyActive = client?.config?.ativo || false;
+      const newStatus = !isCurrentlyActive;
+
+      // Verificar se já existe config
+      const { data: existingConfig } = await supabase
+        .from('relatorio_config')
+        .select('id')
+        .eq('client_id', clientId)
+        .single();
+
+      if (existingConfig) {
+        // Atualizar existente
+        const { error } = await supabase
+          .from('relatorio_config')
+          .update({ 
+            ativo: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('client_id', clientId);
+
+        if (error) throw error;
+      } else {
+        // Criar nova config
+        const { error } = await supabase
+          .from('relatorio_config')
+          .insert({
+            client_id: clientId,
+            ativo: newStatus,
+            horario_disparo: '09:00:00',
+            dias_semana: [1, 2, 3, 4, 5]
+          });
+
+        if (error) throw error;
+      }
+
+      // Atualizar estado local
+      setClients(prev => prev.map(client => 
+        client.id === clientId 
+          ? { 
+              ...client, 
+              config: {
+                ...client.config,
+                ativo: newStatus,
+                horario_disparo: client.config?.horario_disparo || '09:00:00',
+                dias_semana: client.config?.dias_semana || [1, 2, 3, 4, 5]
+              }
+            }
+          : client
+      ));
+
+      toast({
+        title: "Sucesso",
+        description: `Relatório ${newStatus ? 'ativado' : 'desativado'} para ${client?.nome_cliente}`,
+      });
+
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o status",
+        variant: "destructive",
+      });
+    }
   };
 
-  const formatLastSent = (date: string | null) => {
-    if (!date) return "Nunca enviado";
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(date));
+  // Atualizar dias da semana
+  const handleUpdateDays = async (clientId: string, newDays: number[]) => {
+    try {
+      const { error } = await supabase
+        .from('relatorio_config')
+        .update({ 
+          dias_semana: newDays,
+          updated_at: new Date().toISOString()
+        })
+        .eq('client_id', clientId);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setClients(prev => prev.map(client => 
+        client.id === clientId 
+          ? { 
+              ...client, 
+              config: {
+                ...client.config,
+                ativo: client.config?.ativo || false,
+                horario_disparo: client.config?.horario_disparo || '09:00:00',
+                dias_semana: newDays
+              }
+            }
+          : client
+      ));
+
+    } catch (error) {
+      console.error('Erro ao atualizar dias:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar os dias",
+        variant: "destructive",
+      });
+    }
   };
 
-  const WeekDaySelector = ({ selectedDays, onChange }: { selectedDays: number[], onChange: (days: number[]) => void }) => {
+  const getStatusIcon = (client: ClientReport) => {
+    if (!client.config?.ativo) {
+      return <XCircle className="h-4 w-4 text-text-muted" />;
+    }
+    
+    if (client.ultimo_disparo?.status === 'erro') {
+      return <AlertTriangle className="h-4 w-4 text-warning" />;
+    }
+    
+    return <CheckCircle className="h-4 w-4 text-success" />;
+  };
+
+  const formatLastSent = (ultimoDisparo?: { data_disparo: string; status: string }) => {
+    if (!ultimoDisparo) return "Nunca enviado";
+    
+    try {
+      const date = new Date(ultimoDisparo.data_disparo);
+      return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch {
+      return "Data inválida";
+    }
+  };
+
+  const WeekDaySelector = ({ selectedDays, onChange, disabled = false }: { 
+    selectedDays: number[], 
+    onChange: (days: number[]) => void,
+    disabled?: boolean 
+  }) => {
     const toggleDay = (dayId: number) => {
+      if (disabled) return;
+      
       const newDays = selectedDays.includes(dayId)
         ? selectedDays.filter(d => d !== dayId)
         : [...selectedDays, dayId].sort();
@@ -204,11 +338,12 @@ export default function RelatorioN8n() {
               <Button
                 variant={selectedDays.includes(day.id) ? "default" : "outline"}
                 size="sm"
-                className={`w-8 h-8 p-0 rounded-lg transition-all duration-200 ${
+                disabled={disabled}
+                className={`w-7 h-7 p-0 rounded-lg transition-all duration-200 text-xs ${
                   selectedDays.includes(day.id)
-                    ? "bg-primary text-primary-foreground shadow-glow scale-105"
-                    : "hover:bg-muted hover:scale-105"
-                }`}
+                    ? "bg-primary text-primary-foreground shadow-glow"
+                    : "hover:bg-muted"
+                } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => toggleDay(day.id)}
               >
                 {day.short}
@@ -220,6 +355,25 @@ export default function RelatorioN8n() {
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-text-secondary">Carregando relatórios...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Stats calculadas dos dados reais
+  const totalAtivos = clients.filter(c => c.config?.ativo).length;
+  const totalMeta = clients.filter(c => c.meta_account_id).length;
+  const totalGoogle = clients.filter(c => c.google_ads_id).length;
+  const totalLeads = clients.reduce((sum, c) => sum + (c.stats?.total_leads || 0), 0);
 
   return (
     <AppLayout>
@@ -233,18 +387,22 @@ export default function RelatorioN8n() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              className="gap-2" 
+              onClick={() => loadClientsData()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </Button>
             <Button variant="outline" className="gap-2">
               <Settings className="h-4 w-4" />
               Configurações
             </Button>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Disparo
-            </Button>
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Dados Reais */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="surface-elevated">
             <CardContent className="p-4">
@@ -254,9 +412,7 @@ export default function RelatorioN8n() {
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Ativos</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {clients.filter(c => c.isActive).length}
-                  </p>
+                  <p className="text-2xl font-bold text-foreground">{totalAtivos}</p>
                 </div>
               </div>
             </CardContent>
@@ -270,9 +426,7 @@ export default function RelatorioN8n() {
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Meta Ads</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {clients.filter(c => c.metaReports).length}
-                  </p>
+                  <p className="text-2xl font-bold text-foreground">{totalMeta}</p>
                 </div>
               </div>
             </CardContent>
@@ -286,9 +440,7 @@ export default function RelatorioN8n() {
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Google Ads</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {clients.filter(c => c.googleReports).length}
-                  </p>
+                  <p className="text-2xl font-bold text-foreground">{totalGoogle}</p>
                 </div>
               </div>
             </CardContent>
@@ -298,13 +450,11 @@ export default function RelatorioN8n() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-accent/10">
-                  <DollarSign className="h-5 w-5 text-accent" />
+                  <Users className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Saldo Total</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatBalance(clients.reduce((sum, c) => sum + c.metaBalance + c.googleBalance, 0))}
-                  </p>
+                  <p className="text-text-secondary text-sm">Total Leads</p>
+                  <p className="text-2xl font-bold text-foreground">{totalLeads}</p>
                 </div>
               </div>
             </CardContent>
@@ -318,7 +468,7 @@ export default function RelatorioN8n() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                 <Input
-                  placeholder="Buscar por conta ou ID do grupo..."
+                  placeholder="Buscar por cliente ou ID do grupo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -339,7 +489,7 @@ export default function RelatorioN8n() {
           </CardContent>
         </Card>
 
-        {/* Clients List */}
+        {/* Clients List - Dados Reais */}
         <div className="space-y-4">
           {filteredClients.map((client) => (
             <Card key={client.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
@@ -348,93 +498,68 @@ export default function RelatorioN8n() {
                   {/* Client Avatar & Info */}
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center text-white font-bold flex-shrink-0">
-                      {client.initials}
+                      {client.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-foreground text-lg truncate">
-                          {client.name}
+                          {client.nome_cliente}
                         </h3>
-                        {getStatusIcon(client.status)}
+                        {getStatusIcon(client)}
                       </div>
-                      <p className="text-text-tertiary text-sm truncate">
-                        {client.groupId}
-                      </p>
+                      {client.id_grupo && (
+                        <p className="text-text-tertiary text-sm truncate">
+                          {client.id_grupo}
+                        </p>
+                      )}
                       <div className="flex items-center gap-4 mt-2">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-text-muted" />
                           <span className="text-sm text-text-secondary">
-                            {client.scheduleTime}
+                            {client.config?.horario_disparo?.slice(0, 5) || '09:00'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-text-muted" />
                           <WeekDaySelector 
-                            selectedDays={client.scheduleDays}
-                            onChange={(days) => {
-                              setClients(prev => prev.map(c => 
-                                c.id === client.id ? {...c, scheduleDays: days} : c
-                              ));
-                            }}
+                            selectedDays={client.config?.dias_semana || [1, 2, 3, 4, 5]}
+                            onChange={(days) => handleUpdateDays(client.id, days)}
+                            disabled={!client.config?.ativo}
                           />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Platform Controls */}
-                  <div className="flex items-center gap-6">
+                  {/* Platform Controls - Otimizado */}
+                  <div className="flex items-center gap-4">
                     {/* Meta Ads */}
-                    <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-primary"></div>
-                        <span className="font-medium text-sm">Meta</span>
+                    <div className="flex flex-col items-center gap-2 p-2 rounded-xl bg-primary/5 border border-primary/20 min-w-[80px]">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-primary"></div>
+                        <span className="font-medium text-xs">Meta</span>
                       </div>
-                      {client.metaAccountId ? (
-                        <>
-                          <div className="text-center">
-                            <p className="text-xs text-text-muted">Saldo</p>
-                            <p className="font-semibold text-sm">
-                              {formatBalance(client.metaBalance)}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={client.metaReports}
-                            onCheckedChange={() => handleToggleReports(client.id, "meta")}
-                            className="data-[state=checked]:bg-primary"
-                          />
-                        </>
+                      {client.meta_account_id ? (
+                        <Badge variant="secondary" className="text-xs">
+                          Configurado
+                        </Badge>
                       ) : (
-                        <p className="text-xs text-text-muted text-center">
-                          Não configurado
-                        </p>
+                        <span className="text-xs text-text-muted">Não config.</span>
                       )}
                     </div>
 
                     {/* Google Ads */}
-                    <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-warning/5 border border-warning/20">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-warning"></div>
-                        <span className="font-medium text-sm">Google</span>
+                    <div className="flex flex-col items-center gap-2 p-2 rounded-xl bg-warning/5 border border-warning/20 min-w-[80px]">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-warning"></div>
+                        <span className="font-medium text-xs">Google</span>
                       </div>
-                      {client.googleAdsId ? (
-                        <>
-                          <div className="text-center">
-                            <p className="text-xs text-text-muted">Saldo</p>
-                            <p className="font-semibold text-sm">
-                              {formatBalance(client.googleBalance)}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={client.googleReports}
-                            onCheckedChange={() => handleToggleReports(client.id, "google")}
-                            className="data-[state=checked]:bg-warning"
-                          />
-                        </>
+                      {client.google_ads_id ? (
+                        <Badge variant="secondary" className="text-xs">
+                          Configurado
+                        </Badge>
                       ) : (
-                        <p className="text-xs text-text-muted text-center">
-                          Não configurado
-                        </p>
+                        <span className="text-xs text-text-muted">Não config.</span>
                       )}
                     </div>
 
@@ -443,12 +568,12 @@ export default function RelatorioN8n() {
                       <div className="text-center">
                         <p className="text-xs text-text-muted mb-1">Último Envio</p>
                         <p className="text-xs font-medium">
-                          {formatLastSent(client.lastSent)}
+                          {formatLastSent(client.ultimo_disparo)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch
-                          checked={client.isActive}
+                          checked={client.config?.ativo || false}
                           onCheckedChange={() => handleToggleClient(client.id)}
                           className="data-[state=checked]:bg-success"
                         />
@@ -467,11 +592,6 @@ export default function RelatorioN8n() {
                               <Zap className="h-4 w-4" />
                               Enviar Agora
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2 text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                              Remover
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -484,7 +604,7 @@ export default function RelatorioN8n() {
         </div>
 
         {/* Empty State */}
-        {filteredClients.length === 0 && (
+        {filteredClients.length === 0 && !loading && (
           <Card className="surface-elevated">
             <CardContent className="p-12 text-center">
               <div className="mx-auto mb-4 p-3 bg-muted/30 rounded-full w-fit">
@@ -492,7 +612,7 @@ export default function RelatorioN8n() {
               </div>
               <h3 className="font-semibold text-lg mb-2">Nenhum cliente encontrado</h3>
               <p className="text-text-secondary">
-                Tente ajustar os filtros ou termo de busca
+                {searchTerm ? "Tente ajustar o termo de busca" : "Nenhum cliente ativo no sistema"}
               </p>
             </CardContent>
           </Card>
