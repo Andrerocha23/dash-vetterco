@@ -102,9 +102,6 @@ export function AppSidebar({
               <span className="font-bold text-lg text-sidebar-foreground whitespace-nowrap">
                 {brandName}
               </span>
-              <span className="text-xs text-text-tertiary whitespace-nowrap">
-                Marketing Dashboard
-              </span>
             </div>
           </NavLink>
         </div>
