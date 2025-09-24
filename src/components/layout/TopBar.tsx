@@ -121,12 +121,12 @@ export function TopBar() {
 
   return (
     <>
-      {/* Desktop TopBar - Alinhada com sidebar */}
+      {/* Desktop TopBar - Fixa e alinhada */}
       <header 
         className={`
           hidden lg:flex items-center justify-between h-16 bg-card border-b border-border
-          transition-all duration-500 ease-in-out
-          ${sidebarCollapsed ? 'ml-16' : 'ml-64'}
+          transition-all duration-500 ease-in-out fixed top-0 right-0 z-30
+          ${sidebarCollapsed ? 'left-16' : 'left-64'}
         `}
         style={{ 
           paddingLeft: '1.5rem',

@@ -57,7 +57,7 @@ export function AppSidebar({
     <TooltipProvider delayDuration={100}>
       <aside className={`
         hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border
-        transition-all duration-500 ease-in-out relative z-40
+        transition-all duration-500 ease-in-out fixed left-0 top-0 z-40
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}>
         
