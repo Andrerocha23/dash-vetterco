@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, DollarSign, AlertTriangle, CheckCircle, Clock, TrendingUp } from "lucide-react";
+import { Users, DollarSign, AlertTriangle, CheckCircle, Clock, TrendingUp, Target, BarChart3, Zap, Activity } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { PeriodSelector, Period } from "@/components/dashboard/PeriodSelector";
@@ -22,6 +22,12 @@ interface DashboardStats {
   metaAdsClients: number;
   googleAdsClients: number;
   bothChannelsClients: number;
+  totalLeads: number;
+  convertedLeads: number;
+  totalSpend30d: number;
+  avgCTR: number;
+  avgCPL: number;
+  totalCampaigns: number;
 }
 
 interface Alert {
@@ -53,6 +59,24 @@ export default function Dashboard() {
 
       if (error) throw error;
 
+      // Buscar estatísticas de leads
+      const { data: leadsStats, error: leadsError } = await supabase
+        .from('leads_stats')
+        .select('*');
+
+      if (leadsError) throw leadsError;
+
+      // Buscar dados de campanhas dos últimos 30 dias
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data: campaignData, error: campaignError } = await supabase
+        .from('campaign_leads_daily')
+        .select('*')
+        .gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
+
+      if (campaignError) throw campaignError;
+
       if (!clients || clients.length === 0) {
         setStats({
           totalClients: 0,
@@ -65,6 +89,12 @@ export default function Dashboard() {
           metaAdsClients: 0,
           googleAdsClients: 0,
           bothChannelsClients: 0,
+          totalLeads: 0,
+          convertedLeads: 0,
+          totalSpend30d: 0,
+          avgCTR: 0,
+          avgCPL: 0,
+          totalCampaigns: 0,
         });
         setAlerts([]);
         return;
@@ -93,6 +123,20 @@ export default function Dashboard() {
         return balance < threshold;
       });
 
+      // Calcular leads e conversões
+      const totalLeads = leadsStats?.reduce((sum, s) => sum + (s.total_leads || 0), 0) || 0;
+      const convertedLeads = leadsStats?.reduce((sum, s) => sum + (s.leads_convertidos || 0), 0) || 0;
+
+      // Calcular métricas de campanhas dos últimos 30 dias
+      const totalSpend30d = campaignData?.reduce((sum, c) => sum + (Number(c.spend) || 0), 0) || 0;
+      const totalImpressions = campaignData?.reduce((sum, c) => sum + (c.impressions || 0), 0) || 0;
+      const totalClicks = campaignData?.reduce((sum, c) => sum + (c.clicks || 0), 0) || 0;
+      const totalCampaignLeads = campaignData?.reduce((sum, c) => sum + (c.leads_count || 0), 0) || 0;
+      
+      const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+      const avgCPL = totalCampaignLeads > 0 ? totalSpend30d / totalCampaignLeads : 0;
+      const totalCampaigns = campaignData?.length || 0;
+
       const dashboardStats: DashboardStats = {
         totalClients: clients.length,
         activeClients: activeClients.length,
@@ -104,6 +148,12 @@ export default function Dashboard() {
         metaAdsClients: metaAdsClients.length,
         googleAdsClients: googleAdsClients.length,
         bothChannelsClients: bothChannelsClients.length,
+        totalLeads,
+        convertedLeads,
+        totalSpend30d,
+        avgCTR,
+        avgCPL,
+        totalCampaigns,
       };
 
       setStats(dashboardStats);
@@ -267,7 +317,54 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Segunda linha de KPIs */}
+        {/* Métricas de Performance */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KPICard
+            title="Total de Leads"
+            value={stats?.totalLeads || 0}
+            icon={Target}
+            description={`${stats?.convertedLeads || 0} convertidos`}
+            trend={
+              stats && stats.totalLeads > 0 && stats.convertedLeads > 0
+                ? {
+                    value: Math.round((stats.convertedLeads / stats.totalLeads) * 100),
+                    isPositive: true
+                  }
+                : undefined
+            }
+          />
+          
+          <KPICard
+            title="Gasto Total (30d)"
+            value={formatCurrency(stats?.totalSpend30d || 0)}
+            icon={BarChart3}
+            description={`${stats?.totalCampaigns || 0} campanhas ativas`}
+          />
+
+          <KPICard
+            title="CTR Médio"
+            value={`${(stats?.avgCTR || 0).toFixed(2)}%`}
+            icon={Zap}
+            description="Taxa de cliques média"
+            trend={
+              stats && stats.avgCTR > 0
+                ? {
+                    value: stats.avgCTR,
+                    isPositive: stats.avgCTR >= 1.0
+                  }
+                : undefined
+            }
+          />
+
+          <KPICard
+            title="CPL Médio"
+            value={formatCurrency(stats?.avgCPL || 0)}
+            icon={Activity}
+            description="Custo por lead médio"
+          />
+        </div>
+
+        {/* Segunda linha de KPIs - Canais */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <KPICard
             title="Apenas Meta"
