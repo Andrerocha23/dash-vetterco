@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, DollarSign, Target, TrendingUp, Edit, Archive, RefreshCw,
-  Users, BarChart3, Calendar, Settings, Shield
+  Users, BarChart3, Calendar, Settings, Shield, ExternalLink, AlertTriangle,
+  Banknote, Clock, CheckCircle, XCircle
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -41,11 +42,26 @@ interface ClientData {
   saldo_meta: number | null;
   budget_mensal_meta: number | null;
   budget_mensal_google: number | null;
+  budget_mensal_global: number | null;
   pixel_meta: string | null;
   ga4_stream_id: string | null;
   gtm_id: string | null;
   typebot_ativo: boolean | null;
   typebot_url: string | null;
+  link_drive: string | null;
+  meta_account_id: string | null;
+  google_ads_id: string | null;
+  modo_saldo_meta: string | null;
+  alerta_saldo_baixo: number | null;
+  forma_pagamento: string | null;
+  centro_custo: string | null;
+  contrato_inicio: string | null;
+  contrato_renovacao: string | null;
+  url_crm: string | null;
+  webhook_meta: string | null;
+  webhook_google: string | null;
+  canal_relatorio: string | null;
+  horario_relatorio: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -352,8 +368,8 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        {/* KPIs Simples */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* KPIs e Budget Total */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <Card className="surface-elevated">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -366,6 +382,21 @@ export default function ClientDetail() {
                 {formatCurrency((client.saldo_meta || 0) / 100)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Saldo atual</p>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Banknote className="h-4 w-4" />
+                Budget Total
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency((client.budget_mensal_global || 0))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Orçamento mensal</p>
             </CardContent>
           </Card>
 
@@ -415,17 +446,18 @@ export default function ClientDetail() {
           </Card>
         </div>
 
-        {/* Informações do Cliente */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Informações Completas do Cliente */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Informações Básicas */}
           <Card className="surface-elevated">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Informações do Cliente
+                Informações Básicas
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Empresa:</span>
                   <p className="font-medium">{client.nome_empresa}</p>
@@ -444,6 +476,28 @@ export default function ClientDetail() {
                     {client.status}
                   </Badge>
                 </div>
+                <div>
+                  <span className="text-muted-foreground">Forma de Pagamento:</span>
+                  <p className="font-medium">{client.forma_pagamento || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Centro de Custo:</span>
+                  <p className="font-medium">{client.centro_custo || '—'}</p>
+                </div>
+                {client.link_drive && (
+                  <div>
+                    <span className="text-muted-foreground">Drive:</span>
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      className="h-auto p-0 font-medium"
+                      onClick={() => window.open(client.link_drive!, '_blank')}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Abrir Drive
+                    </Button>
+                  </div>
+                )}
               </div>
               {client.observacoes && (
                 <div>
@@ -456,42 +510,141 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
 
+          {/* Configurações de Canais */}
           <Card className="surface-elevated">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Configurações
+                Configurações de Canais
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Meta Ads</p>
-                  <p className="text-sm text-muted-foreground">Facebook e Instagram</p>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">Meta Ads</p>
+                    <p className="text-sm text-muted-foreground">
+                      {client.meta_account_id ? `ID: ${client.meta_account_id}` : 'ID não configurado'}
+                    </p>
+                  </div>
+                  <Badge variant={client.usa_meta_ads ? "default" : "secondary"}>
+                    {client.usa_meta_ads ? "Ativo" : "Inativo"}
+                  </Badge>
                 </div>
-                <Badge variant={client.usa_meta_ads ? "default" : "secondary"}>
-                  {client.usa_meta_ads ? "Ativo" : "Inativo"}
-                </Badge>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Google Ads</p>
-                  <p className="text-sm text-muted-foreground">Campanhas do Google</p>
+                
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">Google Ads</p>
+                    <p className="text-sm text-muted-foreground">
+                      {client.google_ads_id ? `ID: ${client.google_ads_id}` : 'ID não configurado'}
+                    </p>
+                  </div>
+                  <Badge variant={client.usa_google_ads ? "default" : "secondary"}>
+                    {client.usa_google_ads ? "Ativo" : "Inativo"}
+                  </Badge>
                 </div>
-                <Badge variant={client.usa_google_ads ? "default" : "secondary"}>
-                  {client.usa_google_ads ? "Ativo" : "Inativo"}
-                </Badge>
-              </div>
 
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Rastreamento</p>
-                  <p className="text-sm text-muted-foreground">Pixel e Analytics</p>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">Rastreamento</p>
+                    <p className="text-sm text-muted-foreground">
+                      {client.pixel_meta ? 'Pixel configurado' : 'Pixel não configurado'}
+                    </p>
+                  </div>
+                  <Badge variant={client.traqueamento_ativo ? "default" : "secondary"}>
+                    {client.traqueamento_ativo ? "Ativo" : "Inativo"}
+                  </Badge>
                 </div>
-                <Badge variant={client.traqueamento_ativo ? "default" : "secondary"}>
-                  {client.traqueamento_ativo ? "Ativo" : "Inativo"}
-                </Badge>
+
+                {client.usa_meta_ads && (
+                  <div className="pt-2 border-t space-y-2">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Modo Saldo Meta:</span>
+                      <p className="font-medium">{client.modo_saldo_meta || '—'}</p>
+                    </div>
+                    {client.alerta_saldo_baixo && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Alerta Saldo Baixo:</span>
+                        <p className="font-medium">{formatCurrency(client.alerta_saldo_baixo / 100)}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status de Configuração */}
+          <Card className="surface-elevated">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Status de Configuração
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Contas configuradas</span>
+                  {client.meta_account_id || client.google_ads_id ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Pixel/Analytics</span>
+                  {client.pixel_meta || client.ga4_stream_id ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Webhooks</span>
+                  {client.webhook_meta || client.webhook_google ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">CRM Externo</span>
+                  {client.url_crm ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Relatórios</span>
+                  {client.canal_relatorio && client.horario_relatorio ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+
+                {client.contrato_inicio && (
+                  <div className="pt-2 border-t">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Contrato:</span>
+                      <p className="font-medium">
+                        {new Date(client.contrato_inicio).toLocaleDateString('pt-BR')}
+                        {client.contrato_renovacao && (
+                          <span className="text-muted-foreground">
+                            {' até '}
+                            {new Date(client.contrato_renovacao).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -499,9 +652,10 @@ export default function ClientDetail() {
 
         {/* Tabs para diferentes seções */}
         <Tabs defaultValue="campaigns" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
             <TabsTrigger value="accounts">Contas</TabsTrigger>
+            <TabsTrigger value="details">Dados Completos</TabsTrigger>
           </TabsList>
           
           <TabsContent value="campaigns" className="space-y-4">
@@ -583,6 +737,114 @@ export default function ClientDetail() {
           
           <TabsContent value="accounts" className="space-y-4">
             <AccountsSection clientId={client.id} />
+          </TabsContent>
+
+          <TabsContent value="details" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Dados Preenchidos */}
+              <Card className="surface-elevated">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="h-5 w-5" />
+                    Dados Preenchidos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    { label: 'Nome do Cliente', value: client.nome_cliente },
+                    { label: 'Nome da Empresa', value: client.nome_empresa },
+                    { label: 'Telefone', value: client.telefone },
+                    { label: 'Email', value: client.email },
+                    { label: 'Link Drive', value: client.link_drive },
+                    { label: 'Meta Account ID', value: client.meta_account_id },
+                    { label: 'Google Ads ID', value: client.google_ads_id },
+                    { label: 'Pixel Meta', value: client.pixel_meta },
+                    { label: 'GA4 Stream ID', value: client.ga4_stream_id },
+                    { label: 'GTM ID', value: client.gtm_id },
+                    { label: 'Budget Mensal Global', value: client.budget_mensal_global ? formatCurrency(client.budget_mensal_global) : null },
+                    { label: 'Budget Mensal Meta', value: client.budget_mensal_meta ? formatCurrency(client.budget_mensal_meta) : null },
+                    { label: 'Budget Mensal Google', value: client.budget_mensal_google ? formatCurrency(client.budget_mensal_google) : null },
+                    { label: 'URL CRM', value: client.url_crm },
+                    { label: 'Webhook Meta', value: client.webhook_meta },
+                    { label: 'Webhook Google', value: client.webhook_google },
+                    { label: 'Canal Relatório', value: client.canal_relatorio },
+                    { label: 'Horário Relatório', value: client.horario_relatorio },
+                    { label: 'Typebot URL', value: client.typebot_url },
+                  ].filter(item => item.value).map((item, index) => (
+                    <div key={index} className="flex justify-between items-start border-b border-muted/20 pb-2">
+                      <span className="text-sm text-muted-foreground">{item.label}:</span>
+                      <span className="text-sm font-medium text-right max-w-[60%] break-words">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Dados Pendentes */}
+              <Card className="surface-elevated border-orange-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-600">
+                    <AlertTriangle className="h-5 w-5" />
+                    Dados Pendentes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    { label: 'Email', missing: !client.email },
+                    { label: 'Link Drive', missing: !client.link_drive },
+                    { label: 'Meta Account ID', missing: !client.meta_account_id && client.usa_meta_ads },
+                    { label: 'Google Ads ID', missing: !client.google_ads_id && client.usa_google_ads },
+                    { label: 'Pixel Meta', missing: !client.pixel_meta && client.traqueamento_ativo },
+                    { label: 'GA4 Stream ID', missing: !client.ga4_stream_id && client.traqueamento_ativo },
+                    { label: 'GTM ID', missing: !client.gtm_id && client.traqueamento_ativo },
+                    { label: 'Budget Mensal Global', missing: !client.budget_mensal_global },
+                    { label: 'Budget Mensal Meta', missing: !client.budget_mensal_meta && client.usa_meta_ads },
+                    { label: 'Budget Mensal Google', missing: !client.budget_mensal_google && client.usa_google_ads },
+                    { label: 'URL CRM', missing: !client.url_crm },
+                    { label: 'Webhook Meta', missing: !client.webhook_meta && client.usa_meta_ads },
+                    { label: 'Webhook Google', missing: !client.webhook_google && client.usa_google_ads },
+                    { label: 'Canal Relatório', missing: !client.canal_relatorio },
+                    { label: 'Horário Relatório', missing: !client.horario_relatorio },
+                    { label: 'Typebot URL', missing: !client.typebot_url && client.typebot_ativo },
+                    { label: 'Forma de Pagamento', missing: !client.forma_pagamento },
+                    { label: 'Centro de Custo', missing: !client.centro_custo },
+                    { label: 'Contrato Início', missing: !client.contrato_inicio },
+                  ].filter(item => item.missing).map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm text-orange-600">
+                      <Clock className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                  {[
+                    { label: 'Email', missing: !client.email },
+                    { label: 'Link Drive', missing: !client.link_drive },
+                    { label: 'Meta Account ID', missing: !client.meta_account_id && client.usa_meta_ads },
+                    { label: 'Google Ads ID', missing: !client.google_ads_id && client.usa_google_ads },
+                    { label: 'Pixel Meta', missing: !client.pixel_meta && client.traqueamento_ativo },
+                    { label: 'GA4 Stream ID', missing: !client.ga4_stream_id && client.traqueamento_ativo },
+                    { label: 'GTM ID', missing: !client.gtm_id && client.traqueamento_ativo },
+                    { label: 'Budget Mensal Global', missing: !client.budget_mensal_global },
+                    { label: 'Budget Mensal Meta', missing: !client.budget_mensal_meta && client.usa_meta_ads },
+                    { label: 'Budget Mensal Google', missing: !client.budget_mensal_google && client.usa_google_ads },
+                    { label: 'URL CRM', missing: !client.url_crm },
+                    { label: 'Webhook Meta', missing: !client.webhook_meta && client.usa_meta_ads },
+                    { label: 'Webhook Google', missing: !client.webhook_google && client.usa_google_ads },
+                    { label: 'Canal Relatório', missing: !client.canal_relatorio },
+                    { label: 'Horário Relatório', missing: !client.horario_relatorio },
+                    { label: 'Typebot URL', missing: !client.typebot_url && client.typebot_ativo },
+                    { label: 'Forma de Pagamento', missing: !client.forma_pagamento },
+                    { label: 'Centro de Custo', missing: !client.centro_custo },
+                    { label: 'Contrato Início', missing: !client.contrato_inicio },
+                  ].filter(item => item.missing).length === 0 && (
+                    <div className="text-center py-4 text-green-600">
+                      <CheckCircle className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-sm">Todos os dados estão preenchidos!</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
 
