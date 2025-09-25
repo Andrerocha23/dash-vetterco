@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Edit, RefreshCw, ExternalLink, DollarSign, Target, 
-  TrendingUp, Users, Settings, Calendar, BarChart3, Activity,
-  CheckCircle, AlertTriangle, Zap, Star, Phone, Mail, Building,
-  Globe, Eye, MousePointer, ShoppingCart, Award, Clock, MapPin
+  TrendingUp, Users, Settings, Activity, CheckCircle, AlertTriangle, 
+  Phone, Mail, Building, Eye, BarChart3, Award, Star, Calendar
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -202,7 +201,7 @@ export default function ClientDetail() {
       if (error) throw error;
 
       toast({
-        title: "🎉 Sucesso!",
+        title: "Sucesso!",
         description: `Cliente ${data.nomeCliente} atualizado com sucesso.`,
       });
       
@@ -211,7 +210,7 @@ export default function ClientDetail() {
     } catch (error) {
       console.error('Erro ao editar cliente:', error);
       toast({
-        title: "❌ Erro",
+        title: "Erro",
         description: "Não foi possível salvar as alterações",
         variant: "destructive",
       });
@@ -224,7 +223,7 @@ export default function ClientDetail() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast({
-        title: "⚡ Sincronizado!",
+        title: "Sincronizado!",
         description: "Dados atualizados com sucesso.",
       });
       
@@ -232,7 +231,7 @@ export default function ClientDetail() {
       
     } catch (error) {
       toast({
-        title: "❌ Erro na sincronização",
+        title: "Erro na sincronização",
         description: "Não foi possível sincronizar os dados",
         variant: "destructive",
       });
@@ -278,10 +277,10 @@ export default function ClientDetail() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Ativo': return 'bg-emerald-500/10 text-emerald-600 border-emerald-200';
-      case 'Pausado': return 'bg-amber-500/10 text-amber-600 border-amber-200';
-      case 'Inativo': return 'bg-red-500/10 text-red-600 border-red-200';
-      default: return 'bg-gray-500/10 text-gray-600 border-gray-200';
+      case 'Ativo': return 'bg-green-100 text-green-700 border-green-200';
+      case 'Pausado': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'Inativo': return 'bg-red-100 text-red-700 border-red-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -290,13 +289,15 @@ export default function ClientDetail() {
       <Badge 
         key={channel}
         variant="outline" 
-        className={`
-          ${channel === 'Meta' ? 'border-blue-500 text-blue-700 bg-blue-50 hover:bg-blue-100' : ''}
-          ${channel === 'Google' ? 'border-green-500 text-green-700 bg-green-50 hover:bg-green-100' : ''}
-          ${channel === 'TikTok' ? 'border-pink-500 text-pink-700 bg-pink-50 hover:bg-pink-100' : ''}
-          ${!['Meta', 'Google', 'TikTok'].includes(channel) ? 'border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100' : ''}
-          transition-colors duration-200 cursor-pointer
-        `}
+        className={
+          channel === 'Meta' 
+            ? 'border-blue-500 text-blue-600 bg-blue-50'
+            : channel === 'Google'
+            ? 'border-green-500 text-green-600 bg-green-50'
+            : channel === 'TikTok'
+            ? 'border-black text-black bg-gray-50'
+            : 'border-gray-500 text-gray-600 bg-gray-50'
+        }
       >
         {channel}
       </Badge>
@@ -307,7 +308,6 @@ export default function ClientDetail() {
     let score = 0;
     let total = 0;
 
-    // Verificar implementações críticas
     const implementations = [
       client?.meta_account_id,
       client?.google_ads_id,
@@ -328,23 +328,21 @@ export default function ClientDetail() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="space-y-8">
+        <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10" />
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-4 w-48" />
-            </div>
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-48" />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i} className="p-6">
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-8 w-16" />
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-4 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
@@ -353,14 +351,11 @@ export default function ClientDetail() {
   if (!client) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center min-h-[500px]">
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto">
-              <AlertTriangle className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">Cliente não encontrado</h1>
-            <p className="text-gray-600 max-w-md">O cliente solicitado não existe ou foi removido do sistema.</p>
-            <Button onClick={() => navigate('/clientes')} className="mt-4">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Cliente não encontrado</h1>
+            <p className="text-muted-foreground mb-4">O cliente solicitado não foi encontrado.</p>
+            <Button onClick={() => navigate('/clientes')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar para Clientes
             </Button>
@@ -374,274 +369,174 @@ export default function ClientDetail() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        {/* Hero Header */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl blur-3xl"></div>
-          <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-8">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-6">
-                <Button
-                  variant="ghost" 
-                  size="lg"
-                  onClick={() => navigate("/clientes")}
-                  className="rounded-xl hover:bg-gray-100 transition-all duration-200"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                      {client.nome_cliente}
-                    </h1>
-                    <p className="text-xl text-gray-600 flex items-center gap-2 mt-2">
-                      <Building className="h-5 w-5" />
-                      {client.nome_empresa}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <Badge className={`px-4 py-2 text-sm font-medium ${getStatusColor(client.status)}`}>
-                      <Activity className="w-4 h-4 mr-2" />
-                      {client.status}
-                    </Badge>
-                    
-                    <div className="flex gap-2">
-                      {getChannelBadges(client.canais)}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="h-4 w-4" />
-                      Cliente desde {new Date(client.created_at).toLocaleDateString('pt-BR')}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Phone className="h-4 w-4" />
-                      {client.telefone}
-                    </div>
-                    {client.email && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Mail className="h-4 w-4" />
-                        {client.email}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                {client.link_drive && (
-                  <Button 
-                    variant="outline"
-                    size="lg"
-                    onClick={() => window.open(client.link_drive!, '_blank')}
-                    className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-200 transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    <ExternalLink className="h-5 w-5 mr-2" />
-                    Abrir Drive
-                  </Button>
-                )}
-                
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={() => setShowEditModal(true)}
-                  className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-purple-200 transition-all duration-300 shadow-lg hover:shadow-xl"
-                >
-                  <Edit className="h-5 w-5 mr-2" />
-                  Editar
-                </Button>
-                
-                <Button 
-                  size="lg"
-                  onClick={handleSyncClient}
-                  disabled={syncLoading}
-                  className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-                >
-                  <RefreshCw className={`h-5 w-5 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
-                  {syncLoading ? 'Sincronizando...' : 'Sincronizar'}
-                </Button>
-              </div>
+      <div className="space-y-6">
+        {/* Header Simples */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate("/clientes")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{client.nome_cliente}</h1>
+              <p className="text-sm text-muted-foreground">{client.nome_empresa}</p>
             </div>
+          </div>
+          <div className="flex gap-2">
+            {client.link_drive && (
+              <Button 
+                variant="outline"
+                onClick={() => window.open(client.link_drive!, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Abrir Drive
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowEditModal(true)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
+            </Button>
+            <Button 
+              onClick={handleSyncClient}
+              disabled={syncLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+              {syncLoading ? 'Sincronizando...' : 'Sincronizar'}
+            </Button>
           </div>
         </div>
 
-        {/* KPIs Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-transparent rounded-bl-full"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-600 text-sm font-medium mb-1">Saldo Disponível</p>
-                  <p className="text-3xl font-bold text-blue-700">
-                    {formatCurrency((client.saldo_meta || 0) / 100)}
-                  </p>
-                  <p className="text-xs text-blue-500 mt-1">Meta Ads</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-400/20 to-transparent rounded-bl-full"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-emerald-600 text-sm font-medium mb-1">Total de Leads</p>
-                  <p className="text-3xl font-bold text-emerald-700">
-                    {stats?.total_leads || 0}
-                  </p>
-                  <p className="text-xs text-emerald-500 mt-1">
-                    +{stats?.leads_convertidos || 0} convertidos
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                  <Target className="w-6 h-6 text-emerald-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-400/20 to-transparent rounded-bl-full"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-600 text-sm font-medium mb-1">Taxa de Conversão</p>
-                  <p className="text-3xl font-bold text-orange-700">
-                    {stats?.conversion_rate?.toFixed(1) || '0.0'}%
-                  </p>
-                  <p className="text-xs text-orange-500 mt-1">Leads → Vendas</p>
-                </div>
-                <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-400/20 to-transparent rounded-bl-full"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-600 text-sm font-medium mb-1">Investimento Total</p>
-                  <p className="text-3xl font-bold text-purple-700">
-                    {formatCurrency(stats?.total_spend || 0)}
-                  </p>
-                  <p className="text-xs text-purple-500 mt-1">Todas as campanhas</p>
-                </div>
-                <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Implementation Health Score */}
-        <Card className="bg-gradient-to-r from-gray-50 to-white border-gray-200 shadow-lg">
-          <CardHeader className="border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Saúde da Implementação</CardTitle>
-                  <p className="text-sm text-gray-600">Status das configurações críticas</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-gray-900">{implementationScore}%</div>
-                <Progress value={implementationScore} className="w-24 mt-2" />
-              </div>
-            </div>
+        {/* Informações do Cliente */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Informações do Cliente
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              {[
-                { label: 'Meta Account ID', value: client.meta_account_id, icon: Globe, color: 'blue' },
-                { label: 'Google Ads ID', value: client.google_ads_id, icon: Globe, color: 'green' },
-                { label: 'Pixel Meta', value: client.pixel_meta, icon: Eye, color: 'blue' },
-                { label: 'GA4 Stream ID', value: client.ga4_stream_id, icon: BarChart3, color: 'orange' },
-                { label: 'GTM ID', value: client.gtm_id, icon: MousePointer, color: 'purple' }
-              ].map((config, index) => {
-                const Icon = config.icon;
-                const isConfigured = !!config.value;
-                
-                return (
-                  <div key={index} className="flex items-center gap-3 p-4 rounded-xl bg-white border border-gray-100">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      isConfigured 
-                        ? `bg-${config.color}-100 text-${config.color}-600` 
-                        : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{config.label}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {isConfigured ? (
-                          <CheckCircle className="w-4 h-4 text-emerald-500" />
-                        ) : (
-                          <AlertTriangle className="w-4 h-4 text-amber-500" />
-                        )}
-                        <p className="text-xs text-gray-600">
-                          {isConfigured ? 'Configurado' : 'Pendente'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Typebot Status */}
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    client.typebot_ativo ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Typebot</p>
-                    <p className="text-sm text-gray-600">Automação de conversas</p>
-                  </div>
-                </div>
-                <Badge variant={client.typebot_ativo ? "default" : "secondary"} className="px-4 py-2">
-                  {client.typebot_ativo ? "Ativo" : "Inativo"}
+          <CardContent className="space-y-6">
+            {/* Dados Básicos */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+              <div>
+                <p className="text-muted-foreground">Status</p>
+                <Badge className={getStatusColor(client.status)}>
+                  {client.status}
                 </Badge>
               </div>
+              <div>
+                <p className="text-muted-foreground">Telefone</p>
+                <p className="font-medium flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  {client.telefone}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Email</p>
+                <p className="font-medium flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  {client.email || 'Não informado'}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Canais</p>
+                <div className="flex gap-2">
+                  {getChannelBadges(client.canais)}
+                </div>
+              </div>
             </div>
 
-            {/* Budget Information */}
-            {(client.budget_mensal_meta || client.budget_mensal_google) && (
-              <div className="mt-6 pt-6 border-t border-gray-100">
-                <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-purple-600" />
-                  Orçamento Mensal
+            {/* KPIs */}
+            {stats && (
+              <div className="pt-4 border-t">
+                <h4 className="font-medium mb-4 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Estatísticas de Performance
                 </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg border">
+                    <DollarSign className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-blue-700">{formatCurrency((client.saldo_meta || 0) / 100)}</p>
+                    <p className="text-xs text-blue-600">Saldo Meta</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg border">
+                    <Target className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-green-700">{stats.total_leads}</p>
+                    <p className="text-xs text-green-600">Total de Leads</p>
+                  </div>
+                  <div className="text-center p-4 bg-orange-50 rounded-lg border">
+                    <TrendingUp className="h-6 w-6 text-orange-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-orange-700">{stats.conversion_rate.toFixed(1)}%</p>
+                    <p className="text-xs text-orange-600">Taxa de Conversão</p>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg border">
+                    <Award className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-purple-700">{formatCurrency(stats.total_spend)}</p>
+                    <p className="text-xs text-purple-600">Investimento Total</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Score de Implementação */}
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Saúde da Implementação
+                </h4>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{implementationScore}%</div>
+                  <Progress value={implementationScore} className="w-20 mt-1" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { label: 'Meta Account ID', value: client.meta_account_id },
+                  { label: 'Google Ads ID', value: client.google_ads_id },
+                  { label: 'Pixel Meta', value: client.pixel_meta },
+                  { label: 'GA4 Stream ID', value: client.ga4_stream_id },
+                  { label: 'GTM ID', value: client.gtm_id },
+                  { label: 'Typebot', value: client.typebot_ativo ? 'Ativo' : null }
+                ].map((config, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium">{config.label}</p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {config.value || '—'}
+                      </p>
+                    </div>
+                    {config.value ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Orçamentos */}
+            {(client.budget_mensal_meta || client.budget_mensal_google) && (
+              <div className="pt-4 border-t">
+                <h4 className="font-medium mb-3">Orçamento Mensal</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {client.budget_mensal_meta && (
-                    <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                      <p className="text-sm text-blue-600 mb-1">Meta Ads</p>
-                      <p className="text-2xl font-bold text-blue-700">{formatCurrency(client.budget_mensal_meta)}</p>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Budget Meta</p>
+                      <p className="font-medium text-lg">{formatCurrency(client.budget_mensal_meta)}</p>
                     </div>
                   )}
                   {client.budget_mensal_google && (
-                    <div className="p-4 rounded-xl bg-green-50 border border-green-100">
-                      <p className="text-sm text-green-600 mb-1">Google Ads</p>
-                      <p className="text-2xl font-bold text-green-700">{formatCurrency(client.budget_mensal_google)}</p>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Budget Google</p>
+                      <p className="font-medium text-lg">{formatCurrency(client.budget_mensal_google)}</p>
                     </div>
                   )}
                 </div>
@@ -650,39 +545,30 @@ export default function ClientDetail() {
 
             {/* Observações */}
             {client.observacoes && (
-              <div className="mt-6 pt-6 border-t border-gray-100">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-indigo-600" />
-                  Observações
-                </h4>
-                <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100">
-                  <p className="text-gray-700 leading-relaxed">{client.observacoes}</p>
-                </div>
+              <div className="pt-4 border-t">
+                <h4 className="font-medium mb-3">Observações</h4>
+                <p className="text-sm p-3 bg-gray-50 rounded-lg">
+                  {client.observacoes}
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Activity Timeline */}
-        <Card className="bg-white border-gray-200 shadow-lg overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-100">
+        {/* Atividade de Campanhas */}
+        <Card>
+          <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-slate-600 to-gray-700 rounded-xl flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Atividade de Campanhas</CardTitle>
-                  <p className="text-sm text-gray-600">{campaigns.length} registros encontrados</p>
-                </div>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Atividade de Campanhas ({campaigns.length})
+              </CardTitle>
               
               <div className="flex gap-2">
                 <Button
                   variant={activeTab === "overview" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveTab("overview")}
-                  className="transition-all duration-200"
                 >
                   Visão Geral
                 </Button>
@@ -690,7 +576,6 @@ export default function ClientDetail() {
                   variant={activeTab === "campaigns" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveTab("campaigns")}
-                  className="transition-all duration-200"
                 >
                   Campanhas
                 </Button>
@@ -698,188 +583,92 @@ export default function ClientDetail() {
             </div>
           </CardHeader>
           
-          <CardContent className="p-0">
+          <CardContent>
             {activeTab === "overview" && stats && (
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
-                    <Award className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-                    <p className="text-3xl font-bold text-blue-700">{stats.leads_qualificados}</p>
-                    <p className="text-sm text-blue-600 font-medium">Leads Qualificados</p>
-                    <p className="text-xs text-blue-500 mt-1">
-                      {stats.total_leads > 0 ? Math.round((stats.leads_qualificados / stats.total_leads) * 100) : 0}% do total
-                    </p>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <Award className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold">{stats.leads_qualificados}</p>
+                    <p className="text-sm text-muted-foreground">Leads Qualificados</p>
                   </div>
-                  
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200">
-                    <Star className="w-8 h-8 text-emerald-600 mx-auto mb-3" />
-                    <p className="text-3xl font-bold text-emerald-700">{stats.avg_quality_score?.toFixed(1) || '0.0'}</p>
-                    <p className="text-sm text-emerald-600 font-medium">Score de Qualidade</p>
-                    <p className="text-xs text-emerald-500 mt-1">Média das campanhas</p>
+                  <div className="text-center p-4 border rounded-lg">
+                    <Star className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold">{stats.avg_quality_score?.toFixed(1) || '0.0'}</p>
+                    <p className="text-sm text-muted-foreground">Score de Qualidade</p>
                   </div>
-                  
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200">
-                    <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-3" />
-                    <p className="text-3xl font-bold text-purple-700">
+                  <div className="text-center p-4 border rounded-lg">
+                    <TrendingUp className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold">
                       {stats.total_spend > 0 ? formatCurrency(stats.total_spend / stats.total_leads) : 'R$ 0'}
                     </p>
-                    <p className="text-sm text-purple-600 font-medium">Custo por Lead</p>
-                    <p className="text-xs text-purple-500 mt-1">Média geral</p>
+                    <p className="text-sm text-muted-foreground">Custo por Lead</p>
                   </div>
-                </div>
-
-                {/* Performance Chart Placeholder */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-8 text-center border border-gray-200">
-                  <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Gráfico de Performance</h3>
-                  <p className="text-gray-500">Visualização de dados ao longo do tempo em desenvolvimento</p>
                 </div>
               </div>
             )}
 
             {activeTab === "campaigns" && (
-              <div className="overflow-x-auto">
+              <div>
                 {campaigns.length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Calendar className="w-10 h-10 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Nenhuma atividade encontrada</h3>
-                    <p className="text-gray-500">As campanhas aparecerão aqui quando houver dados disponíveis.</p>
+                  <div className="text-center py-12">
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhuma atividade encontrada</h3>
+                    <p className="text-muted-foreground">As campanhas aparecerão aqui quando houver dados disponíveis.</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader className="bg-gray-50">
-                      <TableRow>
-                        <TableHead className="font-semibold text-gray-700">Data</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Plataforma</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Campanha</TableHead>
-                        <TableHead className="text-center font-semibold text-gray-700">Leads</TableHead>
-                        <TableHead className="text-right font-semibold text-gray-700">Investimento</TableHead>
-                        <TableHead className="text-center font-semibold text-gray-700">CTR</TableHead>
-                        <TableHead className="text-center font-semibold text-gray-700">Qualidade</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {campaigns.map((campaign, index) => (
-                        <TableRow key={`${campaign.id}-${campaign.date}`} className="hover:bg-gray-50/50 transition-colors duration-200">
-                          <TableCell className="font-mono text-sm text-gray-600">
-                            {new Date(campaign.date).toLocaleDateString('pt-BR', { 
-                              day: '2-digit', 
-                              month: 'short',
-                              year: '2-digit'
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant="outline" 
-                              className={`font-medium ${
-                                campaign.platform === 'Meta' 
-                                  ? 'border-blue-300 text-blue-700 bg-blue-50' 
-                                  : campaign.platform === 'Google'
-                                  ? 'border-green-300 text-green-700 bg-green-50'
-                                  : 'border-gray-300 text-gray-700 bg-gray-50'
-                              }`}
-                            >
-                              {campaign.platform}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-[250px]">
-                            <div className="truncate font-medium text-gray-900">
-                              {campaign.campaign_name || 'Campanha sem nome'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm">
-                              {campaign.leads_count || 0}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {campaign.spend ? (
-                              <span className="text-gray-900">{formatCurrency(campaign.spend)}</span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {campaign.ctr ? (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                {campaign.ctr.toFixed(2)}%
-                              </Badge>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {campaign.quality_score ? (
-                              <div className="flex items-center justify-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${
-                                  campaign.quality_score >= 8 ? 'bg-emerald-400' :
-                                  campaign.quality_score >= 6 ? 'bg-amber-400' : 'bg-red-400'
-                                }`}></div>
-                                <span className="text-sm font-medium">{campaign.quality_score.toFixed(1)}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Plataforma</TableHead>
+                          <TableHead>Campanha</TableHead>
+                          <TableHead className="text-center">Leads</TableHead>
+                          <TableHead className="text-right">Gasto</TableHead>
+                          <TableHead className="text-center">CTR</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {campaigns.map((campaign) => (
+                          <TableRow key={`${campaign.id}-${campaign.date}`}>
+                            <TableCell className="font-mono text-sm">
+                              {new Date(campaign.date).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  campaign.platform === 'Meta' 
+                                    ? 'border-blue-500 text-blue-600' 
+                                    : campaign.platform === 'Google'
+                                    ? 'border-green-500 text-green-600'
+                                    : 'border-gray-500 text-gray-600'
+                                }
+                              >
+                                {campaign.platform}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {campaign.campaign_name || 'Campanha sem nome'}
+                            </TableCell>
+                            <TableCell className="text-center font-medium">
+                              {campaign.leads_count || 0}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {campaign.spend ? formatCurrency(campaign.spend) : '—'}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {campaign.ctr ? `${campaign.ctr.toFixed(2)}%` : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200 shadow-lg">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-indigo-600" />
-              Ações Rápidas
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-auto p-4 flex flex-col items-start gap-2 bg-white hover:bg-indigo-50 border-indigo-200 transition-all duration-300"
-                onClick={() => setShowEditModal(true)}
-              >
-                <Edit className="w-5 h-5 text-indigo-600" />
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">Editar Informações</p>
-                  <p className="text-xs text-gray-600">Atualizar dados do cliente</p>
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-auto p-4 flex flex-col items-start gap-2 bg-white hover:bg-purple-50 border-purple-200 transition-all duration-300"
-                onClick={() => navigate(`/relatorio-n8n?client=${id}`)}
-              >
-                <BarChart3 className="w-5 h-5 text-purple-600" />
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">Ver Relatórios</p>
-                  <p className="text-xs text-gray-600">Configurar automação</p>
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-auto p-4 flex flex-col items-start gap-2 bg-white hover:bg-emerald-50 border-emerald-200 transition-all duration-300"
-                onClick={() => navigate(`/analytics?client=${id}`)}
-              >
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">Analytics</p>
-                  <p className="text-xs text-gray-600">Análise detalhada</p>
-                </div>
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
