@@ -1,9 +1,37 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
-  ArrowLeft, DollarSign, Target, TrendingUp, Edit, Archive, RefreshCw,
-  Users, BarChart3, Calendar, Settings, Shield, ExternalLink, AlertTriangle,
-  Banknote, Clock, CheckCircle, XCircle
+  ArrowLeft, 
+  DollarSign, 
+  Target, 
+  TrendingUp, 
+  Edit, 
+  Archive, 
+  RefreshCw,
+  Users, 
+  BarChart3, 
+  Calendar, 
+  Settings, 
+  Shield,
+  Phone,
+  Mail,
+  Building2,
+  ExternalLink,
+  Play,
+  Pause,
+  ChevronDown,
+  ChevronRight,
+  Activity,
+  Zap,
+  Eye,
+  MessageSquare,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Globe,
+  Facebook,
+  Search,
+  TrendingDown
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -11,6 +39,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -19,13 +50,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
-import { AccountsSection } from "@/components/accounts/AccountsSection";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ClienteFormData } from "@/types/client";
 
-// Interfaces
+// Interface para dados reais do cliente
 interface ClientData {
   id: string;
   nome_cliente: string;
@@ -42,43 +70,43 @@ interface ClientData {
   saldo_meta: number | null;
   budget_mensal_meta: number | null;
   budget_mensal_google: number | null;
-  budget_mensal_global: number | null;
   pixel_meta: string | null;
   ga4_stream_id: string | null;
   gtm_id: string | null;
   typebot_ativo: boolean | null;
   typebot_url: string | null;
-  link_drive: string | null;
   meta_account_id: string | null;
   google_ads_id: string | null;
-  modo_saldo_meta: string | null;
   alerta_saldo_baixo: number | null;
-  forma_pagamento: string | null;
-  centro_custo: string | null;
-  contrato_inicio: string | null;
-  contrato_renovacao: string | null;
-  url_crm: string | null;
-  webhook_meta: string | null;
-  webhook_google: string | null;
   canal_relatorio: string | null;
   horario_relatorio: string | null;
   created_at: string;
   updated_at: string;
 }
 
-interface CampaignStats {
-  totalCampaigns: number;
-  totalLeads: number;
-  totalSpend: number;
-  avgQualityScore: number;
-  qualificationRate: number;
+// Interface para stats reais de leads
+interface LeadsStats {
+  total_leads: number;
+  leads_convertidos: number;
+  valor_total_conversoes: number;
+  media_leads_dia: number;
+  ultima_atualizacao: string;
 }
 
-// Dados dos gestores
+// Interface para contas do cliente
+interface ClientAccount {
+  id: string;
+  tipo: string;
+  account_id: string;
+  status: string;
+  observacoes: string | null;
+}
+
+// Mock data dos gestores (até implementar tabela managers)
 const gestores = {
-  'gest1': { id: 'gest1', name: 'Carlos Silva', avatar: '👨‍💼' },
-  'gest2': { id: 'gest2', name: 'Ana Costa', avatar: '👩‍💼' },
-  'gest3': { id: 'gest3', name: 'João Santos', avatar: '🧑‍💼' },
+  'gest1': { id: 'gest1', name: 'Carlos Silva', avatar: '👨‍💼', email: 'carlos@company.com' },
+  'gest2': { id: 'gest2', name: 'Ana Costa', avatar: '👩‍💼', email: 'ana@company.com' },
+  'gest3': { id: 'gest3', name: 'João Santos', avatar: '🧑‍💼', email: 'joao@company.com' },
 };
 
 export default function ClientDetail() {
@@ -87,16 +115,10 @@ export default function ClientDetail() {
   const { toast } = useToast();
   
   const [client, setClient] = useState<ClientData | null>(null);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [campaignStats, setCampaignStats] = useState<CampaignStats>({
-    totalCampaigns: 0,
-    totalLeads: 0,
-    totalSpend: 0,
-    avgQualityScore: 0,
-    qualificationRate: 0,
-  });
+  const [leadsStats, setLeadsStats] = useState<LeadsStats | null>(null);
+  const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const loadClientData = async () => {
     if (!id) return;
@@ -125,34 +147,37 @@ export default function ClientDetail() {
 
       setClient(clientData);
 
-      // Buscar campanhas do cliente
-      const { data: campaignsData, error: campaignsError } = await supabase
-        .from('campaign_leads_daily')
-        .select('*')
-        .eq('client_id', id)
-        .order('date', { ascending: false });
+      // Buscar estatísticas de leads (se existir)
+      try {
+        const { data: statsData, error: statsError } = await supabase
+          .from('leads_stats')
+          .select('*')
+          .eq('client_id', id)
+          .single();
 
-      if (campaignsError) throw campaignsError;
+        if (statsError && statsError.code !== 'PGRST116') {
+          console.warn('Erro ao buscar stats de leads:', statsError);
+        } else if (statsData) {
+          setLeadsStats(statsData);
+        }
+      } catch (error) {
+        console.warn('Tabela leads_stats não encontrada ou erro:', error);
+      }
 
-      setCampaigns(campaignsData || []);
+      // Buscar contas do cliente (se existir)
+      try {
+        const { data: accountsData, error: accountsError } = await supabase
+          .from('client_accounts')
+          .select('*')
+          .eq('client_id', id);
 
-      // Calcular estatísticas das campanhas
-      if (campaignsData && campaignsData.length > 0) {
-        const totalLeads = campaignsData.reduce((sum, c) => sum + c.leads_count, 0);
-        const totalSpend = campaignsData.reduce((sum, c) => sum + c.spend, 0);
-        const totalQualified = campaignsData.reduce((sum, c) => sum + (c.qualified_leads || 0), 0);
-        const withScores = campaignsData.filter(c => c.quality_score);
-        const avgQualityScore = withScores.length > 0 
-          ? withScores.reduce((sum, c) => sum + c.quality_score, 0) / withScores.length
-          : 0;
-
-        setCampaignStats({
-          totalCampaigns: campaignsData.length,
-          totalLeads,
-          totalSpend,
-          avgQualityScore,
-          qualificationRate: totalLeads > 0 ? (totalQualified / totalLeads) * 100 : 0,
-        });
+        if (accountsError && accountsError.code !== 'PGRST116') {
+          console.warn('Erro ao buscar contas:', accountsError);
+        } else if (accountsData) {
+          setClientAccounts(accountsData);
+        }
+      } catch (error) {
+        console.warn('Tabela client_accounts não encontrada ou erro:', error);
       }
 
     } catch (error) {
@@ -171,118 +196,47 @@ export default function ClientDetail() {
     loadClientData();
   }, [id, navigate, toast]);
 
-  // Função para editar cliente
-  const handleEditClient = async (clientData: ClienteFormData) => {
-    if (!client) return;
-
-    try {
-      const supabaseData = {
-        nome_cliente: clientData.nomeCliente,
-        nome_empresa: clientData.nomeEmpresa,
-        telefone: clientData.telefone,
-        email: clientData.email || null,
-        gestor_id: clientData.gestorId,
-        canais: clientData.canais,
-        status: clientData.status,
-        observacoes: clientData.observacoes || null,
-        usa_meta_ads: clientData.usaMetaAds,
-        usa_google_ads: clientData.usaGoogleAds,
-        traqueamento_ativo: clientData.traqueamentoAtivo,
-        saldo_meta: clientData.saldoMeta ? clientData.saldoMeta * 100 : null,
-        budget_mensal_meta: clientData.budgetMensalMeta || null,
-        budget_mensal_google: clientData.budgetMensalGoogle || null,
-        pixel_meta: clientData.pixelMeta || null,
-        ga4_stream_id: clientData.ga4StreamId || null,
-        gtm_id: clientData.gtmId || null,
-        typebot_ativo: clientData.typebotAtivo || false,
-        typebot_url: clientData.typebotUrl || null,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase
-        .from('clients')
-        .update(supabaseData)
-        .eq('id', client.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso!",
-        description: "Cliente atualizado com sucesso",
-      });
-
-      setShowEditModal(false);
-      await loadClientData(); // Recarregar dados
-
-    } catch (error) {
-      console.error('Erro ao atualizar cliente:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o cliente",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Converter dados do cliente para o formato do formulário
-  const getClientFormData = (): ClienteFormData => {
-    if (!client) return {} as ClienteFormData;
-
-    return {
-      id: client.id,
-      nomeCliente: client.nome_cliente,
-      nomeEmpresa: client.nome_empresa,
-      telefone: client.telefone,
-      email: client.email || '',
-      gestorId: client.gestor_id,
-      canais: client.canais as ('Meta' | 'Google')[],
-      status: client.status as 'Ativo' | 'Pausado' | 'Arquivado',
-      observacoes: client.observacoes || '',
-      usaMetaAds: client.usa_meta_ads,
-      usaGoogleAds: client.usa_google_ads,
-      traqueamentoAtivo: client.traqueamento_ativo,
-      saldoMeta: client.saldo_meta ? client.saldo_meta / 100 : 0,
-      budgetMensalMeta: client.budget_mensal_meta || 0,
-      budgetMensalGoogle: client.budget_mensal_google || 0,
-      pixelMeta: client.pixel_meta || '',
-      ga4StreamId: client.ga4_stream_id || '',
-      gtmId: client.gtm_id || '',
-      typebotAtivo: client.typebot_ativo || false,
-      typebotUrl: client.typebot_url || '',
-    };
-  };
-
-  const formatCurrency = (value: number) => {
+  // Funções auxiliares
+  const formatCurrency = (value: number | null) => {
+    if (value === null) return 'Não informado';
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 0,
+      minimumFractionDigits: 2,
     }).format(value);
   };
 
-  const getChannelBadges = (channels: string[]) => {
-    return channels.map(channel => (
-      <Badge 
-        key={channel}
-        variant="outline" 
-        className={
-          channel === 'Meta' 
-            ? 'border-blue-500 text-blue-600 bg-blue-50' 
-            : 'border-red-500 text-red-600 bg-red-50'
-        }
-      >
-        {channel}
-      </Badge>
-    ));
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Ativo': return 'bg-green-500/20 text-green-600 border-green-500/50';
-      case 'Pausado': return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/50';
-      case 'Arquivado': return 'bg-gray-500/20 text-gray-600 border-gray-500/50';
-      default: return 'bg-gray-500/20 text-gray-600 border-gray-500/50';
-    }
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      'Ativo': 'bg-green-100 text-green-800 border-green-200',
+      'Pausado': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Arquivado': 'bg-gray-100 text-gray-800 border-gray-200',
+    };
+    
+    return (
+      <Badge className={`${variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800'} border`}>
+        {status}
+      </Badge>
+    );
+  };
+
+  const getChannelBadge = (channel: string) => {
+    const variants = {
+      'Meta': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Google': 'bg-red-100 text-red-800 border-red-200',
+      'TikTok': 'bg-black text-white border-black',
+      'LinkedIn': 'bg-blue-600 text-white border-blue-600',
+    };
+    
+    return (
+      <Badge key={channel} className={`${variants[channel as keyof typeof variants] || 'bg-purple-100 text-purple-800'} border`}>
+        {channel}
+      </Badge>
+    );
   };
 
   if (isLoading) {
@@ -326,537 +280,634 @@ export default function ClientDetail() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header Simples */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/clients")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl font-bold">{client.nome_cliente}</h1>
-              <Badge className={getStatusColor(client.status)}>
-                {client.status}
-              </Badge>
-              <div className="flex gap-2">
-                {getChannelBadges(client.canais)}
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/clients")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-12 w-12">
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
+                  {client.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold">{client.nome_cliente}</h1>
+                  {getStatusBadge(client.status)}
+                </div>
+                <p className="text-muted-foreground">{client.nome_empresa}</p>
+                <div className="flex items-center gap-4 mt-1">
+                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    {client.telefone}
+                  </span>
+                  {client.email && (
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Mail className="h-3 w-3" />
+                      {client.email}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <span className="text-lg">{manager.avatar}</span>
-                Gerenciado por {manager.name}
-              </span>
-              <span>•</span>
-              <span>{client.nome_empresa}</span>
-              <span>•</span>
-              <span>Criado em {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
-            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowEditModal(true)}>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={() => loadClientData()} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <Button onClick={() => navigate(`/clients/${id}/edit`)}>
               <Edit className="h-4 w-4 mr-2" />
-              Editar Cliente
-            </Button>
-            <Button variant="default">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Sincronizar
+              Editar
             </Button>
           </div>
         </div>
 
-        {/* KPIs e Budget Total */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Saldo Meta
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency((client.saldo_meta || 0) / 100)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Saldo atual</p>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Banknote className="h-4 w-4" />
-                Budget Total
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency((client.budget_mensal_global || 0))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Orçamento mensal</p>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Total de Leads
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {campaignStats.totalLeads}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Leads capturados</p>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Taxa Qualificação
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {campaignStats.qualificationRate.toFixed(1)}%
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Leads qualificados</p>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-elevated">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Gasto Total
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(campaignStats.totalSpend)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Investimento</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Informações Completas do Cliente */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Informações Básicas */}
-          <Card className="surface-elevated">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Informações Básicas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3 text-sm">
+        {/* Stats Cards - Apenas com dados reais */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-muted-foreground">Empresa:</span>
-                  <p className="font-medium">{client.nome_empresa}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Telefone:</span>
-                  <p className="font-medium">{client.telefone}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Email:</span>
-                  <p className="font-medium">{client.email || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge className={getStatusColor(client.status)}>
-                    {client.status}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Forma de Pagamento:</span>
-                  <p className="font-medium">{client.forma_pagamento || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Centro de Custo:</span>
-                  <p className="font-medium">{client.centro_custo || '—'}</p>
-                </div>
-                {client.link_drive && (
-                  <div>
-                    <span className="text-muted-foreground">Drive:</span>
-                    <Button 
-                      variant="link" 
-                      size="sm" 
-                      className="h-auto p-0 font-medium"
-                      onClick={() => window.open(client.link_drive!, '_blank')}
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Abrir Drive
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {client.observacoes && (
-                <div>
-                  <span className="text-muted-foreground text-sm">Observações:</span>
-                  <p className="text-sm mt-1 p-2 bg-muted/50 rounded">
-                    {client.observacoes}
+                  <p className="text-sm font-medium text-muted-foreground">Total de Leads</p>
+                  <p className="text-2xl font-bold">
+                    {leadsStats?.total_leads || 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {leadsStats ? `Atualizado em ${formatDate(leadsStats.ultima_atualizacao)}` : 'Dados não disponíveis'}
                   </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Configurações de Canais */}
-          <Card className="surface-elevated">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Configurações de Canais
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">Meta Ads</p>
-                    <p className="text-sm text-muted-foreground">
-                      {client.meta_account_id ? `ID: ${client.meta_account_id}` : 'ID não configurado'}
-                    </p>
-                  </div>
-                  <Badge variant={client.usa_meta_ads ? "default" : "secondary"}>
-                    {client.usa_meta_ads ? "Ativo" : "Inativo"}
-                  </Badge>
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Target className="h-6 w-6 text-blue-600" />
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">Google Ads</p>
-                    <p className="text-sm text-muted-foreground">
-                      {client.google_ads_id ? `ID: ${client.google_ads_id}` : 'ID não configurado'}
-                    </p>
-                  </div>
-                  <Badge variant={client.usa_google_ads ? "default" : "secondary"}>
-                    {client.usa_google_ads ? "Ativo" : "Inativo"}
-                  </Badge>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">Rastreamento</p>
-                    <p className="text-sm text-muted-foreground">
-                      {client.pixel_meta ? 'Pixel configurado' : 'Pixel não configurado'}
-                    </p>
-                  </div>
-                  <Badge variant={client.traqueamento_ativo ? "default" : "secondary"}>
-                    {client.traqueamento_ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                </div>
-
-                {client.usa_meta_ads && (
-                  <div className="pt-2 border-t space-y-2">
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Modo Saldo Meta:</span>
-                      <p className="font-medium">{client.modo_saldo_meta || '—'}</p>
-                    </div>
-                    {client.alerta_saldo_baixo && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Alerta Saldo Baixo:</span>
-                        <p className="font-medium">{formatCurrency(client.alerta_saldo_baixo / 100)}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Status de Configuração */}
-          <Card className="surface-elevated">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Status de Configuração
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Contas configuradas</span>
-                  {client.meta_account_id || client.google_ads_id ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Leads Convertidos</p>
+                  <p className="text-2xl font-bold">
+                    {leadsStats?.leads_convertidos || 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {leadsStats && leadsStats.total_leads > 0 
+                      ? `${((leadsStats.leads_convertidos / leadsStats.total_leads) * 100).toFixed(1)}% de conversão`
+                      : 'Taxa não disponível'
+                    }
+                  </p>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Pixel/Analytics</span>
-                  {client.pixel_meta || client.ga4_stream_id ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-green-600" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Webhooks</span>
-                  {client.webhook_meta || client.webhook_google ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Valor em Conversões</p>
+                  <p className="text-2xl font-bold">
+                    {formatCurrency(leadsStats?.valor_total_conversoes || null)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Total acumulado</p>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">CRM Externo</span>
-                  {client.url_crm ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-purple-600" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Relatórios</span>
-                  {client.canal_relatorio && client.horario_relatorio ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Saldo Meta</p>
+                  <p className="text-2xl font-bold">
+                    {client.saldo_meta ? formatCurrency(client.saldo_meta / 100) : 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {client.alerta_saldo_baixo 
+                      ? `Alerta: ${formatCurrency(client.alerta_saldo_baixo / 100)}`
+                      : 'Sem alerta configurado'
+                    }
+                  </p>
                 </div>
+                <div className="p-3 bg-yellow-100 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-yellow-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-                {client.contrato_inicio && (
-                  <div className="pt-2 border-t">
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Contrato:</span>
-                      <p className="font-medium">
-                        {new Date(client.contrato_inicio).toLocaleDateString('pt-BR')}
-                        {client.contrato_renovacao && (
-                          <span className="text-muted-foreground">
-                            {' até '}
-                            {new Date(client.contrato_renovacao).toLocaleDateString('pt-BR')}
-                          </span>
-                        )}
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="accounts">Contas & IDs</TabsTrigger>
+            <TabsTrigger value="tracking">Rastreamento</TabsTrigger>
+            <TabsTrigger value="settings">Configurações</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Client Info */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Informações do Cliente</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Cliente</p>
+                      <p className="font-semibold">{client.nome_cliente}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Empresa</p>
+                      <p className="font-semibold">{client.nome_empresa}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Telefone</p>
+                      <p className="font-semibold">{client.telefone}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Email</p>
+                      <p className="font-semibold">{client.email || 'Não informado'}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Canais</p>
+                    <div className="flex flex-wrap gap-2">
+                      {client.canais.map(canal => getChannelBadge(canal))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Gestor Responsável</p>
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback>{manager.avatar}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold">Typebot</p>
+                        <p className="text-sm text-muted-foreground">
+                          {client.typebot_ativo ? 'Ativo' : 'Inativo'}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={client.typebot_ativo ? 'default' : 'secondary'}>
+                      {client.typebot_ativo ? 'Configurado' : 'Não configurado'}
+                    </Badge>
+                  </div>
+
+                  {client.typebot_url && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">URL do Typebot</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-sm bg-muted p-2 rounded flex-1 truncate">
+                            {client.typebot_url}
+                          </p>
+                          <Button size="sm" variant="outline" onClick={() => window.open(client.typebot_url!, '_blank')}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações de Orçamento</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Budget Mensal Meta</span>
+                      <span className="font-semibold">
+                        {client.budget_mensal_meta ? formatCurrency(client.budget_mensal_meta) : 'Não definido'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Budget Mensal Google</span>
+                      <span className="font-semibold">
+                        {client.budget_mensal_google ? formatCurrency(client.budget_mensal_google) : 'Não definido'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Saldo Atual Meta</span>
+                      <span className="font-semibold text-green-600">
+                        {client.saldo_meta ? formatCurrency(client.saldo_meta / 100) : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Alerta Saldo Baixo</span>
+                      <span className="font-semibold text-yellow-600">
+                        {client.alerta_saldo_baixo ? formatCurrency(client.alerta_saldo_baixo / 100) : 'Não configurado'}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comunicação & Relatórios</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Canal de Relatório</span>
+                      <Badge variant="outline">
+                        {client.canal_relatorio || 'Não configurado'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Horário dos Relatórios</span>
+                      <span className="font-semibold">
+                        {client.horario_relatorio || 'Não configurado'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Status das Contas</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Facebook className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm">Meta Ads</span>
+                        </div>
+                        <Badge variant={client.usa_meta_ads ? 'default' : 'secondary'}>
+                          {client.usa_meta_ads ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Search className="h-4 w-4 text-red-600" />
+                          <span className="text-sm">Google Ads</span>
+                        </div>
+                        <Badge variant={client.usa_google_ads ? 'default' : 'secondary'}>
+                          {client.usa_google_ads ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Histórico do Cliente</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4 p-4 border rounded-lg">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Users className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">Cliente Criado</p>
+                      <p className="text-sm text-muted-foreground">
+                        Cliente {client.nome_cliente} foi adicionado ao sistema
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDate(client.created_at)}
                       </p>
                     </div>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Tabs para diferentes seções */}
-        <Tabs defaultValue="campaigns" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-            <TabsTrigger value="accounts">Contas</TabsTrigger>
-            <TabsTrigger value="details">Dados Completos</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="campaigns" className="space-y-4">
-            <Card className="surface-elevated">
+                  {client.updated_at !== client.created_at && (
+                    <div className="flex items-start gap-4 p-4 border rounded-lg">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Edit className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Última Atualização</p>
+                        <p className="text-sm text-muted-foreground">
+                          Informações do cliente foram atualizadas
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDate(client.updated_at)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {leadsStats && (
+                    <div className="flex items-start gap-4 p-4 border rounded-lg">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Target className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Estatísticas de Leads</p>
+                        <p className="text-sm text-muted-foreground">
+                          {leadsStats.total_leads} leads totais • {leadsStats.leads_convertidos} convertidos
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Atualizado em {formatDate(leadsStats.ultima_atualizacao)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!leadsStats && (
+                    <div className="text-center py-8">
+                      <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">
+                        Histórico de atividades será exibido aqui
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configure integrações para ver mais dados
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AppLayout>
+  );
+}-semibold">{manager.name}</p>
+                        <p className="text-sm text-muted-foreground">{manager.email}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {client.observacoes && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Observações</p>
+                        <p className="text-sm">{client.observacoes}</p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Real Stats Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resumo de Performance</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {leadsStats ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Total de Leads</span>
+                        <span className="font-bold">{leadsStats.total_leads}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Convertidos</span>
+                        <span className="font-bold text-green-600">{leadsStats.leads_convertidos}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Taxa de Conversão</span>
+                        <span className="font-bold">
+                          {((leadsStats.leads_convertidos / leadsStats.total_leads) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Valor Total</span>
+                        <span className="font-bold">{formatCurrency(leadsStats.valor_total_conversoes)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">
+                        Dados de performance não disponíveis
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configure integrações para ver estatísticas
+                      </p>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Cliente desde</p>
+                    <p className="font-semibold">{formatDate(client.created_at)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Accounts Tab */}
+          <TabsContent value="accounts" className="space-y-6">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Campanhas Recentes
-                </CardTitle>
+                <CardTitle>IDs das Contas</CardTitle>
               </CardHeader>
-              <CardContent>
-                {campaigns.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhuma campanha encontrada</p>
-                    <p className="text-sm">As campanhas aparecerão aqui quando disponíveis</p>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Facebook className="h-5 w-5 text-blue-600" />
+                      Meta Ads
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Account ID</p>
+                        <p className="font-mono text-sm bg-muted p-2 rounded">
+                          {client.meta_account_id || 'Não configurado'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pixel ID</p>
+                        <p className="font-mono text-sm bg-muted p-2 rounded">
+                          {client.pixel_meta || 'Não configurado'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Usando Meta Ads</p>
+                        <Badge variant={client.usa_meta_ads ? 'default' : 'secondary'}>
+                          {client.usa_meta_ads ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Campanha</TableHead>
-                          <TableHead>Platform</TableHead>
-                          <TableHead>Leads</TableHead>
-                          <TableHead>Gasto</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {campaigns.slice(0, 10).map((campaign) => (
-                          <TableRow key={`${campaign.date}-${campaign.campaign_id}`}>
-                            <TableCell>
-                              {new Date(campaign.date).toLocaleDateString('pt-BR')}
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium">{campaign.campaign_name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                ID: {campaign.campaign_id}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant="outline"
-                                className={
-                                  campaign.platform === 'Meta' 
-                                    ? 'border-blue-500 text-blue-600' 
-                                    : 'border-red-500 text-red-600'
-                                }
-                              >
-                                {campaign.platform}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{campaign.leads_count}</TableCell>
-                            <TableCell>{formatCurrency(campaign.spend)}</TableCell>
-                            <TableCell>
-                              <Badge 
-                                className={
-                                  campaign.feedback_status === 'Aprovado' 
-                                    ? 'bg-green-500/20 text-green-600' 
-                                    : campaign.feedback_status === 'Pendente'
-                                    ? 'bg-yellow-500/20 text-yellow-600'
-                                    : 'bg-gray-500/20 text-gray-600'
-                                }
-                              >
-                                {campaign.feedback_status}
-                              </Badge>
-                            </TableCell>
+
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Search className="h-5 w-5 text-red-600" />
+                      Google Ads
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Customer ID</p>
+                        <p className="font-mono text-sm bg-muted p-2 rounded">
+                          {client.google_ads_id || 'Não configurado'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">GA4 Stream ID</p>
+                        <p className="font-mono text-sm bg-muted p-2 rounded">
+                          {client.ga4_stream_id || 'Não configurado'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">GTM Container ID</p>
+                        <p className="font-mono text-sm bg-muted p-2 rounded">
+                          {client.gtm_id || 'Não configurado'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Usando Google Ads</p>
+                        <Badge variant={client.usa_google_ads ? 'default' : 'secondary'}>
+                          {client.usa_google_ads ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Client Accounts Table */}
+                {clientAccounts.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="font-semibold mb-3">Contas Adicionais</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Account ID</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Observações</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {clientAccounts.map((account) => (
+                            <TableRow key={account.id}>
+                              <TableCell>{account.tipo}</TableCell>
+                              <TableCell className="font-mono">{account.account_id}</TableCell>
+                              <TableCell>
+                                {getStatusBadge(account.status)}
+                              </TableCell>
+                              <TableCell>{account.observacoes || '-'}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
-          
-          <TabsContent value="accounts" className="space-y-4">
-            <AccountsSection clientId={client.id} />
-          </TabsContent>
 
-          <TabsContent value="details" className="space-y-4">
+          {/* Tracking Tab */}
+          <TabsContent value="tracking" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Dados Preenchidos */}
-              <Card className="surface-elevated">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="h-5 w-5" />
-                    Dados Preenchidos
-                  </CardTitle>
+                  <CardTitle>Status do Rastreamento</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    { label: 'Nome do Cliente', value: client.nome_cliente },
-                    { label: 'Nome da Empresa', value: client.nome_empresa },
-                    { label: 'Telefone', value: client.telefone },
-                    { label: 'Email', value: client.email },
-                    { label: 'Link Drive', value: client.link_drive },
-                    { label: 'Meta Account ID', value: client.meta_account_id },
-                    { label: 'Google Ads ID', value: client.google_ads_id },
-                    { label: 'Pixel Meta', value: client.pixel_meta },
-                    { label: 'GA4 Stream ID', value: client.ga4_stream_id },
-                    { label: 'GTM ID', value: client.gtm_id },
-                    { label: 'Budget Mensal Global', value: client.budget_mensal_global ? formatCurrency(client.budget_mensal_global) : null },
-                    { label: 'Budget Mensal Meta', value: client.budget_mensal_meta ? formatCurrency(client.budget_mensal_meta) : null },
-                    { label: 'Budget Mensal Google', value: client.budget_mensal_google ? formatCurrency(client.budget_mensal_google) : null },
-                    { label: 'URL CRM', value: client.url_crm },
-                    { label: 'Webhook Meta', value: client.webhook_meta },
-                    { label: 'Webhook Google', value: client.webhook_google },
-                    { label: 'Canal Relatório', value: client.canal_relatorio },
-                    { label: 'Horário Relatório', value: client.horario_relatorio },
-                    { label: 'Typebot URL', value: client.typebot_url },
-                  ].filter(item => item.value).map((item, index) => (
-                    <div key={index} className="flex justify-between items-start border-b border-muted/20 pb-2">
-                      <span className="text-sm text-muted-foreground">{item.label}:</span>
-                      <span className="text-sm font-medium text-right max-w-[60%] break-words">
-                        {item.value}
-                      </span>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${client.traqueamento_ativo ? 'bg-green-100' : 'bg-red-100'}`}>
+                        {client.traqueamento_ativo ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold">Rastreamento Principal</p>
+                        <p className="text-sm text-muted-foreground">
+                          {client.traqueamento_ativo ? 'Ativo' : 'Inativo'}
+                        </p>
+                      </div>
                     </div>
-                  ))}
+                    <Badge variant={client.traqueamento_ativo ? 'default' : 'destructive'}>
+                      {client.traqueamento_ativo ? 'Configurado' : 'Pendente'}
+                    </Badge>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Meta Pixel</span>
+                      {client.pixel_meta ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Google Analytics 4</span>
+                      {client.ga4_stream_id ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Google Tag Manager</span>
+                      {client.gtm_id ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Dados Pendentes */}
-              <Card className="surface-elevated border-orange-200">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-orange-600">
-                    <AlertTriangle className="h-5 w-5" />
-                    Dados Pendentes
-                  </CardTitle>
+                  <CardTitle>Typebot & Automação</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    { label: 'Email', missing: !client.email },
-                    { label: 'Link Drive', missing: !client.link_drive },
-                    { label: 'Meta Account ID', missing: !client.meta_account_id && client.usa_meta_ads },
-                    { label: 'Google Ads ID', missing: !client.google_ads_id && client.usa_google_ads },
-                    { label: 'Pixel Meta', missing: !client.pixel_meta && client.traqueamento_ativo },
-                    { label: 'GA4 Stream ID', missing: !client.ga4_stream_id && client.traqueamento_ativo },
-                    { label: 'GTM ID', missing: !client.gtm_id && client.traqueamento_ativo },
-                    { label: 'Budget Mensal Global', missing: !client.budget_mensal_global },
-                    { label: 'Budget Mensal Meta', missing: !client.budget_mensal_meta && client.usa_meta_ads },
-                    { label: 'Budget Mensal Google', missing: !client.budget_mensal_google && client.usa_google_ads },
-                    { label: 'URL CRM', missing: !client.url_crm },
-                    { label: 'Webhook Meta', missing: !client.webhook_meta && client.usa_meta_ads },
-                    { label: 'Webhook Google', missing: !client.webhook_google && client.usa_google_ads },
-                    { label: 'Canal Relatório', missing: !client.canal_relatorio },
-                    { label: 'Horário Relatório', missing: !client.horario_relatorio },
-                    { label: 'Typebot URL', missing: !client.typebot_url && client.typebot_ativo },
-                    { label: 'Forma de Pagamento', missing: !client.forma_pagamento },
-                    { label: 'Centro de Custo', missing: !client.centro_custo },
-                    { label: 'Contrato Início', missing: !client.contrato_inicio },
-                  ].filter(item => item.missing).map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm text-orange-600">
-                      <Clock className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </div>
-                  ))}
-                  {[
-                    { label: 'Email', missing: !client.email },
-                    { label: 'Link Drive', missing: !client.link_drive },
-                    { label: 'Meta Account ID', missing: !client.meta_account_id && client.usa_meta_ads },
-                    { label: 'Google Ads ID', missing: !client.google_ads_id && client.usa_google_ads },
-                    { label: 'Pixel Meta', missing: !client.pixel_meta && client.traqueamento_ativo },
-                    { label: 'GA4 Stream ID', missing: !client.ga4_stream_id && client.traqueamento_ativo },
-                    { label: 'GTM ID', missing: !client.gtm_id && client.traqueamento_ativo },
-                    { label: 'Budget Mensal Global', missing: !client.budget_mensal_global },
-                    { label: 'Budget Mensal Meta', missing: !client.budget_mensal_meta && client.usa_meta_ads },
-                    { label: 'Budget Mensal Google', missing: !client.budget_mensal_google && client.usa_google_ads },
-                    { label: 'URL CRM', missing: !client.url_crm },
-                    { label: 'Webhook Meta', missing: !client.webhook_meta && client.usa_meta_ads },
-                    { label: 'Webhook Google', missing: !client.webhook_google && client.usa_google_ads },
-                    { label: 'Canal Relatório', missing: !client.canal_relatorio },
-                    { label: 'Horário Relatório', missing: !client.horario_relatorio },
-                    { label: 'Typebot URL', missing: !client.typebot_url && client.typebot_ativo },
-                    { label: 'Forma de Pagamento', missing: !client.forma_pagamento },
-                    { label: 'Centro de Custo', missing: !client.centro_custo },
-                    { label: 'Contrato Início', missing: !client.contrato_inicio },
-                  ].filter(item => item.missing).length === 0 && (
-                    <div className="text-center py-4 text-green-600">
-                      <CheckCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p className="text-sm">Todos os dados estão preenchidos!</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {/* Modal de Edição */}
-        <ClienteFormModal
-          mode="edit"
-          open={showEditModal}
-          onOpenChange={setShowEditModal}
-          onSubmit={handleEditClient}
-          initialValues={getClientFormData()}
-        />
-      </div>
-    </AppLayout>
-  );
-}
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${client.typebot_ativo ? 'bg-green-100' : 'bg-gray-100'}`}>
+                        {client.typebot_ativo ? (
+                          <Zap className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Zap className="h-5 w-5 text-gray-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font
