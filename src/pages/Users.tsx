@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Search, 
-  Users, 
+  Users as UsersIcon, 
   UserCheck,
   Crown,
   Key,
@@ -140,6 +140,7 @@ export default function Users() {
       const { data, error } = await supabase
         .from('profiles')
         .insert({
+          id: crypto.randomUUID(),
           email: newUserData.email,
           name: newUserData.name,
           role: newUserData.role
@@ -317,7 +318,7 @@ export default function Users() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
+                  <UsersIcon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Total</p>
@@ -481,7 +482,7 @@ export default function Users() {
           <Card className="surface-elevated">
             <CardContent className="p-12 text-center">
               <div className="mx-auto mb-4 p-3 bg-muted/30 rounded-full w-fit">
-                <Users className="h-8 w-8 text-text-muted" />
+                <UsersIcon className="h-8 w-8 text-text-muted" />
               </div>
               <h3 className="font-semibold text-lg mb-2">Nenhum usuário encontrado</h3>
               <p className="text-text-secondary">
