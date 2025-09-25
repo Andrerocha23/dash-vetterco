@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, DollarSign, Target, TrendingUp, Edit, RefreshCw,
-  Users, BarChart3, Settings, ExternalLink, CheckCircle, AlertCircle
+  Users, Settings, ExternalLink, CheckCircle, AlertCircle
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -320,8 +320,8 @@ export default function ClientDetail() {
             <Skeleton className="h-6 w-24" />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
               <Card key={i}>
                 <CardHeader className="pb-2">
                   <Skeleton className="h-4 w-24" />
@@ -333,33 +333,18 @@ export default function ClientDetail() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-6 w-48" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-4 w-full" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-6 w-48" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-4 w-full" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-4 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
@@ -386,49 +371,39 @@ export default function ClientDetail() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        {/* Header Simples */}
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button
-              variant="ghost"
+              variant="ghost" 
               size="sm"
               onClick={() => navigate("/clientes")}
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-foreground">{client.nome_cliente}</h1>
-                <Badge className={getStatusColor(client.status)}>
-                  {client.status}
-                </Badge>
-                <div className="flex gap-2">
-                  {getChannelBadges(client.canais)}
-                </div>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span>{client.nome_empresa}</span>
-                <span>•</span>
-                <span>{client.telefone}</span>
-                {client.email && (
-                  <>
-                    <span>•</span>
-                    <span>{client.email}</span>
-                  </>
-                )}
-              </div>
+              <h1 className="text-2xl font-bold">{client.nome_cliente}</h1>
+              <p className="text-sm text-gray-600">{client.nome_empresa}</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
+            {client.link_drive && (
+              <Button 
+                variant="outline"
+                onClick={() => window.open(client.link_drive!, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Abrir Drive
+              </Button>
+            )}
             <Button 
               variant="outline" 
               onClick={() => setShowEditModal(true)}
             >
               <Edit className="h-4 w-4 mr-2" />
-              Editar Cliente
+              Editar
             </Button>
             <Button 
-              variant="default"
               onClick={handleSyncClient}
               disabled={syncLoading}
             >
@@ -438,232 +413,187 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Saldo Meta
-              </CardTitle>
+        {/* Informações Básicas - Layout Simples */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Informações do Cliente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+              <div>
+                <p className="text-gray-600">Status</p>
+                <Badge className={getStatusColor(client.status)}>
+                  {client.status}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-gray-600">Telefone</p>
+                <p className="font-medium">{client.telefone}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Email</p>
+                <p className="font-medium">{client.email || 'Não informado'}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Canais</p>
+                <div className="flex gap-2">
+                  {getChannelBadges(client.canais)}
+                </div>
+              </div>
+            </div>
+            {client.observacoes && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600">Observações</p>
+                <p className="text-sm mt-1 p-3 bg-gray-50 rounded-md">
+                  {client.observacoes}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* KPIs Simples */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saldo Meta</CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {formatCurrency((client.saldo_meta || 0) / 100)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Disponível</p>
+              <div className="text-2xl font-bold">{formatCurrency((client.saldo_meta || 0) / 100)}</div>
+              <p className="text-xs text-gray-600">Disponível</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Total de Leads
-              </CardTitle>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
+              <Target className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {stats?.total_leads || 0}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Gerados</p>
+              <div className="text-2xl font-bold">{stats?.total_leads || 0}</div>
+              <p className="text-xs text-gray-600">Leads gerados</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-orange-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Taxa de Conversão
-              </CardTitle>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Investimento Total</CardTitle>
+              <TrendingUp className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {stats?.conversion_rate?.toFixed(1) || '0.0'}%
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Leads → Vendas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Investimento Total
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {formatCurrency(stats?.total_spend || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Gasto em campanhas</p>
+              <div className="text-2xl font-bold">{formatCurrency(stats?.total_spend || 0)}</div>
+              <p className="text-xs text-gray-600">Gasto em campanhas</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Informações do Cliente */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Dados Básicos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Informações Básicas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Nome:</span>
-                  <p className="font-medium">{client.nome_cliente}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Empresa:</span>
-                  <p className="font-medium">{client.nome_empresa}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Telefone:</span>
-                  <p className="font-medium">{client.telefone}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Email:</span>
-                  <p className="font-medium">{client.email || '—'}</p>
+        {/* Configurações - Seção Simples */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configurações e IDs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+              <div>
+                <p className="text-gray-600">Meta Account ID</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-xs">{client.meta_account_id || '—'}</p>
+                  {client.meta_account_id ? (
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  )}
                 </div>
               </div>
-              
-              {client.link_drive && (
-                <div className="pt-3 border-t">
-                  <Button 
-                    variant="link" 
-                    size="sm" 
-                    className="h-auto p-0 font-medium"
-                    onClick={() => window.open(client.link_drive!, '_blank')}
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Abrir Drive do Cliente
-                  </Button>
+              <div>
+                <p className="text-gray-600">Google Ads ID</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-xs">{client.google_ads_id || '—'}</p>
+                  {client.google_ads_id ? (
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  )}
                 </div>
-              )}
-              
-              {client.observacoes && (
-                <div className="pt-3 border-t">
-                  <span className="text-muted-foreground text-sm">Observações:</span>
-                  <p className="text-sm mt-1 p-3 bg-muted/50 rounded-md">
-                    {client.observacoes}
-                  </p>
+              </div>
+              <div>
+                <p className="text-gray-600">Pixel Meta</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-xs">{client.pixel_meta || '—'}</p>
+                  {client.pixel_meta ? (
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+              <div>
+                <p className="text-gray-600">GA4 Stream ID</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-xs">{client.ga4_stream_id || '—'}</p>
+                  {client.ga4_stream_id ? (
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-600">GTM ID</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-xs">{client.gtm_id || '—'}</p>
+                  {client.gtm_id ? (
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-600">Typebot</p>
+                <Badge variant={client.typebot_ativo ? "default" : "secondary"}>
+                  {client.typebot_ativo ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+            </div>
+            
+            {(client.budget_mensal_meta || client.budget_mensal_google) && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {client.budget_mensal_meta && (
+                    <div>
+                      <p className="text-gray-600">Budget Meta</p>
+                      <p className="font-medium">{formatCurrency(client.budget_mensal_meta)}</p>
+                    </div>
+                  )}
+                  {client.budget_mensal_google && (
+                    <div>
+                      <p className="text-gray-600">Budget Google</p>
+                      <p className="font-medium">{formatCurrency(client.budget_mensal_google)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Configurações e Implementações */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Configurações e Rastreamento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Meta Account ID:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs">{client.meta_account_id || '—'}</span>
-                    {client.meta_account_id ? (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-3 w-3 text-yellow-500" />
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Google Ads ID:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs">{client.google_ads_id || '—'}</span>
-                    {client.google_ads_id ? (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-3 w-3 text-yellow-500" />
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Pixel Meta:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs">{client.pixel_meta || '—'}</span>
-                    {client.pixel_meta ? (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-3 w-3 text-yellow-500" />
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">GA4 Stream:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs">{client.ga4_stream_id || '—'}</span>
-                    {client.ga4_stream_id ? (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-3 w-3 text-yellow-500" />
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">GTM ID:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs">{client.gtm_id || '—'}</span>
-                    {client.gtm_id ? (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-3 w-3 text-yellow-500" />
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="pt-3 border-t">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Typebot:</span>
-                  <Badge variant={client.typebot_ativo ? "default" : "secondary"}>
-                    {client.typebot_ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                </div>
-                {client.typebot_url && (
-                  <p className="text-xs text-muted-foreground mt-1 break-all">
-                    {client.typebot_url}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-3 border-t">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Budget Mensal Meta:</span>
-                  <p className="font-medium">{client.budget_mensal_meta ? formatCurrency(client.budget_mensal_meta) : '—'}</p>
-                </div>
-                <div className="text-sm mt-2">
-                  <span className="text-muted-foreground">Budget Mensal Google:</span>
-                  <p className="font-medium">{client.budget_mensal_google ? formatCurrency(client.budget_mensal_google) : '—'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Campanhas Recentes */}
+        {/* Campanhas - Tabela Simples */}
         <Card>
           <CardHeader>
-            <CardTitle>Atividades de Campanha Recentes</CardTitle>
+            <CardTitle>Atividades de Campanha ({campaigns.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {campaigns.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">Nenhuma atividade de campanha encontrada</p>
+                <p className="text-gray-600">Nenhuma atividade de campanha encontrada</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -676,7 +606,6 @@ export default function ClientDetail() {
                       <TableHead className="text-center">Leads</TableHead>
                       <TableHead className="text-right">Gasto</TableHead>
                       <TableHead className="text-center">CTR</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -686,17 +615,20 @@ export default function ClientDetail() {
                           {new Date(campaign.date).toLocaleDateString('pt-BR')}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={
-                            campaign.platform === 'Meta' 
-                              ? 'border-blue-500 text-blue-600' 
-                              : campaign.platform === 'Google'
-                              ? 'border-green-500 text-green-600'
-                              : 'border-gray-500 text-gray-600'
-                          }>
+                          <Badge 
+                            variant="outline" 
+                            className={
+                              campaign.platform === 'Meta' 
+                                ? 'border-blue-500 text-blue-600' 
+                                : campaign.platform === 'Google'
+                                ? 'border-green-500 text-green-600'
+                                : 'border-gray-500 text-gray-600'
+                            }
+                          >
                             {campaign.platform}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-medium max-w-[200px] truncate">
+                        <TableCell className="max-w-[200px] truncate">
                           {campaign.campaign_name || 'Campanha sem nome'}
                         </TableCell>
                         <TableCell className="text-center font-medium">
@@ -707,19 +639,6 @@ export default function ClientDetail() {
                         </TableCell>
                         <TableCell className="text-center">
                           {campaign.ctr ? `${campaign.ctr.toFixed(2)}%` : '—'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {campaign.kanban_status && (
-                            <Badge variant="outline" className={
-                              campaign.kanban_status === 'Executado'
-                                ? 'border-green-500 text-green-600'
-                                : campaign.kanban_status === 'Em Andamento'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-yellow-500 text-yellow-600'
-                            }>
-                              {campaign.kanban_status}
-                            </Badge>
-                          )}
                         </TableCell>
                       </TableRow>
                     ))}
