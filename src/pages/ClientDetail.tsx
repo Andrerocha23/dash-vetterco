@@ -6,32 +6,19 @@ import {
   Target, 
   TrendingUp, 
   Edit, 
-  Archive, 
   RefreshCw,
   Users, 
   BarChart3, 
-  Calendar, 
-  Settings, 
-  Shield,
   Phone,
   Mail,
-  Building2,
   ExternalLink,
-  Play,
-  Pause,
-  ChevronDown,
-  ChevronRight,
   Activity,
   Zap,
-  Eye,
-  MessageSquare,
   AlertCircle,
   CheckCircle,
   Clock,
-  Globe,
   Facebook,
   Search,
-  TrendingDown
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -39,9 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -102,7 +88,7 @@ interface ClientAccount {
   observacoes: string | null;
 }
 
-// Mock data dos gestores (até implementar tabela managers)
+// Mock data dos gestores
 const gestores = {
   'gest1': { id: 'gest1', name: 'Carlos Silva', avatar: '👨‍💼', email: 'carlos@company.com' },
   'gest2': { id: 'gest2', name: 'Ana Costa', avatar: '👩‍💼', email: 'ana@company.com' },
@@ -161,7 +147,7 @@ export default function ClientDetail() {
           setLeadsStats(statsData);
         }
       } catch (error) {
-        console.warn('Tabela leads_stats não encontrada ou erro:', error);
+        console.warn('Tabela leads_stats não encontrada:', error);
       }
 
       // Buscar contas do cliente (se existir)
@@ -177,7 +163,7 @@ export default function ClientDetail() {
           setClientAccounts(accountsData);
         }
       } catch (error) {
-        console.warn('Tabela client_accounts não encontrada ou erro:', error);
+        console.warn('Tabela client_accounts não encontrada:', error);
       }
 
     } catch (error) {
@@ -468,202 +454,7 @@ export default function ClientDetail() {
                         <AvatarFallback>{manager.avatar}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-semibold">Typebot</p>
-                        <p className="text-sm text-muted-foreground">
-                          {client.typebot_ativo ? 'Ativo' : 'Inativo'}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant={client.typebot_ativo ? 'default' : 'secondary'}>
-                      {client.typebot_ativo ? 'Configurado' : 'Não configurado'}
-                    </Badge>
-                  </div>
-
-                  {client.typebot_url && (
-                    <>
-                      <Separator />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">URL do Typebot</p>
-                        <div className="flex items-center gap-2">
-                          <p className="font-mono text-sm bg-muted p-2 rounded flex-1 truncate">
-                            {client.typebot_url}
-                          </p>
-                          <Button size="sm" variant="outline" onClick={() => window.open(client.typebot_url!, '_blank')}>
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configurações de Orçamento</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Budget Mensal Meta</span>
-                      <span className="font-semibold">
-                        {client.budget_mensal_meta ? formatCurrency(client.budget_mensal_meta) : 'Não definido'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Budget Mensal Google</span>
-                      <span className="font-semibold">
-                        {client.budget_mensal_google ? formatCurrency(client.budget_mensal_google) : 'Não definido'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Saldo Atual Meta</span>
-                      <span className="font-semibold text-green-600">
-                        {client.saldo_meta ? formatCurrency(client.saldo_meta / 100) : 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Alerta Saldo Baixo</span>
-                      <span className="font-semibold text-yellow-600">
-                        {client.alerta_saldo_baixo ? formatCurrency(client.alerta_saldo_baixo / 100) : 'Não configurado'}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Comunicação & Relatórios</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Canal de Relatório</span>
-                      <Badge variant="outline">
-                        {client.canal_relatorio || 'Não configurado'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Horário dos Relatórios</span>
-                      <span className="font-semibold">
-                        {client.horario_relatorio || 'Não configurado'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Status das Contas</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Facebook className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm">Meta Ads</span>
-                        </div>
-                        <Badge variant={client.usa_meta_ads ? 'default' : 'secondary'}>
-                          {client.usa_meta_ads ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Search className="h-4 w-4 text-red-600" />
-                          <span className="text-sm">Google Ads</span>
-                        </div>
-                        <Badge variant={client.usa_google_ads ? 'default' : 'secondary'}>
-                          {client.usa_google_ads ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* History Tab */}
-          <TabsContent value="history" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Histórico do Cliente</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-4 p-4 border rounded-lg">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold">Cliente Criado</p>
-                      <p className="text-sm text-muted-foreground">
-                        Cliente {client.nome_cliente} foi adicionado ao sistema
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDate(client.created_at)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {client.updated_at !== client.created_at && (
-                    <div className="flex items-start gap-4 p-4 border rounded-lg">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Edit className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">Última Atualização</p>
-                        <p className="text-sm text-muted-foreground">
-                          Informações do cliente foram atualizadas
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(client.updated_at)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {leadsStats && (
-                    <div className="flex items-start gap-4 p-4 border rounded-lg">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <Target className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">Estatísticas de Leads</p>
-                        <p className="text-sm text-muted-foreground">
-                          {leadsStats.total_leads} leads totais • {leadsStats.leads_convertidos} convertidos
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Atualizado em {formatDate(leadsStats.ultima_atualizacao)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {!leadsStats && (
-                    <div className="text-center py-8">
-                      <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-sm text-muted-foreground">
-                        Histórico de atividades será exibido aqui
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Configure integrações para ver mais dados
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </AppLayout>
-  );
-}-semibold">{manager.name}</p>
+                        <p className="font-semibold">{manager.name}</p>
                         <p className="text-sm text-muted-foreground">{manager.email}</p>
                       </div>
                     </div>
@@ -758,7 +549,7 @@ export default function ClientDetail() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Usando Meta Ads</p>
+                        <p className="text-sm text-muted-foreground">Status</p>
                         <Badge variant={client.usa_meta_ads ? 'default' : 'secondary'}>
                           {client.usa_meta_ads ? 'Ativo' : 'Inativo'}
                         </Badge>
@@ -791,7 +582,7 @@ export default function ClientDetail() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Usando Google Ads</p>
+                        <p className="text-sm text-muted-foreground">Status</p>
                         <Badge variant={client.usa_google_ads ? 'default' : 'secondary'}>
                           {client.usa_google_ads ? 'Ativo' : 'Inativo'}
                         </Badge>
@@ -887,27 +678,3 @@ export default function ClientDetail() {
                       <span className="text-sm">Google Tag Manager</span>
                       {client.gtm_id ? (
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Typebot & Automação</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${client.typebot_ativo ? 'bg-green-100' : 'bg-gray-100'}`}>
-                        {client.typebot_ativo ? (
-                          <Zap className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <Zap className="h-5 w-5 text-gray-600" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font
