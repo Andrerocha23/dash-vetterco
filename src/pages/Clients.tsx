@@ -1,93 +1,152 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreHorizontal, Eye, Edit, Archive, ArchiveRestore } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+  Search, 
+  Plus, 
+  Users, 
+  Building2,
+  UserCheck,
+  Calendar,
+  RefreshCw,
+  MoreVertical,
+  Edit,
+  Eye,
+  Archive,
+  ArchiveRestore,
+  Phone,
+  Mail,
+  Target,
+  BarChart3,
+  DollarSign,
+  Activity
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
-import { useToast } from "@/hooks/use-toast";
-import { useClientManagers } from "@/hooks/useClientManagers";
-import { supabase } from "@/integrations/supabase/client";
-import { ClienteFormData } from "@/types/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
-// Dados dos gestores
-const gestores = {
-  'gest1': { id: 'gest1', name: 'Carlos Silva', avatar: '👨‍💼' },
-  'gest2': { id: 'gest2', name: 'Ana Costa', avatar: '👩‍💼' },
-  'gest3': { id: 'gest3', name: 'João Santos', avatar: '🧑‍💼' },
-};
-
-// Interface simples para o cliente
-interface ClientDisplay {
+interface ClientData {
   id: string;
-  name: string;
-  gestorId: string;
-  channels: ('Meta' | 'Google')[];
-  status: 'Active' | 'Paused' | 'Archived';
-  activeCampaigns: number;
-  metaBalance: number;
-  createdOn: string;
-  rawData: any;
+  nome_cliente: string;
+  nome_empresa: string;
+  telefone: string;
+  email: string | null;
+  gestor_id: string;
+  canais: string[];
+  status: string;
+  observacoes: string | null;
+  usa_meta_ads: boolean;
+  usa_google_ads: boolean;
+  traqueamento_ativo: boolean;
+  saldo_meta: number | null;
+  meta_account_id: string | null;
+  google_ads_id: string | null;
+  created_at: string;
+  updated_at: string;
+  gestor_name?: string;
+  stats?: {
+    total_leads: number;
+    conversoes: number;
+    gasto_total: number;
+  };
 }
+
+const STATUS_OPTIONS = [
+  { value: 'Ativo', label: 'Ativo', color: 'bg-success', textColor: 'text-success' },
+  { value: 'Pausado', label: 'Pausado', color: 'bg-warning', textColor: 'text-warning' },
+  { value: 'Arquivado', label: 'Arquivado', color: 'bg-text-muted', textColor: 'text-text-muted' }
+];
+
+const CANAIS_OPTIONS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'Orgânico'];
 
 export default function Clients() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { managers, getManagerName, getManagerAvatar } = useClientManagers();
-  
-  const [clients, setClients] = useState<ClientDisplay[]>([]);
+  const [clients, setClients] = useState<ClientData[]>([]);
+  const [managers, setManagers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("active");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterManager, setFilterManager] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingClient, setEditingClient] = useState<Partial<ClienteFormData> | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newClientData, setNewClientData] = useState({
+    nome_cliente: '',
+    nome_empresa: '',
+    telefone: '',
+    email: '',
+    gestor_id: '',
+    canais: [] as string[],
+    status: 'Ativo'
+  });
+  const { toast } = useToast();
 
-  // Carregar clientes do banco
-  const loadClients = async () => {
+  // Carregar clientes e gestores do banco
+  const loadClientsData = async () => {
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase
+
+      // Buscar clientes
+      const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (clientsError) throw clientsError;
 
-      // Transformar dados simples
-      const transformedClients: ClientDisplay[] = (data || []).map(client => ({
-        id: client.id,
-        name: client.nome_cliente,
-        gestorId: client.gestor_id,
-        channels: client.canais as ('Meta' | 'Google')[],
-        status: client.status === 'Ativo' ? 'Active' : 
-               client.status === 'Pausado' ? 'Paused' : 'Archived',
-        activeCampaigns: Math.floor(Math.random() * 5) + 1, // Temporário
-        metaBalance: (client.saldo_meta || 0) / 100,
-        createdOn: client.created_at,
-        rawData: client,
-      }));
+      // Buscar gestores
+      const { data: managersData, error: managersError } = await supabase
+        .from('managers')
+        .select('id, name')
+        .eq('status', 'active');
 
-      setClients(transformedClients);
-      
+      if (managersError) console.warn('Managers not found:', managersError);
+
+      // Buscar stats de leads (se disponível)
+      const { data: leadsData, error: leadsError } = await supabase
+        .from('leads_stats')
+        .select('client_id, total_leads, leads_convertidos, valor_total_conversoes');
+
+      if (leadsError) console.warn('Leads stats not available:', leadsError);
+
+      // Processar dados combinados
+      const processedClients: ClientData[] = (clientsData || []).map(client => {
+        const manager = managersData?.find(m => m.id === client.gestor_id);
+        const stats = leadsData?.find(s => s.client_id === client.id);
+
+        return {
+          ...client,
+          gestor_name: manager?.name || 'Gestor não encontrado',
+          stats: stats ? {
+            total_leads: stats.total_leads || 0,
+            conversoes: stats.leads_convertidos || 0,
+            gasto_total: stats.valor_total_conversoes || 0
+          } : undefined
+        };
+      });
+
+      setClients(processedClients);
+      setManagers(managersData || []);
+
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
       toast({
@@ -100,314 +159,157 @@ export default function Clients() {
     }
   };
 
+  // Criar novo cliente
+  const handleCreateClient = async () => {
+    try {
+      if (!newClientData.nome_cliente || !newClientData.telefone) {
+        toast({
+          title: "Erro",
+          description: "Preencha nome e telefone",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('clients')
+        .insert({
+          ...newClientData,
+          email: newClientData.email || null
+        });
+
+      if (error) throw error;
+
+      await loadClientsData();
+      setShowCreateModal(false);
+      setNewClientData({
+        nome_cliente: '',
+        nome_empresa: '',
+        telefone: '',
+        email: '',
+        gestor_id: '',
+        canais: [],
+        status: 'Ativo'
+      });
+
+      toast({
+        title: "Sucesso",
+        description: `Cliente ${newClientData.nome_cliente} criado`,
+      });
+
+    } catch (error) {
+      console.error('Erro ao criar cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o cliente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Alterar status do cliente
+  const handleChangeStatus = async (clientId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', clientId);
+
+      if (error) throw error;
+
+      await loadClientsData();
+
+      toast({
+        title: "Sucesso",
+        description: `Status do cliente alterado para ${newStatus}`,
+      });
+
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Navegar para detalhes do cliente
+  const handleViewClient = (clientId: string) => {
+    navigate(`/clientes/${clientId}`);
+  };
+
   useEffect(() => {
-    loadClients();
+    loadClientsData();
   }, []);
 
-// Salvar cliente
-const handleSaveClient = async (clientData: ClienteFormData) => {
-  try {
-    const supabaseData = {
-      nome_cliente: clientData.nomeCliente,
-      nome_empresa: clientData.nomeEmpresa,
-      telefone: clientData.telefone,
-      email: clientData.email || null,
-      gestor_id: clientData.gestorId,
-      canais: clientData.canais,
-      status: clientData.status,
-      observacoes: clientData.observacoes || null,
-      id_grupo: clientData.idGrupo || null,
-      usa_crm_externo: clientData.usaCrmExterno || false,
-      url_crm: clientData.urlCrm || null,
-      
-      // Meta Ads - CAMPOS CORRIGIDOS
-      usa_meta_ads: clientData.usaMetaAds,
-      ativar_campanhas_meta: clientData.ativarCampanhasMeta || false,
-      meta_account_id: clientData.metaAccountId || null,
-      meta_business_id: clientData.metaBusinessId || null,
-      meta_page_id: clientData.metaPageId || null,
-      modo_saldo_meta: clientData.modoSaldoMeta || null,
-      monitorar_saldo_meta: clientData.monitorarSaldoMeta || false,
-      saldo_meta: clientData.saldoMeta ? clientData.saldoMeta * 100 : null,
-      alerta_saldo_baixo: clientData.alertaSaldoBaixo ? clientData.alertaSaldoBaixo * 100 : null,
-      budget_mensal_meta: clientData.budgetMensalMeta || null,
-      link_meta: clientData.linkMeta || null,
-      utm_padrao: clientData.utmPadrao || null,
-      webhook_meta: clientData.webhookMeta || null,
-      
-      // Google Ads - CAMPOS CORRIGIDOS
-      usa_google_ads: clientData.usaGoogleAds,
-      google_ads_id: clientData.googleAdsId || null,
-      budget_mensal_google: clientData.budgetMensalGoogle || null,
-      conversoes: clientData.conversoes || null,
-      link_google: clientData.linkGoogle || null,
-      webhook_google: clientData.webhookGoogle || null,
-      
-      // Comunicação & Automação
-      canal_relatorio: clientData.canalRelatorio || null,
-      horario_relatorio: clientData.horarioRelatorio || null,
-      templates_padrao: clientData.templatesPadrao || null,
-      notificacao_saldo_baixo: clientData.notificacaoSaldoBaixo || false,
-      notificacao_erro_sync: clientData.notificacaoErroSync || false,
-      notificacao_leads_diarios: clientData.notificacaoLeadsDiarios || false,
-      
-      // Rastreamento & Analytics
-      traqueamento_ativo: clientData.traqueamentoAtivo,
-      pixel_meta: clientData.pixelMeta || null,
-      ga4_stream_id: clientData.ga4StreamId || null,
-      gtm_id: clientData.gtmId || null,
-      typebot_ativo: clientData.typebotAtivo || false,
-      typebot_url: clientData.typebotUrl || null,
-      
-      // Financeiro & Orçamento
-      budget_mensal_global: clientData.budgetMensalGlobal || null,
-      forma_pagamento: clientData.formaPagamento || null,
-      centro_custo: clientData.centroCusto || null,
-      contrato_inicio: clientData.contratoInicio || null,
-      contrato_renovacao: clientData.contratoRenovacao || null,
-      
-      // Permissões & Atribuições
-      papel_padrao: clientData.papelPadrao || null,
-      usuarios_vinculados: clientData.usuariosVinculados || null,
-      ocultar_ranking: clientData.ocultarRanking || false,
-      somar_metricas: clientData.somarMetricas || false,
-    };
-
-    const { error } = await supabase
-      .from('clients')
-      .insert(supabaseData);
-
-    if (error) throw error;
-
-    toast({
-      title: "Sucesso!",
-      description: "Cliente criado com sucesso",
-    });
-
-    await loadClients();
-    setShowCreateModal(false);
-
-  } catch (error) {
-    console.error('Erro ao salvar cliente:', error);
-    toast({
-      title: "Erro",
-      description: "Não foi possível salvar o cliente",
-      variant: "destructive",
-    });
-  }
-};
-
-// Atualizar cliente (edição)
-const handleUpdateClient = async (id: string, clientData: ClienteFormData) => {
-  try {
-    const supabaseData = {
-      nome_cliente: clientData.nomeCliente,
-      nome_empresa: clientData.nomeEmpresa,
-      telefone: clientData.telefone,
-      email: clientData.email || null,
-      gestor_id: clientData.gestorId,
-      canais: clientData.canais,
-      status: clientData.status,
-      observacoes: clientData.observacoes || null,
-      id_grupo: clientData.idGrupo || null,
-      usa_crm_externo: clientData.usaCrmExterno || false,
-      url_crm: clientData.urlCrm || null,
-      usa_meta_ads: clientData.usaMetaAds,
-      ativar_campanhas_meta: clientData.ativarCampanhasMeta || false,
-      meta_account_id: clientData.metaAccountId || null,
-      meta_business_id: clientData.metaBusinessId || null,
-      meta_page_id: clientData.metaPageId || null,
-      modo_saldo_meta: clientData.modoSaldoMeta || null,
-      monitorar_saldo_meta: clientData.monitorarSaldoMeta || false,
-      saldo_meta: clientData.saldoMeta ? clientData.saldoMeta * 100 : null,
-      alerta_saldo_baixo: clientData.alertaSaldoBaixo ? clientData.alertaSaldoBaixo * 100 : null,
-      budget_mensal_meta: clientData.budgetMensalMeta || null,
-      link_meta: clientData.linkMeta || null,
-      utm_padrao: clientData.utmPadrao || null,
-      webhook_meta: clientData.webhookMeta || null,
-      usa_google_ads: clientData.usaGoogleAds,
-      google_ads_id: clientData.googleAdsId || null,
-      budget_mensal_google: clientData.budgetMensalGoogle || null,
-      conversoes: clientData.conversoes || null,
-      link_google: clientData.linkGoogle || null,
-      webhook_google: clientData.webhookGoogle || null,
-      canal_relatorio: clientData.canalRelatorio || null,
-      horario_relatorio: clientData.horarioRelatorio || null,
-      templates_padrao: clientData.templatesPadrao || null,
-      notificacao_saldo_baixo: clientData.notificacaoSaldoBaixo || false,
-      notificacao_erro_sync: clientData.notificacaoErroSync || false,
-      notificacao_leads_diarios: clientData.notificacaoLeadsDiarios || false,
-      traqueamento_ativo: clientData.traqueamentoAtivo,
-      pixel_meta: clientData.pixelMeta || null,
-      ga4_stream_id: clientData.ga4StreamId || null,
-      gtm_id: clientData.gtmId || null,
-      typebot_ativo: clientData.typebotAtivo || false,
-      typebot_url: clientData.typebotUrl || null,
-      budget_mensal_global: clientData.budgetMensalGlobal || null,
-      forma_pagamento: clientData.formaPagamento || null,
-      centro_custo: clientData.centroCusto || null,
-      contrato_inicio: clientData.contratoInicio || null,
-      contrato_renovacao: clientData.contratoRenovacao || null,
-      papel_padrao: clientData.papelPadrao || null,
-      usuarios_vinculados: clientData.usuariosVinculados || null,
-      ocultar_ranking: clientData.ocultarRanking || false,
-      somar_metricas: clientData.somarMetricas || false,
-    };
-
-    const { error } = await supabase
-      .from('clients')
-      .update(supabaseData)
-      .eq('id', id);
-
-    if (error) throw error;
-
-    toast({
-      title: "Sucesso!",
-      description: "Cliente atualizado com sucesso",
-    });
-
-    await loadClients();
-    setShowEditModal(false);
-    setEditingClient(null);
-    setEditingId(null);
-  } catch (error) {
-    console.error('Erro ao atualizar cliente:', error);
-    toast({
-      title: "Erro",
-      description: "Não foi possível atualizar o cliente",
-      variant: "destructive",
-    });
-  }
-};
-
-// Editar: preparar dados iniciais e abrir modal
-const handleEditClick = (client: ClientDisplay) => {
-  setEditingId(client.id);
-  const raw = client.rawData;
-  const initial: Partial<ClienteFormData> = {
-    nomeCliente: raw.nome_cliente,
-    nomeEmpresa: raw.nome_empresa,
-    telefone: raw.telefone,
-    email: raw.email || undefined,
-    gestorId: raw.gestor_id,
-    canais: raw.canais,
-    status: raw.status,
-    observacoes: raw.observacoes || undefined,
-    idGrupo: raw.id_grupo || undefined,
-    usaCrmExterno: !!raw.usa_crm_externo,
-    urlCrm: raw.url_crm || undefined,
-    usaMetaAds: !!raw.usa_meta_ads,
-    ativarCampanhasMeta: !!raw.ativar_campanhas_meta,
-    metaAccountId: raw.meta_account_id || undefined,
-    metaBusinessId: raw.meta_business_id || undefined,
-    metaPageId: raw.meta_page_id || undefined,
-    modoSaldoMeta: raw.modo_saldo_meta || undefined,
-    monitorarSaldoMeta: !!raw.monitorar_saldo_meta,
-    saldoMeta: raw.saldo_meta ? Number(raw.saldo_meta) / 100 : undefined,
-    alertaSaldoBaixo: raw.alerta_saldo_baixo ? Number(raw.alerta_saldo_baixo) / 100 : undefined,
-    budgetMensalMeta: raw.budget_mensal_meta || undefined,
-    linkMeta: raw.link_meta || undefined,
-    utmPadrao: raw.utm_padrao || undefined,
-    webhookMeta: raw.webhook_meta || undefined,
-    usaGoogleAds: !!raw.usa_google_ads,
-    googleAdsId: raw.google_ads_id || undefined,
-    budgetMensalGoogle: raw.budget_mensal_google || undefined,
-    conversoes: raw.conversoes || undefined,
-    linkGoogle: raw.link_google || undefined,
-    webhookGoogle: raw.webhook_google || undefined,
-    canalRelatorio: raw.canal_relatorio || undefined,
-    horarioRelatorio: raw.horario_relatorio || undefined,
-    templatesPadrao: raw.templates_padrao || undefined,
-    notificacaoSaldoBaixo: !!raw.notificacao_saldo_baixo,
-    notificacaoErroSync: !!raw.notificacao_erro_sync,
-    notificacaoLeadsDiarios: !!raw.notificacao_leads_diarios,
-    traqueamentoAtivo: !!raw.traqueamento_ativo,
-    pixelMeta: raw.pixel_meta || undefined,
-    ga4StreamId: raw.ga4_stream_id || undefined,
-    gtmId: raw.gtm_id || undefined,
-    typebotAtivo: !!raw.typebot_ativo,
-    typebotUrl: raw.typebot_url || undefined,
-    budgetMensalGlobal: raw.budget_mensal_global || undefined,
-    formaPagamento: raw.forma_pagamento || undefined,
-    centroCusto: raw.centro_custo || undefined,
-    contratoInicio: raw.contrato_inicio || undefined,
-    contratoRenovacao: raw.contrato_renovacao || undefined,
-    papelPadrao: raw.papel_padrao || undefined,
-    usuariosVinculados: raw.usuarios_vinculados || undefined,
-    ocultarRanking: !!raw.ocultar_ranking,
-    somarMetricas: !!raw.somar_metricas,
-  };
-  setEditingClient(initial);
-  setShowEditModal(true);
-};
-
-// Arquivar / Desarquivar
-const handleToggleArchive = async (client: ClientDisplay) => {
-  try {
-    const next = client.status === 'Active' ? 'Arquivado' : 'Ativo';
-    const { error } = await supabase
-      .from('clients')
-      .update({ status: next })
-      .eq('id', client.id);
-    if (error) throw error;
-
-    toast({
-      title: next === 'Arquivado' ? 'Cliente arquivado' : 'Cliente restaurado',
-      description: `${client.name} foi ${next === 'Arquivado' ? 'arquivado' : 'restaurado'}.`,
-    });
-
-    await loadClients();
-  } catch (error) {
-    console.error('Erro ao atualizar status:', error);
-    toast({
-      title: 'Erro',
-      description: 'Não foi possível atualizar o status do cliente',
-      variant: 'destructive',
-    });
-  }
-};
-
-  // Filtros simples
   const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = 
-      statusFilter === "all" || 
-      (statusFilter === "active" && client.status === "Active") ||
-      (statusFilter === "archived" && client.status === "Archived");
+    const matchesSearch = client.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         client.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         client.telefone.includes(searchTerm) ||
+                         client.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesSearch && matchesStatus;
+    const matchesStatus = filterStatus === "all" || client.status === filterStatus;
+    const matchesManager = filterManager === "all" || client.gestor_id === filterManager;
+    
+    return matchesSearch && matchesStatus && matchesManager;
   });
 
-  // Badges dos canais
+  // Stats gerais
+  const totalClients = clients.length;
+  const activeClients = clients.filter(c => c.status === 'Ativo').length;
+  const pausedClients = clients.filter(c => c.status === 'Pausado').length;
+  const metaClients = clients.filter(c => c.usa_meta_ads || c.canais.includes('Meta')).length;
+  const googleClients = clients.filter(c => c.usa_google_ads || c.canais.includes('Google')).length;
+  const totalBalance = clients.reduce((sum, c) => sum + ((c.saldo_meta || 0) / 100), 0);
+
+  const getStatusBadge = (status: string) => {
+    const statusInfo = STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
+    return (
+      <Badge className={`text-xs text-white ${statusInfo.color}`}>
+        {statusInfo.label}
+      </Badge>
+    );
+  };
+
   const getChannelBadges = (channels: string[]) => {
-    return channels.map((channel) => (
-      <Badge
+    return channels.map(channel => (
+      <Badge 
         key={channel}
-        variant="outline"
-        className={
-          channel === 'Meta'
-            ? 'border-primary text-primary bg-primary/10'
-            : 'border-muted-foreground text-muted-foreground bg-secondary/50'
-        }
+        variant="outline" 
+        className={`text-xs ${
+          channel === 'Meta' ? 'border-primary text-primary' : 
+          channel === 'Google' ? 'border-warning text-warning' :
+          'border-accent text-accent'
+        }`}
       >
         {channel}
       </Badge>
     ));
   };
 
-  const statusFilters = [
-    { key: "all", label: "Todos" },
-    { key: "active", label: "Ativos" },
-    { key: "archived", label: "Arquivados" },
-  ];
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
 
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Carregando clientes...</p>
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-text-secondary">Carregando clientes...</p>
           </div>
         </div>
       </AppLayout>
@@ -417,196 +319,402 @@ const handleToggleArchive = async (client: ClientDisplay) => {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header simples */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Clientes</h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie seus clientes e campanhas
+            <h1 className="text-2xl font-bold text-foreground">Gestão de Clientes</h1>
+            <p className="text-text-secondary mt-1">
+              Controle completo da sua carteira de clientes
             </p>
           </div>
-          <ClienteFormModal
-            mode="create"
-            open={showCreateModal}
-            onOpenChange={setShowCreateModal}
-            onSubmit={handleSaveClient}
-            trigger={
-              <Button variant="apple" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Cliente
-              </Button>
-            }
-          />
-          <ClienteFormModal
-            mode="edit"
-            open={showEditModal}
-            onOpenChange={setShowEditModal}
-            initialValues={editingClient || undefined}
-            onSubmit={(data) => editingId && handleUpdateClient(editingId, data)}
-          />
-        </div>
-
-        {/* Filtros limpos */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar clientes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            {statusFilters.map((status) => (
-              <Button
-                key={status.key}
-                variant={statusFilter === status.key ? "default" : "outline"}
-                size="sm"
-                className="whitespace-nowrap"
-                onClick={() => setStatusFilter(status.key as typeof statusFilter)}
-              >
-                {status.label}
-              </Button>
-            ))}
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              className="gap-2" 
+              onClick={loadClientsData}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </Button>
+            <Button 
+              className="gap-2"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Novo Cliente
+            </Button>
           </div>
         </div>
 
-        {/* Tabela simples */}
-        <Card className="surface-elevated">
-          <CardHeader>
-            <CardTitle>
-              {filteredClients.length} Cliente{filteredClients.length !== 1 ? 's' : ''}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredClients.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">👥</div>
-                <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
-                <p className="text-muted-foreground mb-6">
-                  {searchQuery || statusFilter !== "active" 
-                    ? "Tente ajustar sua busca ou filtros" 
-                    : "Comece adicionando seu primeiro cliente"
-                  }
-                </p>
-                {!searchQuery && statusFilter === "active" && (
-                  <Button 
-                    variant="apple" 
-                    className="gap-2"
-                    onClick={() => setShowCreateModal(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Adicionar Primeiro Cliente
-                  </Button>
-                )}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Total</p>
+                  <p className="text-2xl font-bold text-foreground">{totalClients}</p>
+                </div>
               </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Canais</TableHead>
-                    <TableHead>Gestor</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredClients.map((client) => (
-                    <TableRow 
-                      key={client.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/clients/${client.id}`)}
-                    >
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{client.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {client.activeCampaigns} campanhas ativas
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {getChannelBadges(client.channels)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                            {getManagerAvatar(client.gestorId)}
-                          </div>
-                          <span className="font-medium">{(() => {
-                            const name = getManagerName(client.gestorId);
-                            return name === 'Gestor não encontrado' ? (client.gestorId || '—') : name;
-                          })()}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(client.createdOn).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={client.status === "Active" ? "default" : "secondary"}
-                          className={client.status === "Active" ? "bg-green-500/20 text-green-400 border-green-500/50" : ""}
-                        >
-                          {client.status === "Active" ? "Ativo" : client.status === "Paused" ? "Pausado" : "Arquivado"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/clients/${client.id}`);
-                            }}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditClick(client);
-                            }}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleArchive(client);
-                            }}>
-                              {client.status === "Active" ? (
-                                <>
-                                  <Archive className="h-4 w-4 mr-2" />
-                                  Arquivar
-                                </>
-                              ) : (
-                                <>
-                                  <ArchiveRestore className="h-4 w-4 mr-2" />
-                                  Desarquivar
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-success/10">
+                  <UserCheck className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Ativos</p>
+                  <p className="text-2xl font-bold text-foreground">{activeClients}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning/10">
+                  <Activity className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Pausados</p>
+                  <p className="text-2xl font-bold text-foreground">{pausedClients}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Meta</p>
+                  <p className="text-2xl font-bold text-foreground">{metaClients}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning/10">
+                  <Target className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Google</p>
+                  <p className="text-2xl font-bold text-foreground">{googleClients}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-elevated">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-accent/10">
+                  <DollarSign className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm">Saldo Total</p>
+                  <p className="text-2xl font-bold text-foreground">{formatCurrency(totalBalance)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <Card className="surface-elevated">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+                <Input
+                  placeholder="Buscar por nome, empresa, telefone ou email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  {STATUS_OPTIONS.map(status => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
                   ))}
-                </TableBody>
-              </Table>
-            )}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterManager} onValueChange={setFilterManager}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filtrar por gestor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Gestores</SelectItem>
+                  {managers.map(manager => (
+                    <SelectItem key={manager.id} value={manager.id}>
+                      {manager.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Clients List */}
+        <div className="space-y-4">
+          {filteredClients.map((client) => (
+            <Card key={client.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  {/* Client Info */}
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-gradient-primary text-white font-bold">
+                        {client.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-foreground text-lg">
+                          {client.nome_cliente}
+                        </h3>
+                        {getStatusBadge(client.status)}
+                        <div className="flex gap-1">
+                          {getChannelBadges(client.canais)}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-text-secondary">
+                        <div className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3" />
+                          {client.nome_empresa}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {client.telefone}
+                        </div>
+                        {client.email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {client.email}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <UserCheck className="h-3 w-3" />
+                          {client.gestor_name}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(client.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats & Actions */}
+                  <div className="flex items-center gap-6">
+                    {/* Quick Stats */}
+                    {client.stats && (
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="text-center">
+                          <p className="font-semibold text-foreground">{client.stats.total_leads}</p>
+                          <p className="text-text-muted text-xs">Leads</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-success">{client.stats.conversoes}</p>
+                          <p className="text-text-muted text-xs">Conversões</p>
+                        </div>
+                        {client.saldo_meta && (
+                          <div className="text-center">
+                            <p className="font-semibold text-primary">{formatCurrency((client.saldo_meta || 0) / 100)}</p>
+                            <p className="text-text-muted text-xs">Saldo</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          className="gap-2"
+                          onClick={() => handleViewClient(client.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver Detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="gap-2">
+                          <Edit className="h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {client.status === 'Ativo' ? (
+                          <DropdownMenuItem 
+                            className="gap-2"
+                            onClick={() => handleChangeStatus(client.id, 'Pausado')}
+                          >
+                            <Archive className="h-4 w-4" />
+                            Pausar
+                          </DropdownMenuItem>
+                        ) : client.status === 'Pausado' ? (
+                          <>
+                            <DropdownMenuItem 
+                              className="gap-2"
+                              onClick={() => handleChangeStatus(client.id, 'Ativo')}
+                            >
+                              <ArchiveRestore className="h-4 w-4" />
+                              Reativar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="gap-2"
+                              onClick={() => handleChangeStatus(client.id, 'Arquivado')}
+                            >
+                              <Archive className="h-4 w-4" />
+                              Arquivar
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem 
+                            className="gap-2"
+                            onClick={() => handleChangeStatus(client.id, 'Ativo')}
+                          >
+                            <ArchiveRestore className="h-4 w-4" />
+                            Desarquivar
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {filteredClients.length === 0 && !loading && (
+          <Card className="surface-elevated">
+            <CardContent className="p-12 text-center">
+              <div className="mx-auto mb-4 p-3 bg-muted/30 rounded-full w-fit">
+                <Users className="h-8 w-8 text-text-muted" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Nenhum cliente encontrado</h3>
+              <p className="text-text-secondary">
+                {searchTerm ? "Tente ajustar os filtros de busca" : "Nenhum cliente cadastrado no sistema"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Modal de Criação */}
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Novo Cliente</DialogTitle>
+              <DialogDescription>
+                Criar uma nova conta de cliente no sistema
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome_cliente">Nome do Cliente</Label>
+                <Input
+                  id="nome_cliente"
+                  value={newClientData.nome_cliente}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, nome_cliente: e.target.value }))}
+                  placeholder="Ex: Casa & Cia Imóveis"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nome_empresa">Nome da Empresa</Label>
+                <Input
+                  id="nome_empresa"
+                  value={newClientData.nome_empresa}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, nome_empresa: e.target.value }))}
+                  placeholder="Ex: Casa & Cia Ltda"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={newClientData.telefone}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, telefone: e.target.value }))}
+                  placeholder="(11) 99999-9999"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newClientData.email}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="contato@empresa.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="gestor">Gestor</Label>
+                <Select 
+                  value={newClientData.gestor_id} 
+                  onValueChange={(value) => setNewClientData(prev => ({ ...prev, gestor_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um gestor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {managers.map(manager => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateClient}>
+                Criar Cliente
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
