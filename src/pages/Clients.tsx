@@ -1,70 +1,69 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Search, 
-  Plus, 
   Users, 
-  Building2,
-  UserCheck,
-  Calendar,
+  Plus, 
+  Search, 
+  Filter, 
+  MoreVertical, 
+  Eye, 
+  Edit, 
+  Archive, 
+  RotateCcw,
   RefreshCw,
-  MoreVertical,
-  Edit,
-  Eye,
-  Archive,
-  ArchiveRestore,
+  TrendingUp,
+  Building2,
   Phone,
   Mail,
-  Target,
-  BarChart3,
-  DollarSign,
-  Activity
-} from "lucide-react";
+  Calendar,
+  DollarSign
+} from 'lucide-react';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientData {
   id: string;
   nome_cliente: string;
   nome_empresa: string;
   telefone: string;
-  email: string | null;
-  gestor_id: string;
-  canais: string[];
+  email?: string;
   status: string;
-  observacoes: string | null;
-  usa_meta_ads: boolean;
-  usa_google_ads: boolean;
-  traqueamento_ativo: boolean;
-  saldo_meta: number | null;
-  meta_account_id: string | null;
-  google_ads_id: string | null;
+  canais: string[];
+  gestor_id?: string;
+  gestor_name?: string;
   created_at: string;
   updated_at: string;
-  gestor_name?: string;
+  usa_meta_ads?: boolean;
+  usa_google_ads?: boolean;
+  saldo_meta?: number;
   stats?: {
     total_leads: number;
     conversoes: number;
@@ -73,9 +72,9 @@ interface ClientData {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'Ativo', label: 'Ativo', color: 'bg-success', textColor: 'text-success' },
-  { value: 'Pausado', label: 'Pausado', color: 'bg-warning', textColor: 'text-warning' },
-  { value: 'Arquivado', label: 'Arquivado', color: 'bg-text-muted', textColor: 'text-text-muted' }
+  { value: 'Ativo', label: 'Ativo', color: 'bg-green-500', textColor: 'text-green-600' },
+  { value: 'Pausado', label: 'Pausado', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
+  { value: 'Arquivado', label: 'Arquivado', color: 'bg-gray-500', textColor: 'text-gray-600' }
 ];
 
 const CANAIS_OPTIONS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'Orgânico'];
@@ -113,29 +112,49 @@ export default function Clients() {
 
       if (clientsError) throw clientsError;
 
-      // Buscar gestores
-      const { data: managersData, error: managersError } = await supabase
-        .from('managers')
-        .select('id, name')
-        .eq('status', 'active');
+      // Buscar gestores (se a tabela existir)
+      let managersData = [];
+      try {
+        const { data: managersResult, error: managersError } = await supabase
+          .from('managers')
+          .select('id, name')
+          .eq('status', 'active');
 
-      if (managersError) console.warn('Managers not found:', managersError);
+        if (!managersError) {
+          managersData = managersResult || [];
+        }
+      } catch (error) {
+        console.warn('Managers table not found, using fallback');
+        // Gestores mock de fallback
+        managersData = [
+          { id: 'gest1', name: 'João Silva' },
+          { id: 'gest2', name: 'Maria Santos' },
+          { id: 'gest3', name: 'Pedro Costa' },
+        ];
+      }
 
-      // Buscar stats de leads (se disponível)
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads_stats')
-        .select('client_id, total_leads, leads_convertidos, valor_total_conversoes');
+      // Buscar stats de leads (se a tabela existir)
+      let leadsData = [];
+      try {
+        const { data: leadsResult, error: leadsError } = await supabase
+          .from('leads_stats')
+          .select('client_id, total_leads, leads_convertidos, valor_total_conversoes');
 
-      if (leadsError) console.warn('Leads stats not available:', leadsError);
+        if (!leadsError) {
+          leadsData = leadsResult || [];
+        }
+      } catch (error) {
+        console.warn('Leads stats table not found');
+      }
 
       // Processar dados combinados
       const processedClients: ClientData[] = (clientsData || []).map(client => {
-        const manager = managersData?.find(m => m.id === client.gestor_id);
-        const stats = leadsData?.find(s => s.client_id === client.id);
+        const manager = managersData.find(m => m.id === client.gestor_id);
+        const stats = leadsData.find(s => s.client_id === client.id);
 
         return {
           ...client,
-          gestor_name: manager?.name || 'Gestor não encontrado',
+          gestor_name: manager?.name || 'Sem gestor',
           stats: stats ? {
             total_leads: stats.total_leads || 0,
             conversoes: stats.leads_convertidos || 0,
@@ -145,7 +164,7 @@ export default function Clients() {
       });
 
       setClients(processedClients);
-      setManagers(managersData || []);
+      setManagers(managersData);
 
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
@@ -175,7 +194,8 @@ export default function Clients() {
         .from('clients')
         .insert({
           ...newClientData,
-          email: newClientData.email || null
+          email: newClientData.email || null,
+          canais: newClientData.canais.length > 0 ? newClientData.canais : ['Meta']
         });
 
       if (error) throw error;
@@ -239,13 +259,19 @@ export default function Clients() {
 
   // Navegar para detalhes do cliente
   const handleViewClient = (clientId: string) => {
-    navigate(`/clientes/${clientId}`);
+    navigate(`/clients/${clientId}`);
+  };
+
+  // Editar cliente
+  const handleEditClient = (clientId: string) => {
+    navigate(`/clients/${clientId}/edit`);
   };
 
   useEffect(() => {
     loadClientsData();
   }, []);
 
+  // Filtrar clientes
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -258,7 +284,7 @@ export default function Clients() {
     return matchesSearch && matchesStatus && matchesManager;
   });
 
-  // Stats gerais
+  // Calcular estatísticas
   const totalClients = clients.length;
   const activeClients = clients.filter(c => c.status === 'Ativo').length;
   const pausedClients = clients.filter(c => c.status === 'Pausado').length;
@@ -269,7 +295,14 @@ export default function Clients() {
   const getStatusBadge = (status: string) => {
     const statusInfo = STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
     return (
-      <Badge className={`text-xs text-white ${statusInfo.color}`}>
+      <Badge 
+        variant="outline"
+        className={`text-xs border ${
+          status === 'Ativo' ? 'border-green-500 text-green-600 bg-green-50' : 
+          status === 'Pausado' ? 'border-yellow-500 text-yellow-600 bg-yellow-50' :
+          'border-gray-500 text-gray-600 bg-gray-50'
+        }`}
+      >
         {statusInfo.label}
       </Badge>
     );
@@ -281,9 +314,9 @@ export default function Clients() {
         key={channel}
         variant="outline" 
         className={`text-xs ${
-          channel === 'Meta' ? 'border-primary text-primary' : 
-          channel === 'Google' ? 'border-warning text-warning' :
-          'border-accent text-accent'
+          channel === 'Meta' ? 'border-blue-500 text-blue-600 bg-blue-50' : 
+          channel === 'Google' ? 'border-red-500 text-red-600 bg-red-50' :
+          'border-purple-500 text-purple-600 bg-purple-50'
         }`}
       >
         {channel}
@@ -309,7 +342,7 @@ export default function Clients() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-text-secondary">Carregando clientes...</p>
+            <p className="text-muted-foreground">Carregando clientes...</p>
           </div>
         </div>
       </AppLayout>
@@ -323,7 +356,7 @@ export default function Clients() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Gestão de Clientes</h1>
-            <p className="text-text-secondary mt-1">
+            <p className="text-muted-foreground mt-1">
               Controle completo da sua carteira de clientes
             </p>
           </div>
@@ -332,8 +365,9 @@ export default function Clients() {
               variant="outline" 
               className="gap-2" 
               onClick={loadClientsData}
+              disabled={loading}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
             <Button 
@@ -348,85 +382,85 @@ export default function Clients() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <Card className="surface-elevated">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
+                <div className="p-2 rounded-lg bg-blue-100">
+                  <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Total</p>
-                  <p className="text-2xl font-bold text-foreground">{totalClients}</p>
+                  <p className="text-muted-foreground text-sm">Total</p>
+                  <p className="text-2xl font-bold">{totalClients}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <UserCheck className="h-5 w-5 text-success" />
+                <div className="p-2 rounded-lg bg-green-100">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Ativos</p>
-                  <p className="text-2xl font-bold text-foreground">{activeClients}</p>
+                  <p className="text-muted-foreground text-sm">Ativos</p>
+                  <p className="text-2xl font-bold text-green-600">{activeClients}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-warning/10">
-                  <Activity className="h-5 w-5 text-warning" />
+                <div className="p-2 rounded-lg bg-yellow-100">
+                  <Archive className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Pausados</p>
-                  <p className="text-2xl font-bold text-foreground">{pausedClients}</p>
+                  <p className="text-muted-foreground text-sm">Pausados</p>
+                  <p className="text-2xl font-bold text-yellow-600">{pausedClients}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <BarChart3 className="h-5 w-5 text-primary" />
+                <div className="p-2 rounded-lg bg-blue-100">
+                  <Building2 className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Meta</p>
-                  <p className="text-2xl font-bold text-foreground">{metaClients}</p>
+                  <p className="text-muted-foreground text-sm">Meta</p>
+                  <p className="text-2xl font-bold text-blue-600">{metaClients}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-warning/10">
-                  <Target className="h-5 w-5 text-warning" />
+                <div className="p-2 rounded-lg bg-red-100">
+                  <Building2 className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Google</p>
-                  <p className="text-2xl font-bold text-foreground">{googleClients}</p>
+                  <p className="text-muted-foreground text-sm">Google</p>
+                  <p className="text-2xl font-bold text-red-600">{googleClients}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-accent/10">
-                  <DollarSign className="h-5 w-5 text-accent" />
+                <div className="p-2 rounded-lg bg-green-100">
+                  <DollarSign className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Saldo Total</p>
-                  <p className="text-2xl font-bold text-foreground">{formatCurrency(totalBalance)}</p>
+                  <p className="text-muted-foreground text-sm">Saldo Total</p>
+                  <p className="text-xl font-bold text-green-600">{formatCurrency(totalBalance)}</p>
                 </div>
               </div>
             </CardContent>
@@ -434,11 +468,11 @@ export default function Clients() {
         </div>
 
         {/* Filters */}
-        <Card className="surface-elevated">
+        <Card>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nome, empresa, telefone ou email..."
                   value={searchTerm}
@@ -446,28 +480,25 @@ export default function Clients() {
                   className="pl-9"
                 />
               </div>
-              
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filtrar por status" />
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Status</SelectItem>
-                  {STATUS_OPTIONS.map(status => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="Ativo">Ativos</SelectItem>
+                  <SelectItem value="Pausado">Pausados</SelectItem>
+                  <SelectItem value="Arquivado">Arquivados</SelectItem>
                 </SelectContent>
               </Select>
-
               <Select value={filterManager} onValueChange={setFilterManager}>
                 <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filtrar por gestor" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Gestores</SelectItem>
-                  {managers.map(manager => (
+                  {managers.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
                       {manager.name}
                     </SelectItem>
@@ -481,51 +512,45 @@ export default function Clients() {
         {/* Clients List */}
         <div className="space-y-4">
           {filteredClients.map((client) => (
-            <Card key={client.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
+            <Card key={client.id} className="hover:shadow-lg transition-all duration-200">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  {/* Client Info */}
+                <div className="flex items-center justify-between gap-4">
+                  {/* Cliente Info */}
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-gradient-primary text-white font-bold">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
                         {client.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
-
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-foreground text-lg">
-                          {client.nome_cliente}
-                        </h3>
+                        <h3 className="font-semibold text-lg">{client.nome_cliente}</h3>
                         {getStatusBadge(client.status)}
-                        <div className="flex gap-1">
-                          {getChannelBadges(client.canais)}
-                        </div>
                       </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-text-secondary">
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {client.nome_empresa}
-                        </div>
-                        <div className="flex items-center gap-1">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {client.nome_empresa}
+                      </p>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
                           {client.telefone}
-                        </div>
+                        </span>
                         {client.email && (
-                          <div className="flex items-center gap-1">
+                          <span className="flex items-center gap-1">
                             <Mail className="h-3 w-3" />
                             {client.email}
-                          </div>
+                          </span>
                         )}
-                        <div className="flex items-center gap-1">
-                          <UserCheck className="h-3 w-3" />
-                          {client.gestor_name}
-                        </div>
-                        <div className="flex items-center gap-1">
+                        <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {formatDate(client.created_at)}
-                        </div>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {getChannelBadges(client.canais)}
+                        <Badge variant="secondary" className="text-xs">
+                          {client.gestor_name}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -536,17 +561,17 @@ export default function Clients() {
                     {client.stats && (
                       <div className="flex items-center gap-4 text-sm">
                         <div className="text-center">
-                          <p className="font-semibold text-foreground">{client.stats.total_leads}</p>
-                          <p className="text-text-muted text-xs">Leads</p>
+                          <p className="font-semibold">{client.stats.total_leads}</p>
+                          <p className="text-muted-foreground text-xs">Leads</p>
                         </div>
                         <div className="text-center">
-                          <p className="font-semibold text-success">{client.stats.conversoes}</p>
-                          <p className="text-text-muted text-xs">Conversões</p>
+                          <p className="font-semibold text-green-600">{client.stats.conversoes}</p>
+                          <p className="text-muted-foreground text-xs">Conversões</p>
                         </div>
                         {client.saldo_meta && (
                           <div className="text-center">
-                            <p className="font-semibold text-primary">{formatCurrency((client.saldo_meta || 0) / 100)}</p>
-                            <p className="text-text-muted text-xs">Saldo</p>
+                            <p className="font-semibold text-blue-600">{formatCurrency((client.saldo_meta || 0) / 100)}</p>
+                            <p className="text-muted-foreground text-xs">Saldo</p>
                           </div>
                         )}
                       </div>
@@ -567,7 +592,10 @@ export default function Clients() {
                           <Eye className="h-4 w-4" />
                           Ver Detalhes
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem 
+                          className="gap-2"
+                          onClick={() => handleEditClient(client.id)}
+                        >
                           <Edit className="h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
@@ -586,7 +614,7 @@ export default function Clients() {
                               className="gap-2"
                               onClick={() => handleChangeStatus(client.id, 'Ativo')}
                             >
-                              <ArchiveRestore className="h-4 w-4" />
+                              <RotateCcw className="h-4 w-4" />
                               Reativar
                             </DropdownMenuItem>
                             <DropdownMenuItem 
@@ -602,8 +630,8 @@ export default function Clients() {
                             className="gap-2"
                             onClick={() => handleChangeStatus(client.id, 'Ativo')}
                           >
-                            <ArchiveRestore className="h-4 w-4" />
-                            Desarquivar
+                            <RotateCcw className="h-4 w-4" />
+                            Reativar
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -615,84 +643,86 @@ export default function Clients() {
           ))}
         </div>
 
-        {/* Empty State */}
         {filteredClients.length === 0 && !loading && (
-          <Card className="surface-elevated">
-            <CardContent className="p-12 text-center">
-              <div className="mx-auto mb-4 p-3 bg-muted/30 rounded-full w-fit">
-                <Users className="h-8 w-8 text-text-muted" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Nenhum cliente encontrado</h3>
-              <p className="text-text-secondary">
-                {searchTerm ? "Tente ajustar os filtros de busca" : "Nenhum cliente cadastrado no sistema"}
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum cliente encontrado</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                {searchTerm || filterStatus !== "all" || filterManager !== "all"
+                  ? "Nenhum cliente corresponde aos critérios de busca."
+                  : "Você ainda não possui clientes cadastrados."
+                }
               </p>
+              {!searchTerm && filterStatus === "all" && filterManager === "all" && (
+                <Button onClick={() => setShowCreateModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar primeiro cliente
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Modal de Criação */}
+        {/* Modal Criar Cliente */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Novo Cliente</DialogTitle>
               <DialogDescription>
-                Criar uma nova conta de cliente no sistema
+                Preencha as informações básicas do cliente
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome_cliente">Nome do Cliente</Label>
+              <div>
+                <label className="text-sm font-medium">Nome do Cliente *</label>
                 <Input
-                  id="nome_cliente"
                   value={newClientData.nome_cliente}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, nome_cliente: e.target.value }))}
-                  placeholder="Ex: Casa & Cia Imóveis"
+                  onChange={(e) => setNewClientData({...newClientData, nome_cliente: e.target.value})}
+                  placeholder="Ex: João Silva"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nome_empresa">Nome da Empresa</Label>
+              <div>
+                <label className="text-sm font-medium">Nome da Empresa</label>
                 <Input
-                  id="nome_empresa"
                   value={newClientData.nome_empresa}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, nome_empresa: e.target.value }))}
-                  placeholder="Ex: Casa & Cia Ltda"
+                  onChange={(e) => setNewClientData({...newClientData, nome_empresa: e.target.value})}
+                  placeholder="Ex: Imobiliária Silva"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
+              <div>
+                <label className="text-sm font-medium">Telefone *</label>
                 <Input
-                  id="telefone"
                   value={newClientData.telefone}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, telefone: e.target.value }))}
+                  onChange={(e) => setNewClientData({...newClientData, telefone: e.target.value})}
                   placeholder="(11) 99999-9999"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div>
+                <label className="text-sm font-medium">Email</label>
                 <Input
-                  id="email"
                   type="email"
                   value={newClientData.email}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="contato@empresa.com"
+                  onChange={(e) => setNewClientData({...newClientData, email: e.target.value})}
+                  placeholder="cliente@email.com"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="gestor">Gestor</Label>
+              <div>
+                <label className="text-sm font-medium">Gestor</label>
                 <Select 
                   value={newClientData.gestor_id} 
-                  onValueChange={(value) => setNewClientData(prev => ({ ...prev, gestor_id: value }))}
+                  onValueChange={(value) => setNewClientData({...newClientData, gestor_id: value})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um gestor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {managers.map(manager => (
+                    {managers.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>
                         {manager.name}
                       </SelectItem>
