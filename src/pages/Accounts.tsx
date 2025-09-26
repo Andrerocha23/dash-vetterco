@@ -12,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   Search, 
   Plus, 
-  Users, 
   Building2,
   UserCheck,
   Calendar,
@@ -46,7 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
-interface ClientData {
+interface AccountData {
   id: string;
   nome_cliente: string;
   nome_empresa: string;
@@ -62,14 +61,26 @@ interface ClientData {
   saldo_meta: number | null;
   meta_account_id: string | null;
   google_ads_id: string | null;
+  cliente_id: string | null;
   created_at: string;
   updated_at: string;
   gestor_name?: string;
+  cliente_nome?: string;
   stats?: {
     total_leads: number;
     conversoes: number;
     gasto_total: number;
   };
+}
+
+interface Cliente {
+  id: string;
+  nome: string;
+  cnpj: string | null;
+  email: string | null;
+  telefone: string | null;
+  instagram_handle: string | null;
+  site: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -80,38 +91,41 @@ const STATUS_OPTIONS = [
 
 const CANAIS_OPTIONS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'Orgânico'];
 
-export default function Clients() {
+export default function Accounts() {
   const navigate = useNavigate();
-  const [clients, setClients] = useState<ClientData[]>([]);
+  const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterManager, setFilterManager] = useState("all");
+  const [filterCliente, setFilterCliente] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newClientData, setNewClientData] = useState({
+  const [newAccountData, setNewAccountData] = useState({
     nome_cliente: '',
     nome_empresa: '',
     telefone: '',
     email: '',
     gestor_id: '',
+    cliente_id: '',
     canais: [] as string[],
     status: 'Ativo'
   });
   const { toast } = useToast();
 
-  // Carregar clientes e gestores do banco
-  const loadClientsData = async () => {
+  // Carregar contas, gestores e clientes do banco
+  const loadAccountsData = async () => {
     try {
       setLoading(true);
 
-      // Buscar clientes
-      const { data: clientsData, error: clientsError } = await supabase
+      // Buscar contas (renomeada de clients)
+      const { data: accountsData, error: accountsError } = await supabase
         .from('accounts')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (clientsError) throw clientsError;
+      if (accountsError) throw accountsError;
 
       // Buscar gestores
       const { data: managersData, error: managersError } = await supabase
@@ -121,6 +135,14 @@ export default function Clients() {
 
       if (managersError) console.warn('Managers not found:', managersError);
 
+      // Buscar clientes
+      const { data: clientesData, error: clientesError } = await supabase
+        .from('clientes')
+        .select('*')
+        .order('nome', { ascending: true });
+
+      if (clientesError) console.warn('Clientes not found:', clientesError);
+
       // Buscar stats de leads (se disponível)
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads_stats')
@@ -129,13 +151,15 @@ export default function Clients() {
       if (leadsError) console.warn('Leads stats not available:', leadsError);
 
       // Processar dados combinados
-      const processedClients: ClientData[] = (clientsData || []).map(client => {
-        const manager = managersData?.find(m => m.id === client.gestor_id);
-        const stats = leadsData?.find(s => s.client_id === client.id);
+      const processedAccounts: AccountData[] = (accountsData || []).map(account => {
+        const manager = managersData?.find(m => m.id === account.gestor_id);
+        const cliente = clientesData?.find(c => c.id === account.cliente_id);
+        const stats = leadsData?.find(s => s.client_id === account.id);
 
         return {
-          ...client,
+          ...account,
           gestor_name: manager?.name || 'Gestor não encontrado',
+          cliente_nome: cliente?.nome || 'Cliente não vinculado',
           stats: stats ? {
             total_leads: stats.total_leads || 0,
             conversoes: stats.leads_convertidos || 0,
@@ -144,14 +168,15 @@ export default function Clients() {
         };
       });
 
-      setClients(processedClients);
+      setAccounts(processedAccounts);
       setManagers(managersData || []);
+      setClientes(clientesData || []);
 
     } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
+      console.error('Erro ao carregar contas:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os clientes",
+        description: "Não foi possível carregar as contas",
         variant: "destructive",
       });
     } finally {
@@ -159,13 +184,13 @@ export default function Clients() {
     }
   };
 
-  // Criar novo cliente
-  const handleCreateClient = async () => {
+  // Criar nova conta
+  const handleCreateAccount = async () => {
     try {
-      if (!newClientData.nome_cliente || !newClientData.telefone) {
+      if (!newAccountData.nome_cliente || !newAccountData.telefone || !newAccountData.cliente_id) {
         toast({
           title: "Erro",
-          description: "Preencha nome e telefone",
+          description: "Preencha nome, telefone e selecione um cliente",
           variant: "destructive",
         });
         return;
@@ -174,41 +199,42 @@ export default function Clients() {
       const { error } = await supabase
         .from('accounts')
         .insert({
-          ...newClientData,
-          email: newClientData.email || null
+          ...newAccountData,
+          email: newAccountData.email || null
         });
 
       if (error) throw error;
 
-      await loadClientsData();
+      await loadAccountsData();
       setShowCreateModal(false);
-      setNewClientData({
+      setNewAccountData({
         nome_cliente: '',
         nome_empresa: '',
         telefone: '',
         email: '',
         gestor_id: '',
+        cliente_id: '',
         canais: [],
         status: 'Ativo'
       });
 
       toast({
         title: "Sucesso",
-        description: `Cliente ${newClientData.nome_cliente} criado`,
+        description: `Conta ${newAccountData.nome_cliente} criada`,
       });
 
     } catch (error) {
-      console.error('Erro ao criar cliente:', error);
+      console.error('Erro ao criar conta:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar o cliente",
+        description: "Não foi possível criar a conta",
         variant: "destructive",
       });
     }
   };
 
-  // Alterar status do cliente
-  const handleChangeStatus = async (clientId: string, newStatus: string) => {
+  // Alterar status da conta
+  const handleChangeStatus = async (accountId: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from('accounts')
@@ -216,15 +242,15 @@ export default function Clients() {
           status: newStatus,
           updated_at: new Date().toISOString()
         })
-        .eq('id', clientId);
+        .eq('id', accountId);
 
       if (error) throw error;
 
-      await loadClientsData();
+      await loadAccountsData();
 
       toast({
         title: "Sucesso",
-        description: `Status do cliente alterado para ${newStatus}`,
+        description: `Status da conta alterado para ${newStatus}`,
       });
 
     } catch (error) {
@@ -237,34 +263,36 @@ export default function Clients() {
     }
   };
 
-  // Navegar para detalhes do cliente
-  const handleViewClient = (clientId: string) => {
-    navigate(`/clientes/${clientId}`);
+  // Navegar para detalhes da conta
+  const handleViewAccount = (accountId: string) => {
+    navigate(`/contas/${accountId}`);
   };
 
   useEffect(() => {
-    loadClientsData();
+    loadAccountsData();
   }, []);
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.telefone.includes(searchTerm) ||
-                         client.email?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredAccounts = accounts.filter(account => {
+    const matchesSearch = account.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         account.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         account.telefone.includes(searchTerm) ||
+                         account.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         account.cliente_nome?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = filterStatus === "all" || client.status === filterStatus;
-    const matchesManager = filterManager === "all" || client.gestor_id === filterManager;
+    const matchesStatus = filterStatus === "all" || account.status === filterStatus;
+    const matchesManager = filterManager === "all" || account.gestor_id === filterManager;
+    const matchesCliente = filterCliente === "all" || account.cliente_id === filterCliente;
     
-    return matchesSearch && matchesStatus && matchesManager;
+    return matchesSearch && matchesStatus && matchesManager && matchesCliente;
   });
 
   // Stats gerais
-  const totalClients = clients.length;
-  const activeClients = clients.filter(c => c.status === 'Ativo').length;
-  const pausedClients = clients.filter(c => c.status === 'Pausado').length;
-  const metaClients = clients.filter(c => c.usa_meta_ads || c.canais.includes('Meta')).length;
-  const googleClients = clients.filter(c => c.usa_google_ads || c.canais.includes('Google')).length;
-  const totalBalance = clients.reduce((sum, c) => sum + ((c.saldo_meta || 0) / 100), 0);
+  const totalAccounts = accounts.length;
+  const activeAccounts = accounts.filter(c => c.status === 'Ativo').length;
+  const pausedAccounts = accounts.filter(c => c.status === 'Pausado').length;
+  const metaAccounts = accounts.filter(c => c.usa_meta_ads || c.canais.includes('Meta')).length;
+  const googleAccounts = accounts.filter(c => c.usa_google_ads || c.canais.includes('Google')).length;
+  const totalBalance = accounts.reduce((sum, c) => sum + ((c.saldo_meta || 0) / 100), 0);
 
   const getStatusBadge = (status: string) => {
     const statusInfo = STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
@@ -309,7 +337,7 @@ export default function Clients() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-text-secondary">Carregando clientes...</p>
+            <p className="text-text-secondary">Carregando contas...</p>
           </div>
         </div>
       </AppLayout>
@@ -322,16 +350,16 @@ export default function Clients() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Gestão de Clientes</h1>
+            <h1 className="text-2xl font-bold text-foreground">Gestão de Contas</h1>
             <p className="text-text-secondary mt-1">
-              Controle completo da sua carteira de clientes
+              Controle completo da sua carteira de contas de anúncio
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
               className="gap-2" 
-              onClick={loadClientsData}
+              onClick={loadAccountsData}
             >
               <RefreshCw className="h-4 w-4" />
               Atualizar
@@ -341,7 +369,7 @@ export default function Clients() {
               onClick={() => setShowCreateModal(true)}
             >
               <Plus className="h-4 w-4" />
-              Novo Cliente
+              Nova Conta
             </Button>
           </div>
         </div>
@@ -352,11 +380,11 @@ export default function Clients() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
+                  <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Total</p>
-                  <p className="text-2xl font-bold text-foreground">{totalClients}</p>
+                  <p className="text-2xl font-bold text-foreground">{totalAccounts}</p>
                 </div>
               </div>
             </CardContent>
@@ -370,7 +398,7 @@ export default function Clients() {
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Ativos</p>
-                  <p className="text-2xl font-bold text-foreground">{activeClients}</p>
+                  <p className="text-2xl font-bold text-foreground">{activeAccounts}</p>
                 </div>
               </div>
             </CardContent>
@@ -384,7 +412,7 @@ export default function Clients() {
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Pausados</p>
-                  <p className="text-2xl font-bold text-foreground">{pausedClients}</p>
+                  <p className="text-2xl font-bold text-foreground">{pausedAccounts}</p>
                 </div>
               </div>
             </CardContent>
@@ -398,7 +426,7 @@ export default function Clients() {
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Meta</p>
-                  <p className="text-2xl font-bold text-foreground">{metaClients}</p>
+                  <p className="text-2xl font-bold text-foreground">{metaAccounts}</p>
                 </div>
               </div>
             </CardContent>
@@ -412,7 +440,7 @@ export default function Clients() {
                 </div>
                 <div>
                   <p className="text-text-secondary text-sm">Google</p>
-                  <p className="text-2xl font-bold text-foreground">{googleClients}</p>
+                  <p className="text-2xl font-bold text-foreground">{googleAccounts}</p>
                 </div>
               </div>
             </CardContent>
@@ -440,7 +468,7 @@ export default function Clients() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                 <Input
-                  placeholder="Buscar por nome, empresa, telefone ou email..."
+                  placeholder="Buscar por nome, empresa, telefone, email ou cliente..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -474,136 +502,136 @@ export default function Clients() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={filterCliente} onValueChange={setFilterCliente}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filtrar por cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Clientes</SelectItem>
+                  {clientes.map(cliente => (
+                    <SelectItem key={cliente.id} value={cliente.id}>
+                      {cliente.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Clients List */}
+        {/* Accounts List */}
         <div className="space-y-4">
-          {filteredClients.map((client) => (
-            <Card key={client.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
+          {filteredAccounts.map((account) => (
+            <Card key={account.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  {/* Client Info */}
+                  {/* Account Info */}
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="bg-gradient-primary text-white font-bold">
-                        {client.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        {account.nome_cliente.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
 
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-foreground text-lg">
-                          {client.nome_cliente}
+                          {account.nome_cliente}
                         </h3>
-                        {getStatusBadge(client.status)}
-                        <div className="flex gap-1">
-                          {getChannelBadges(client.canais)}
-                        </div>
+                        {getStatusBadge(account.status)}
+                        {account.cliente_nome && (
+                          <Badge variant="secondary" className="text-xs">
+                            {account.cliente_nome}
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-text-secondary">
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {client.nome_empresa}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {client.telefone}
-                        </div>
-                        {client.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {client.email}
-                          </div>
+                        <span className="flex items-center gap-1">
+                          <Building2 className="h-4 w-4" />
+                          {account.nome_empresa}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-4 w-4" />
+                          {account.telefone}
+                        </span>
+                        {account.email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-4 w-4" />
+                            {account.email}
+                          </span>
                         )}
-                        <div className="flex items-center gap-1">
-                          <UserCheck className="h-3 w-3" />
-                          {client.gestor_name}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(client.created_at)}
-                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2">
+                        {getChannelBadges(account.canais)}
                       </div>
                     </div>
                   </div>
 
-                  {/* Stats & Actions */}
+                  {/* Quick Stats */}
                   <div className="flex items-center gap-6">
-                    {/* Quick Stats */}
-                    {client.stats && (
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="text-center">
-                          <p className="font-semibold text-foreground">{client.stats.total_leads}</p>
-                          <p className="text-text-muted text-xs">Leads</p>
+                    {account.stats && (
+                      <div className="text-right">
+                        <div className="text-sm text-text-secondary mb-1">Performance</div>
+                        <div className="flex gap-4 text-sm">
+                          <span className="text-foreground font-medium">
+                            {account.stats.total_leads} leads
+                          </span>
+                          <span className="text-success font-medium">
+                            {account.stats.conversoes} conversões
+                          </span>
+                          <span className="text-text-secondary">
+                            {formatCurrency(account.stats.gasto_total)}
+                          </span>
                         </div>
-                        <div className="text-center">
-                          <p className="font-semibold text-success">{client.stats.conversoes}</p>
-                          <p className="text-text-muted text-xs">Conversões</p>
-                        </div>
-                        {client.saldo_meta && (
-                          <div className="text-center">
-                            <p className="font-semibold text-primary">{formatCurrency((client.saldo_meta || 0) / 100)}</p>
-                            <p className="text-text-muted text-xs">Saldo</p>
-                          </div>
-                        )}
                       </div>
                     )}
+
+                    <div className="text-right">
+                      <div className="text-sm text-text-secondary mb-1">Atualizado</div>
+                      <div className="text-sm text-foreground">
+                        {formatDate(account.updated_at)}
+                      </div>
+                    </div>
 
                     {/* Actions */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          className="gap-2"
-                          onClick={() => handleViewClient(client.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          Ver Detalhes
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => handleViewAccount(account.id)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalhes
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
-                          <Edit className="h-4 w-4" />
+                        <DropdownMenuItem onClick={() => navigate(`/contas/${account.id}/editar`)}>
+                          <Edit className="mr-2 h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        {client.status === 'Ativo' ? (
-                          <DropdownMenuItem 
-                            className="gap-2"
-                            onClick={() => handleChangeStatus(client.id, 'Pausado')}
-                          >
-                            <Archive className="h-4 w-4" />
-                            Pausar
+                        {account.status === 'Ativo' && (
+                          <DropdownMenuItem onClick={() => handleChangeStatus(account.id, 'Pausado')}>
+                            <Archive className="mr-2 h-4 w-4" />
+                            Pausar conta
                           </DropdownMenuItem>
-                        ) : client.status === 'Pausado' ? (
-                          <>
-                            <DropdownMenuItem 
-                              className="gap-2"
-                              onClick={() => handleChangeStatus(client.id, 'Ativo')}
-                            >
-                              <ArchiveRestore className="h-4 w-4" />
-                              Reativar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="gap-2"
-                              onClick={() => handleChangeStatus(client.id, 'Arquivado')}
-                            >
-                              <Archive className="h-4 w-4" />
-                              Arquivar
-                            </DropdownMenuItem>
-                          </>
-                        ) : (
+                        )}
+                        {account.status === 'Pausado' && (
+                          <DropdownMenuItem onClick={() => handleChangeStatus(account.id, 'Ativo')}>
+                            <ArchiveRestore className="mr-2 h-4 w-4" />
+                            Ativar conta
+                          </DropdownMenuItem>
+                        )}
+                        {account.status !== 'Arquivado' && (
                           <DropdownMenuItem 
-                            className="gap-2"
-                            onClick={() => handleChangeStatus(client.id, 'Ativo')}
+                            onClick={() => handleChangeStatus(account.id, 'Arquivado')}
+                            className="text-destructive"
                           >
-                            <ArchiveRestore className="h-4 w-4" />
-                            Desarquivar
+                            <Archive className="mr-2 h-4 w-4" />
+                            Arquivar conta
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -613,82 +641,125 @@ export default function Clients() {
               </CardContent>
             </Card>
           ))}
+
+          {filteredAccounts.length === 0 && (
+            <Card className="surface-elevated">
+              <CardContent className="p-12 text-center">
+                <Building2 className="h-12 w-12 mx-auto mb-4 text-text-tertiary" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Nenhuma conta encontrada
+                </h3>
+                <p className="text-text-secondary mb-4">
+                  {searchTerm || filterStatus !== "all" || filterManager !== "all" || filterCliente !== "all"
+                    ? "Tente ajustar os filtros para encontrar as contas que procura."
+                    : "Comece criando sua primeira conta de anúncio."
+                  }
+                </p>
+                {!searchTerm && filterStatus === "all" && filterManager === "all" && filterCliente === "all" && (
+                  <Button onClick={() => setShowCreateModal(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar primeira conta
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Empty State */}
-        {filteredClients.length === 0 && !loading && (
-          <Card className="surface-elevated">
-            <CardContent className="p-12 text-center">
-              <div className="mx-auto mb-4 p-3 bg-muted/30 rounded-full w-fit">
-                <Users className="h-8 w-8 text-text-muted" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Nenhum cliente encontrado</h3>
-              <p className="text-text-secondary">
-                {searchTerm ? "Tente ajustar os filtros de busca" : "Nenhum cliente cadastrado no sistema"}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Modal de Criação */}
+        {/* Create Account Modal */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Novo Cliente</DialogTitle>
+              <DialogTitle>Criar Nova Conta</DialogTitle>
               <DialogDescription>
-                Criar uma nova conta de cliente no sistema
+                Preencha os dados para criar uma nova conta de anúncio
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome_cliente">Nome do Cliente</Label>
+
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="cliente_id" className="text-right">
+                  Cliente *
+                </Label>
+                <Select 
+                  value={newAccountData.cliente_id} 
+                  onValueChange={(value) => setNewAccountData(prev => ({ ...prev, cliente_id: value }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map(cliente => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nome_cliente" className="text-right">
+                  Nome da Conta *
+                </Label>
                 <Input
                   id="nome_cliente"
-                  value={newClientData.nome_cliente}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, nome_cliente: e.target.value }))}
-                  placeholder="Ex: Casa & Cia Imóveis"
+                  value={newAccountData.nome_cliente}
+                  onChange={(e) => setNewAccountData(prev => ({ ...prev, nome_cliente: e.target.value }))}
+                  className="col-span-3"
+                  placeholder="Nome da conta de anúncio"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nome_empresa">Nome da Empresa</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nome_empresa" className="text-right">
+                  Empresa
+                </Label>
                 <Input
                   id="nome_empresa"
-                  value={newClientData.nome_empresa}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, nome_empresa: e.target.value }))}
-                  placeholder="Ex: Casa & Cia Ltda"
+                  value={newAccountData.nome_empresa}
+                  onChange={(e) => setNewAccountData(prev => ({ ...prev, nome_empresa: e.target.value }))}
+                  className="col-span-3"
+                  placeholder="Nome da empresa"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="telefone" className="text-right">
+                  Telefone *
+                </Label>
                 <Input
                   id="telefone"
-                  value={newClientData.telefone}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, telefone: e.target.value }))}
+                  value={newAccountData.telefone}
+                  onChange={(e) => setNewAccountData(prev => ({ ...prev, telefone: e.target.value }))}
+                  className="col-span-3"
                   placeholder="(11) 99999-9999"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
-                  value={newClientData.email}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="contato@empresa.com"
+                  value={newAccountData.email}
+                  onChange={(e) => setNewAccountData(prev => ({ ...prev, email: e.target.value }))}
+                  className="col-span-3"
+                  placeholder="email@exemplo.com"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="gestor">Gestor</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="gestor_id" className="text-right">
+                  Gestor
+                </Label>
                 <Select 
-                  value={newClientData.gestor_id} 
-                  onValueChange={(value) => setNewClientData(prev => ({ ...prev, gestor_id: value }))}
+                  value={newAccountData.gestor_id} 
+                  onValueChange={(value) => setNewAccountData(prev => ({ ...prev, gestor_id: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Selecione um gestor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -702,15 +773,15 @@ export default function Clients() {
               </div>
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter>
               <Button 
                 variant="outline" 
                 onClick={() => setShowCreateModal(false)}
               >
                 Cancelar
               </Button>
-              <Button onClick={handleCreateClient}>
-                Criar Cliente
+              <Button onClick={handleCreateAccount}>
+                Criar Conta
               </Button>
             </DialogFooter>
           </DialogContent>
