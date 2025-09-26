@@ -1,4 +1,124 @@
-// src/pages/ContasCliente.tsx - LAYOUT HORIZONTAL IGUAL AO RELATÓRIOS N8N
+{/* ✅ LISTA HORIZONTAL COM COLUNAS ALINHADAS */}
+        <div className="space-y-3">
+          {filteredAccounts.map((account) => (
+            <Card key={account.id} className="surface-elevated">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  
+                  {/* ✅ LADO ESQUERDO - CLIENTE COM BOLHA */}
+                  <div className="flex items-center gap-4 min-w-[280px]">
+                    
+                    {/* Avatar com iniciais seguindo o design system */}
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-surface-elevated text-foreground font-bold text-sm border border-border">
+                        {getInitials(account.nome_cliente)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* Nome e Empresa */}
+                    <div className="flex flex-col flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground">
+                          {account.nome_cliente}
+                        </h3>
+                        {/* Status visual */}
+                        {account.status === 'Ativo' && (
+                          <CheckCircle className="h-4 w-4 text-success" />
+                        )}
+                        {account.status === 'Pausado' && (
+                          <Clock className="h-4 w-4 text-warning" />
+                        )}
+                        {account.status === 'Arquivado' && (
+                          <Archive className="h-4 w-4 text-text-muted" />
+                        )}
+                      </div>
+                      <div className="text-sm text-text-secondary">
+                        ID: {account.meta_account_id || account.google_ads_id || 'Não configurado'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ✅ CENTRO - INFORMAÇÕES ALINHADAS EM COLUNAS */}
+                  <div className="flex items-center gap-8 flex-1 justify-center">
+                    
+                    {/* Coluna 1: Plataformas */}
+                    <div className="flex flex-col items-center min-w-[120px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Plataformas</div>
+                      <div className="text-sm font-medium text-center">
+                        {account.usa_meta_ads && account.meta_account_id ? (
+                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs mb-1">
+                            <Facebook className="h-3 w-3 mr-1" />
+                            Meta
+                          </Badge>
+                        ) : account.usa_meta_ads ? (
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs mb-1">
+                            <Facebook className="h-3 w-3 mr-1" />
+                            Meta (sem ID)
+                          </Badge>
+                        ) : null}
+                        
+                        {account.usa_google_ads && account.google_ads_id ? (
+                          <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
+                            <Chrome className="h-3 w-3 mr-1" />
+                            Google
+                          </Badge>
+                        ) : account.usa_google_ads ? (
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
+                            <Chrome className="h-3 w-3 mr-1" />
+                            Google (sem ID)
+                          </Badge>
+                        ) : null}
+                        
+                        {!account.usa_meta_ads && !account.usa_google_ads && (
+                          <span className="text-text-muted text-xs">Não configurado</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Coluna 2: Budget/mês */}
+                    <div className="flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Budget/mês</div>
+                      <div className="text-sm font-medium text-center">
+                        {account.total_budget && account.total_budget > 0 ? (
+                          <span className="text-success">
+                            R$ {account.total_budget.toLocaleString('pt-BR')}
+                          </span>
+                        ) : (
+                          <span className="text-text-muted">Não definido</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Coluna 3: Saldo Meta */}
+                    <div className="flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Saldo Meta</div>
+                      <div className="text-sm font-medium text-center">
+                        {account.usa_meta_ads ? (
+                          account.saldo_meta && account.saldo_meta > 0 ? (
+                            <span className="text-success">
+                              R$ {(account.saldo_meta / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          ) : (
+                            <span className="text-warning">R$ 0,00</span>
+                          )
+                        ) : (
+                          <span className="text-text-muted">-</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Coluna 4: Gestor */}
+                    <div className="flex flex-col items-center min-w-[120px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Gestor</div>
+                      <div className="text-sm font-medium text-center">
+                        {account.gestor_name !== 'Gestor não encontrado' ? (
+                          <span className="text-foreground">{account.gestor_name}</span>
+                        ) : (
+                          <span className="text-warning">Não atribuído</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>// src/pages/ContasCliente.tsx - LAYOUT HORIZONTAL IGUAL AO RELATÓRIOS N8N
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
