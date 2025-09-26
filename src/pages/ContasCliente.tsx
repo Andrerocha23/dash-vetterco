@@ -1,124 +1,4 @@
-{/* ✅ LISTA HORIZONTAL COM COLUNAS ALINHADAS */}
-        <div className="space-y-3">
-          {filteredAccounts.map((account) => (
-            <Card key={account.id} className="surface-elevated">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  
-                  {/* ✅ LADO ESQUERDO - CLIENTE COM BOLHA */}
-                  <div className="flex items-center gap-4 min-w-[280px]">
-                    
-                    {/* Avatar com iniciais seguindo o design system */}
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-surface-elevated text-foreground font-bold text-sm border border-border">
-                        {getInitials(account.nome_cliente)}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    {/* Nome e Empresa */}
-                    <div className="flex flex-col flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-foreground">
-                          {account.nome_cliente}
-                        </h3>
-                        {/* Status visual */}
-                        {account.status === 'Ativo' && (
-                          <CheckCircle className="h-4 w-4 text-success" />
-                        )}
-                        {account.status === 'Pausado' && (
-                          <Clock className="h-4 w-4 text-warning" />
-                        )}
-                        {account.status === 'Arquivado' && (
-                          <Archive className="h-4 w-4 text-text-muted" />
-                        )}
-                      </div>
-                      <div className="text-sm text-text-secondary">
-                        ID: {account.meta_account_id || account.google_ads_id || 'Não configurado'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ✅ CENTRO - INFORMAÇÕES ALINHADAS EM COLUNAS */}
-                  <div className="flex items-center gap-8 flex-1 justify-center">
-                    
-                    {/* Coluna 1: Plataformas */}
-                    <div className="flex flex-col items-center min-w-[120px]">
-                      <div className="text-xs text-text-secondary font-medium mb-1">Plataformas</div>
-                      <div className="text-sm font-medium text-center">
-                        {account.usa_meta_ads && account.meta_account_id ? (
-                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs mb-1">
-                            <Facebook className="h-3 w-3 mr-1" />
-                            Meta
-                          </Badge>
-                        ) : account.usa_meta_ads ? (
-                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs mb-1">
-                            <Facebook className="h-3 w-3 mr-1" />
-                            Meta (sem ID)
-                          </Badge>
-                        ) : null}
-                        
-                        {account.usa_google_ads && account.google_ads_id ? (
-                          <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
-                            <Chrome className="h-3 w-3 mr-1" />
-                            Google
-                          </Badge>
-                        ) : account.usa_google_ads ? (
-                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
-                            <Chrome className="h-3 w-3 mr-1" />
-                            Google (sem ID)
-                          </Badge>
-                        ) : null}
-                        
-                        {!account.usa_meta_ads && !account.usa_google_ads && (
-                          <span className="text-text-muted text-xs">Não configurado</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Coluna 2: Budget/mês */}
-                    <div className="flex flex-col items-center min-w-[100px]">
-                      <div className="text-xs text-text-secondary font-medium mb-1">Budget/mês</div>
-                      <div className="text-sm font-medium text-center">
-                        {account.total_budget && account.total_budget > 0 ? (
-                          <span className="text-success">
-                            R$ {account.total_budget.toLocaleString('pt-BR')}
-                          </span>
-                        ) : (
-                          <span className="text-text-muted">Não definido</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Coluna 3: Saldo Meta */}
-                    <div className="flex flex-col items-center min-w-[100px]">
-                      <div className="text-xs text-text-secondary font-medium mb-1">Saldo Meta</div>
-                      <div className="text-sm font-medium text-center">
-                        {account.usa_meta_ads ? (
-                          account.saldo_meta && account.saldo_meta > 0 ? (
-                            <span className="text-success">
-                              R$ {(account.saldo_meta / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
-                          ) : (
-                            <span className="text-warning">R$ 0,00</span>
-                          )
-                        ) : (
-                          <span className="text-text-muted">-</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Coluna 4: Gestor */}
-                    <div className="flex flex-col items-center min-w-[120px]">
-                      <div className="text-xs text-text-secondary font-medium mb-1">Gestor</div>
-                      <div className="text-sm font-medium text-center">
-                        {account.gestor_name !== 'Gestor não encontrado' ? (
-                          <span className="text-foreground">{account.gestor_name}</span>
-                        ) : (
-                          <span className="text-warning">Não atribuído</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>// src/pages/ContasCliente.tsx - LAYOUT HORIZONTAL IGUAL AO RELATÓRIOS N8N
+// src/pages/ContasCliente.tsx - VERSÃO CORRIGIDA SEM ERROS
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -159,7 +39,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 
 interface AccountData {
@@ -278,8 +158,8 @@ export default function ContasCliente() {
           gestor_name: manager?.name || 'Gestor não encontrado',
           cliente_nome: cliente?.nome || 'Cliente não vinculado',
           total_budget: (account.budget_mensal_meta || 0) + (account.budget_mensal_google || 0),
-          leads_mes: Math.floor(Math.random() * 150) + 20, // TODO: Dados reais
-          conversoes_mes: Math.floor(Math.random() * 30) + 5, // TODO: Dados reais
+          leads_mes: Math.floor(Math.random() * 150) + 20,
+          conversoes_mes: Math.floor(Math.random() * 30) + 5,
         };
       });
 
@@ -299,7 +179,7 @@ export default function ContasCliente() {
       setClientes(clientesData || []);
       setStats(calculatedStats);
 
-      // Toast informativo igual ao relatórios
+      // Toast informativo
       toast({
         title: "Dados carregados!",
         description: `${processedAccounts.length} contas encontradas`,
@@ -525,7 +405,7 @@ export default function ContasCliente() {
     <AppLayout>
       <div className="space-y-6">
         
-        {/* ✅ HEADER IGUAL AO RELATÓRIOS */}
+        {/* ✅ HEADER */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Gestão de Contas</h1>
@@ -546,7 +426,7 @@ export default function ContasCliente() {
           </div>
         </div>
 
-        {/* ✅ KPIs HORIZONTAIS IGUAL AO RELATÓRIOS */}
+        {/* ✅ KPIs HORIZONTAIS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           
           {/* Total */}
@@ -610,7 +490,7 @@ export default function ContasCliente() {
           </Card>
         </div>
 
-        {/* ✅ BUSCA E FILTROS IGUAL AO RELATÓRIOS */}
+        {/* ✅ BUSCA E FILTROS */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
@@ -638,25 +518,25 @@ export default function ContasCliente() {
           </div>
         </div>
 
-        {/* ✅ LISTA HORIZONTAL COM INFORMAÇÕES DE CONTAS */}
+        {/* ✅ LISTA HORIZONTAL COM COLUNAS ALINHADAS */}
         <div className="space-y-3">
           {filteredAccounts.map((account) => (
             <Card key={account.id} className="surface-elevated">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   
-                  {/* ✅ LADO ESQUERDO - INFO DA CONTA */}
-                  <div className="flex items-center gap-4">
+                  {/* ✅ LADO ESQUERDO - CLIENTE COM BOLHA */}
+                  <div className="flex items-center gap-4 min-w-[280px]">
                     
-                    {/* Avatar com iniciais */}
-                    <Avatar className="h-12 w-12 border-2 border-primary/20">
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+                    {/* Avatar com iniciais seguindo o design system */}
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-surface-elevated text-foreground font-bold text-sm border border-border">
                         {getInitials(account.nome_cliente)}
                       </AvatarFallback>
                     </Avatar>
 
                     {/* Nome e Empresa */}
-                    <div className="flex flex-col">
+                    <div className="flex flex-col flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-foreground">
                           {account.nome_cliente}
@@ -672,29 +552,26 @@ export default function ContasCliente() {
                           <Archive className="h-4 w-4 text-text-muted" />
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-text-secondary">
-                        <span>{account.nome_empresa}</span>
-                        {account.cliente_nome && account.cliente_nome !== 'Cliente não vinculado' && (
-                          <span>• {account.cliente_nome}</span>
-                        )}
+                      <div className="text-sm text-text-secondary">
+                        ID: {account.meta_account_id || account.google_ads_id || 'Não configurado'}
                       </div>
                     </div>
                   </div>
 
-                  {/* ✅ CENTRO - PLATAFORMAS E CONFIGURAÇÕES */}
-                  <div className="flex items-center gap-6">
+                  {/* ✅ CENTRO - INFORMAÇÕES ALINHADAS EM COLUNAS */}
+                  <div className="flex items-center gap-8 flex-1 justify-center">
                     
-                    {/* Plataformas configuradas */}
-                    <div className="flex flex-col gap-1">
-                      <div className="text-xs text-text-secondary font-medium">Plataformas</div>
-                      <div className="flex items-center gap-2">
+                    {/* Coluna 1: Plataformas */}
+                    <div className="flex flex-col items-center min-w-[120px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Plataformas</div>
+                      <div className="text-sm font-medium text-center">
                         {account.usa_meta_ads && account.meta_account_id ? (
-                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
+                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs mb-1">
                             <Facebook className="h-3 w-3 mr-1" />
                             Meta
                           </Badge>
                         ) : account.usa_meta_ads ? (
-                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs mb-1">
                             <Facebook className="h-3 w-3 mr-1" />
                             Meta (sem ID)
                           </Badge>
@@ -713,17 +590,15 @@ export default function ContasCliente() {
                         ) : null}
                         
                         {!account.usa_meta_ads && !account.usa_google_ads && (
-                          <Badge variant="secondary" className="bg-text-muted/10 text-text-muted border-text-muted/20 text-xs">
-                            Não configurado
-                          </Badge>
+                          <span className="text-text-muted text-xs">Não configurado</span>
                         )}
                       </div>
                     </div>
 
-                    {/* Budget Mensal */}
-                    <div className="flex flex-col gap-1">
-                      <div className="text-xs text-text-secondary font-medium">Budget/mês</div>
-                      <div className="text-sm font-medium text-foreground">
+                    {/* Coluna 2: Budget/mês */}
+                    <div className="flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Budget/mês</div>
+                      <div className="text-sm font-medium text-center">
                         {account.total_budget && account.total_budget > 0 ? (
                           <span className="text-success">
                             R$ {account.total_budget.toLocaleString('pt-BR')}
@@ -734,28 +609,30 @@ export default function ContasCliente() {
                       </div>
                     </div>
 
-                    {/* Saldo Meta */}
-                    {account.usa_meta_ads && (
-                      <div className="flex flex-col gap-1">
-                        <div className="text-xs text-text-secondary font-medium">Saldo Meta</div>
-                        <div className="text-sm font-medium">
-                          {account.saldo_meta && account.saldo_meta > 0 ? (
+                    {/* Coluna 3: Saldo Meta */}
+                    <div className="flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Saldo Meta</div>
+                      <div className="text-sm font-medium text-center">
+                        {account.usa_meta_ads ? (
+                          account.saldo_meta && account.saldo_meta > 0 ? (
                             <span className="text-success">
-                              R$ {(account.saldo_meta / 100).toLocaleString('pt-BR')}
+                              R$ {(account.saldo_meta / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                           ) : (
                             <span className="text-warning">R$ 0,00</span>
-                          )}
-                        </div>
+                          )
+                        ) : (
+                          <span className="text-text-muted">-</span>
+                        )}
                       </div>
-                    )}
+                    </div>
 
-                    {/* Gestor */}
-                    <div className="flex flex-col gap-1">
-                      <div className="text-xs text-text-secondary font-medium">Gestor</div>
-                      <div className="text-sm font-medium text-foreground">
+                    {/* Coluna 4: Gestor */}
+                    <div className="flex flex-col items-center min-w-[120px]">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Gestor</div>
+                      <div className="text-sm font-medium text-center">
                         {account.gestor_name !== 'Gestor não encontrado' ? (
-                          account.gestor_name
+                          <span className="text-foreground">{account.gestor_name}</span>
                         ) : (
                           <span className="text-warning">Não atribuído</span>
                         )}
@@ -850,7 +727,7 @@ export default function ContasCliente() {
           </Card>
         )}
 
-        {/* ✅ FOOTER IGUAL AO RELATÓRIOS */}
+        {/* ✅ FOOTER */}
         {filteredAccounts.length > 0 && (
           <div className="flex items-center justify-between text-sm text-text-secondary bg-surface-elevated rounded-lg px-4 py-3">
             <span>Dados carregados!</span>
