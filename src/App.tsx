@@ -8,7 +8,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import AuthPage from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Boards from "./pages/Boards";
-import Clients from "./pages/Clients";
+// ❌ REMOVIDO: import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
 import Accounts from "./pages/Accounts";
 import ClientesNew from "./pages/ClientesNew";
@@ -75,16 +75,7 @@ const App = () => (
                 <ClientDetail />
               </ProtectedRoute>
             } />
-            <Route path="/clients" element={
-              <ProtectedRoute>
-                <Clients />
-              </ProtectedRoute>
-            } />
-            <Route path="/clients/:id" element={
-              <ProtectedRoute>
-                <ClientDetail />
-              </ProtectedRoute>
-            } />
+            {/* ❌ REMOVIDO: Rotas /clients e /clients/:id */}
             <Route path="/analytics" element={
               <ProtectedRoute>
                 <Analytics />
