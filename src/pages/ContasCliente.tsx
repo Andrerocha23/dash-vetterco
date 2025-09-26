@@ -1,4 +1,4 @@
-// src/pages/ContasCliente.tsx - UI/UX POLIDO + TOOLTIP DINÂMICO (FUNÇÕES INTACTAS)
+// src/pages/ContasCliente.tsx — Layout seguindo o padrão do print (FUNÇÕES INTACTAS)
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -12,10 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ModernAccountForm } from "@/components/forms/ModernAccountForm";
-import { 
-  Search, 
-  Plus, 
-  Users, 
+import {
+  Search,
+  Plus,
+  Users,
   Building2,
   RefreshCw,
   MoreVertical,
@@ -27,7 +27,8 @@ import {
   Phone,
   Facebook,
   Chrome,
-  Info
+  Info,
+  Filter
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -88,6 +89,7 @@ export default function ContasCliente() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Estados (inalterados)
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
@@ -277,6 +279,36 @@ export default function ContasCliente() {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  // ====== UI Components (apenas layout) ======
+  const StatCard = ({
+    icon,
+    title,
+    value,
+    iconWrapClass,
+    iconClass
+  }: {
+    icon: React.ReactNode;
+    title: string;
+    value: React.ReactNode;
+    iconWrapClass: string;
+    iconClass: string;
+  }) => (
+    <Card className="surface-elevated border-border/40 rounded-2xl">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-4">
+          <div className={`h-12 w-12 rounded-xl ring-1 flex items-center justify-center ${iconWrapClass}`}>
+            {/* ícone */}
+            <div className={iconClass}>{icon}</div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm text-text-secondary">{title}</span>
+            <span className="text-2xl md:text-3xl font-semibold tabular-nums text-foreground">{value}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
       <AppLayout>
@@ -294,178 +326,95 @@ export default function ContasCliente() {
     <AppLayout>
       <TooltipProvider delayDuration={200}>
         <div className="relative">
-          <div className="pointer-events-none absolute inset-x-0 -top-12 h-32 bg-gradient-to-b from-primary/10 to-transparent blur-2xl" />
-
-          <div className="mx-auto max-w-7xl px-4 md:px-6 space-y-6">
+          {/* container centralizado e responsivo */}
+          <div className="mx-auto max-w-screen-2xl px-3 sm:px-4 md:px-6 pb-24 sm:pb-12 space-y-6">
             {/* HEADER */}
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">Gestão de Contas</h1>
                 <p className="text-text-secondary mt-2 max-w-2xl">
                   Controle a sua carteira de contas de anúncio com filtros rápidos, métricas claras e ações diretas.
                 </p>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <Button 
-                  variant="outline" 
+              <div className="flex items-center gap-3 self-start md:self-auto">
+                <Button
+                  variant="outline"
                   className="gap-2"
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  aria-label="Atualizar lista de contas"
+                  aria-label="Atualizar"
                 >
                   <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                   Atualizar
                 </Button>
-                <Button onClick={handleCreateAccount} className="gap-2" aria-label="Criar nova conta">
+                <Button onClick={handleCreateAccount} className="gap-2" aria-label="Nova Conta">
                   <Plus className="h-4 w-4" />
                   Nova Conta
                 </Button>
               </div>
             </div>
 
-            {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-primary/10 ring-1 ring-primary/20">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-text-tertiary font-medium">Total</p>
-                      <p className="text-3xl md:text-4xl font-semibold tabular-nums text-foreground">{stats.total}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-success/10 ring-1 ring-success/20">
-                      <Users className="h-6 w-6 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-text-tertiary font-medium">Ativos</p>
-                      <p className="text-3xl md:text-4xl font-semibold tabular-nums text-foreground">{stats.ativos}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-warning/10 ring-1 ring-warning/20">
-                      <Zap className="h-6 w-6 text-warning" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-text-tertiary font-medium">Pausados</p>
-                      <p className="text-3xl md:text-4xl font-semibold tabular-nums text-foreground">{stats.pausados}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-blue-500/10 ring-1 ring-blue-500/20">
-                      <BarChart3 className="h-6 w-6 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-text-tertiary font-medium">Meta</p>
-                      <p className="text-3xl md:text-4xl font-semibold tabular-nums text-foreground">{stats.metaAds}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-red-500/10 ring-1 ring-red-500/20">
-                      <Chrome className="h-6 w-6 text-red-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-text-tertiary font-medium">Google</p>
-                      <p className="text-3xl md:text-4xl font-semibold tabular-nums text-foreground">{stats.googleAds}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-green-500/10 ring-1 ring-green-500/20">
-                      <Info className="h-6 w-6 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-text-tertiary font-medium">Saldo Total</p>
-                      <p className="text-2xl md:text-3xl font-semibold tabular-nums text-foreground">
-                        R$ {(stats.saldoTotal / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* KPIs no padrão do print */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <StatCard
+                icon={<Users className="h-5 w-5" />}
+                title="Total"
+                value={stats.total}
+                iconWrapClass="bg-primary/10 ring-primary/20"
+                iconClass="text-primary"
+              />
+              <StatCard
+                icon={<CheckCircleIcon />}
+                title="Ativos"
+                value={stats.ativos}
+                iconWrapClass="bg-success/10 ring-success/20"
+                iconClass="text-success"
+              />
+              <StatCard
+                icon={<BarChart3 className="h-5 w-5" />}
+                title="Meta Ads"
+                value={stats.metaAds}
+                iconWrapClass="bg-blue-500/10 ring-blue-500/20"
+                iconClass="text-blue-500"
+              />
+              <StatCard
+                icon={<TargetIcon />}
+                title="Google Ads"
+                value={stats.googleAds}
+                iconWrapClass="bg-amber-500/10 ring-amber-500/20"
+                iconClass="text-amber-500"
+              />
             </div>
 
-            {/* FILTROS */}
-            <div className="sticky top-0 z-10 -mx-4 md:-mx-6 px-4 md:px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-surface/60 border-b border-border/40">
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
-                  <Input
-                    placeholder="Buscar por nome, empresa, telefone, e-mail ou cliente..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                    aria-label="Buscar contas"
-                  />
-                </div>
-
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-48" aria-label="Filtrar por status">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Todos os Status">Todos os Status</SelectItem>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Pausado">Pausado</SelectItem>
-                    <SelectItem value="Arquivado">Arquivado</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={filterGestor} onValueChange={setFilterGestor}>
-                  <SelectTrigger className="w-48" aria-label="Filtrar por gestor">
-                    <SelectValue placeholder="Gestor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Todos os Gestores">Todos os Gestores</SelectItem>
-                    {managers.map(manager => (
-                      <SelectItem key={manager.id} value={manager.id}>
-                        {manager.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filterCliente} onValueChange={setFilterCliente}>
-                  <SelectTrigger className="w-48" aria-label="Filtrar por cliente">
-                    <SelectValue placeholder="Cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Todos os Clientes">Todos os Clientes</SelectItem>
-                    {clientes.map(cliente => (
-                      <SelectItem key={cliente.id} value={cliente.id}>
-                        {cliente.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Filtros no padrão do print: busca grande + botão filtro + select */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+                <Input
+                  placeholder="Buscar por conta ou ID do grupo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-12"
+                  aria-label="Buscar contas"
+                />
               </div>
+
+              <Button type="button" variant="outline" className="h-12 gap-2 self-end md:self-auto">
+                <Filter className="h-4 w-4" />
+                Filtros
+              </Button>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full md:w-48 h-12">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos os Status">Todos</SelectItem>
+                  <SelectItem value="Ativo">Ativos</SelectItem>
+                  <SelectItem value="Pausado">Pausados</SelectItem>
+                  <SelectItem value="Arquivado">Arquivados</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* LISTA DE CONTAS */}
@@ -476,11 +425,9 @@ export default function ContasCliente() {
                   account.status === 'Pausado' ? 'from-warning/70 to-warning/10' :
                   'from-text-muted/70 to-text-muted/10';
 
-                // --- NOVO: verificação por ID para considerar "configurado"
+                // Dinâmica de configuração por ID
                 const metaConfigured = !!(account.meta_account_id && account.meta_account_id.trim().length > 0);
                 const googleConfigured = !!(account.google_ads_id && account.google_ads_id.trim().length > 0);
-
-                // Exibir chip se usa o canal OU se já houver ID salvo (opcional; mantenho visível)
                 const showMetaChip = account.usa_meta_ads || metaConfigured;
                 const showGoogleChip = account.usa_google_ads || googleConfigured;
 
@@ -490,7 +437,6 @@ export default function ContasCliente() {
                     className="surface-elevated relative overflow-hidden transition-all hover:ring-1 hover:ring-primary/30 hover:shadow-lg group cursor-pointer"
                     onClick={() => handleViewAccount(account.id)}
                   >
-                    {/* faixa lateral de status */}
                     <div className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${statusColor}`} />
                     <CardContent className="p-4 md:p-5">
                       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] items-center gap-4">
@@ -533,7 +479,7 @@ export default function ContasCliente() {
                           </div>
                         </div>
 
-                        {/* CANAIS / TOOLTIP DINÂMICO POR ID */}
+                        {/* CANAIS */}
                         <div className="text-right md:text-left">
                           <div className="text-xs text-text-tertiary font-medium mb-1">Canais</div>
                           <div className="flex items-center md:justify-start justify-end gap-2">
@@ -565,7 +511,7 @@ export default function ContasCliente() {
                                     className={[
                                       "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
                                       googleConfigured
-                                        ? "border-red-500/30 bg-red-500/10 text-red-400"
+                                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
                                         : "border-border/40 bg-transparent text-text-muted"
                                     ].join(" ")}
                                   >
@@ -597,8 +543,8 @@ export default function ContasCliente() {
                         <div className="flex items-center justify-end">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="icon"
                                 onClick={(e) => e.stopPropagation()}
                                 className="hover:bg-transparent"
@@ -677,5 +623,21 @@ export default function ContasCliente() {
         </div>
       </TooltipProvider>
     </AppLayout>
+  );
+}
+
+/** Ícones auxiliares para ficar mais perto do print */
+function CheckCircleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+      <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14-4-4 1.414-1.414L11 12.172l4.586-4.586L17 9l-6 7Z"/>
+    </svg>
+  );
+}
+function TargetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+      <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2Zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6Zm1 5h7v2h-7v-2Z"/>
+    </svg>
   );
 }
