@@ -1,6 +1,6 @@
 // src/mocks/n8nService.ts - Atualizado para usar 'accounts'
 import { RelatorioN8n, RelatorioFilters, ConfigurarDisparoPayload } from "@/types/n8n";
-import { supabase } from "@/integrations/supabase/accounts";
+import { supabase } from "@/integrations/supabase/client";
 
 export const n8nService = {
   async listRelatorios(filters: RelatorioFilters = {}): Promise<RelatorioN8n[]> {
