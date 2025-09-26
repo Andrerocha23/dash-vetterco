@@ -94,9 +94,9 @@ export default function RelatorioN8n() {
     try {
       setLoading(true);
 
-      // Buscar clientes com suas configurações de relatório
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
+      // Buscar contas (accounts) com suas configurações de relatório
+      const { data: accountsData, error: accountsError } = await supabase
+        .from('accounts') // ✅ Corrigido: era 'clients'
         .select(`
           id,
           nome_cliente,
@@ -109,7 +109,7 @@ export default function RelatorioN8n() {
         .eq('status', 'Ativo')
         .order('nome_cliente');
 
-      if (clientsError) throw clientsError;
+      if (accountsError) throw accountsError;
 
       // Buscar configurações de relatório
       const { data: configsData, error: configsError } = await supabase
@@ -126,29 +126,29 @@ export default function RelatorioN8n() {
 
       if (disparosError) throw disparosError;
 
-      // Buscar stats dos clientes
+      // Buscar stats das contas
       const { data: statsData, error: statsError } = await supabase
-        .from('leads_stats')
+        .from('client_stats') // ✅ Pode manter se a tabela for client_stats
         .select('client_id, total_leads, leads_convertidos');
 
       if (statsError) throw statsError;
 
       // Processar dados
-      const processedClients: ClientReport[] = (clientsData || []).map(client => {
-        const config = configsData?.find(c => c.client_id === client.id);
-        const stats = statsData?.find(s => s.client_id === client.id);
+      const processedClients: ClientReport[] = (accountsData || []).map(account => {
+        const config = configsData?.find(c => c.client_id === account.id);
+        const stats = statsData?.find(s => s.client_id === account.id);
         
-        // Encontrar último disparo do cliente
-        const ultimoDisparo = disparosData?.find(d => d.client_id === client.id);
+        // Encontrar último disparo da conta
+        const ultimoDisparo = disparosData?.find(d => d.client_id === account.id);
 
         return {
-          id: client.id,
-          nome_cliente: client.nome_cliente,
-          nome_empresa: client.nome_empresa,
-          id_grupo: client.id_grupo,
-          meta_account_id: client.meta_account_id,
-          google_ads_id: client.google_ads_id,
-          status: client.status,
+          id: account.id,
+          nome_cliente: account.nome_cliente,
+          nome_empresa: account.nome_empresa,
+          id_grupo: account.id_grupo,
+          meta_account_id: account.meta_account_id,
+          google_ads_id: account.google_ads_id,
+          status: account.status,
           config: config ? {
             ativo: config.ativo || false,
             horario_disparo: config.horario_disparo,
@@ -608,7 +608,7 @@ export default function RelatorioN8n() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Central de Relatórios</h1>
             <p className="text-text-secondary mt-1">
-              Gerencie os disparos automáticos de relatórios para seus clientes
+              Gerencie os disparos automáticos de relatórios para suas contas
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -636,7 +636,7 @@ export default function RelatorioN8n() {
                   <Users className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-text-secondary text-sm">Todos</p>
+                  <p className="text-text-secondary text-sm">Todas</p>
                   <p className="text-2xl font-bold text-foreground">{clients.length}</p>
                 </div>
               </div>
@@ -707,7 +707,7 @@ export default function RelatorioN8n() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                 <Input
-                  placeholder="Buscar por cliente ou ID do grupo..."
+                  placeholder="Buscar por conta ou ID do grupo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -728,7 +728,7 @@ export default function RelatorioN8n() {
           </CardContent>
         </Card>
 
-        {/* Clients List - Dados Reais */}
+        {/* Accounts List - Dados Reais */}
         <div className="space-y-4">
           {filteredClients.map((client) => (
             <Card key={client.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
@@ -860,13 +860,16 @@ export default function RelatorioN8n() {
               <div className="mx-auto mb-4 p-3 bg-muted/30 rounded-full w-fit">
                 <Search className="h-8 w-8 text-text-muted" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Nenhum cliente encontrado</h3>
+              <h3 className="font-semibold text-lg mb-2">Nenhuma conta encontrada</h3>
               <p className="text-text-secondary">
-                {searchTerm ? "Tente ajustar o termo de busca" : "Nenhum cliente ativo no sistema"}
+                {searchTerm ? "Tente ajustar o termo de busca" : "Nenhuma conta ativa no sistema"}
               </p>
             </CardContent>
           </Card>
         )}
+
+        {/* Modal de Edição */}
+        <EditClientModal />
       </div>
     </AppLayout>
   );
