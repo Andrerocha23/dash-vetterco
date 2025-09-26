@@ -1,4 +1,4 @@
-// src/pages/ContasCliente.tsx - UI/UX POLIDO (FUNÇÕES INTACTAS)
+// src/pages/ContasCliente.tsx - UI/UX POLIDO + TOOLTIP DINÂMICO (FUNÇÕES INTACTAS)
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -36,8 +36,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-
-// ➕ UI: tooltips para ícones/chips
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AccountData {
@@ -54,6 +52,7 @@ interface AccountData {
   created_at: string;
   updated_at: string;
 
+  // Canais/IDs
   usa_meta_ads?: boolean;
   meta_account_id?: string;
   saldo_meta?: number;
@@ -61,10 +60,13 @@ interface AccountData {
   usa_google_ads?: boolean;
   google_ads_id?: string;
   budget_mensal_google?: number;
+
+  // Outros
   link_drive?: string;
   canal_relatorio?: string;
   horario_relatorio?: string;
 
+  // Calculados
   gestor_name?: string;
   cliente_nome?: string;
   total_budget?: number;
@@ -86,7 +88,6 @@ export default function ContasCliente() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Estados (inalterados)
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
@@ -114,7 +115,7 @@ export default function ContasCliente() {
     loadAccountsData();
   }, []);
 
-  // ✅ FUNÇÃO PRINCIPAL DE CARREGAMENTO (inalterada)
+  // === CARREGAMENTO (inalterado) ===
   const loadAccountsData = async () => {
     try {
       setLoading(true);
@@ -123,21 +124,18 @@ export default function ContasCliente() {
         .from('accounts')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (accountsError) throw accountsError;
 
       const { data: managersData, error: managersError } = await supabase
         .from('managers')
         .select('id, name')
         .eq('status', 'active');
-
       if (managersError) console.warn('Gestores não encontrados:', managersError);
 
       const { data: clientesData, error: clientesError } = await supabase
         .from('clientes')
         .select('*')
         .order('nome', { ascending: true });
-
       if (clientesError) console.warn('Clientes não encontrados:', clientesError);
 
       const processedAccounts: AccountData[] = (accountsData || []).map(account => {
@@ -187,20 +185,20 @@ export default function ContasCliente() {
     setRefreshing(false);
   };
 
+  // === FILTROS (inalterado) ===
   const filteredAccounts = accounts.filter(account => {
     const matchesSearch = !searchTerm || 
       account.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.telefone.includes(searchTerm) ||
       (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase()));
-      
     const matchesStatus = filterStatus === "Todos os Status" || account.status === filterStatus;
     const matchesGestor = filterGestor === "Todos os Gestores" || account.gestor_id === filterGestor;
     const matchesCliente = filterCliente === "Todos os Clientes" || account.cliente_id === filterCliente;
-
     return matchesSearch && matchesStatus && matchesGestor && matchesCliente;
   });
 
+  // === AÇÕES (inalteradas) ===
   const handleCreateAccount = () => {
     setEditingAccount(null);
     setShowModernForm(true);
@@ -229,13 +227,16 @@ export default function ContasCliente() {
         canais: data.canais || [],
         canal_relatorio: data.canal_relatorio,
         horario_relatorio: data.horario_relatorio,
+        // Meta
         usa_meta_ads: data.usa_meta_ads || false,
         meta_account_id: data.meta_account_id || null,
         budget_mensal_meta: data.budget_mensal_meta || 0,
         saldo_meta: data.saldo_meta || 0,
+        // Google
         usa_google_ads: data.usa_google_ads || false,
         google_ads_id: data.google_ads_id || null,
         budget_mensal_google: data.budget_mensal_google || 0,
+        // Outros
         link_drive: data.link_drive || null,
         updated_at: new Date().toISOString()
       };
@@ -243,7 +244,6 @@ export default function ContasCliente() {
       if (editingAccount) {
         const { error } = await supabase.from('accounts').update(accountData).eq('id', editingAccount.id);
         if (error) throw error;
-
         toast({ title: "Sucesso", description: "Conta atualizada com sucesso" });
       } else {
         const { error } = await supabase.from('accounts').insert({
@@ -251,7 +251,6 @@ export default function ContasCliente() {
           created_at: new Date().toISOString()
         });
         if (error) throw error;
-
         toast({ title: "Sucesso", description: "Conta criada com sucesso" });
       }
 
@@ -269,6 +268,7 @@ export default function ContasCliente() {
     }
   };
 
+  // === Helpers (inalterados) ===
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -293,12 +293,11 @@ export default function ContasCliente() {
   return (
     <AppLayout>
       <TooltipProvider delayDuration={200}>
-        {/* Fundo com sutil gradiente para toque “premium” */}
         <div className="relative">
           <div className="pointer-events-none absolute inset-x-0 -top-12 h-32 bg-gradient-to-b from-primary/10 to-transparent blur-2xl" />
 
           <div className="mx-auto max-w-7xl px-4 md:px-6 space-y-6">
-            {/* ✅ HEADER */}
+            {/* HEADER */}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">Gestão de Contas</h1>
@@ -324,9 +323,8 @@ export default function ContasCliente() {
               </div>
             </div>
 
-            {/* ✅ KPIs */}
+            {/* KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              {/* Total */}
               <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
@@ -341,7 +339,6 @@ export default function ContasCliente() {
                 </CardContent>
               </Card>
 
-              {/* Ativos */}
               <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
@@ -356,7 +353,6 @@ export default function ContasCliente() {
                 </CardContent>
               </Card>
 
-              {/* Pausados */}
               <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
@@ -371,7 +367,6 @@ export default function ContasCliente() {
                 </CardContent>
               </Card>
 
-              {/* Meta */}
               <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
@@ -386,7 +381,6 @@ export default function ContasCliente() {
                 </CardContent>
               </Card>
 
-              {/* Google */}
               <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
@@ -401,7 +395,6 @@ export default function ContasCliente() {
                 </CardContent>
               </Card>
 
-              {/* Saldo Total */}
               <Card className="surface-elevated group transition-transform hover:-translate-y-0.5">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
@@ -419,7 +412,7 @@ export default function ContasCliente() {
               </Card>
             </div>
 
-            {/* ✅ FILTROS (toolbar sticky) */}
+            {/* FILTROS */}
             <div className="sticky top-0 z-10 -mx-4 md:-mx-6 px-4 md:px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-surface/60 border-b border-border/40">
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
@@ -475,13 +468,21 @@ export default function ContasCliente() {
               </div>
             </div>
 
-            {/* ✅ LISTA DE CONTAS */}
+            {/* LISTA DE CONTAS */}
             <div className="space-y-3">
               {filteredAccounts.map((account) => {
                 const statusColor =
                   account.status === 'Ativo' ? 'from-success/70 to-success/10' :
                   account.status === 'Pausado' ? 'from-warning/70 to-warning/10' :
                   'from-text-muted/70 to-text-muted/10';
+
+                // --- NOVO: verificação por ID para considerar "configurado"
+                const metaConfigured = !!(account.meta_account_id && account.meta_account_id.trim().length > 0);
+                const googleConfigured = !!(account.google_ads_id && account.google_ads_id.trim().length > 0);
+
+                // Exibir chip se usa o canal OU se já houver ID salvo (opcional; mantenho visível)
+                const showMetaChip = account.usa_meta_ads || metaConfigured;
+                const showGoogleChip = account.usa_google_ads || googleConfigured;
 
                 return (
                   <Card
@@ -532,33 +533,53 @@ export default function ContasCliente() {
                           </div>
                         </div>
 
-                        {/* CONFIGURAÇÕES */}
+                        {/* CANAIS / TOOLTIP DINÂMICO POR ID */}
                         <div className="text-right md:text-left">
                           <div className="text-xs text-text-tertiary font-medium mb-1">Canais</div>
                           <div className="flex items-center md:justify-start justify-end gap-2">
-                            {account.usa_meta_ads && (
+                            {showMetaChip && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center gap-1.5 rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-xs font-medium text-blue-400">
+                                  <span
+                                    className={[
+                                      "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
+                                      metaConfigured
+                                        ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
+                                        : "border-border/40 bg-transparent text-text-muted"
+                                    ].join(" ")}
+                                  >
                                     <Facebook className="h-3.5 w-3.5" />
                                     Meta
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent>Meta Ads configurado</TooltipContent>
+                                <TooltipContent>
+                                  {metaConfigured ? "Meta Ads configurado" : "Meta Ads não configurado (adicione o ID da conta)."}
+                                </TooltipContent>
                               </Tooltip>
                             )}
-                            {account.usa_google_ads && (
+
+                            {showGoogleChip && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center gap-1.5 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-medium text-red-400">
+                                  <span
+                                    className={[
+                                      "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
+                                      googleConfigured
+                                        ? "border-red-500/30 bg-red-500/10 text-red-400"
+                                        : "border-border/40 bg-transparent text-text-muted"
+                                    ].join(" ")}
+                                  >
                                     <Chrome className="h-3.5 w-3.5" />
                                     Google
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent>Google Ads configurado</TooltipContent>
+                                <TooltipContent>
+                                  {googleConfigured ? "Google Ads configurado" : "Google Ads não configurado (adicione o ID da conta)."}
+                                </TooltipContent>
                               </Tooltip>
                             )}
-                            {!account.usa_meta_ads && !account.usa_google_ads && (
+
+                            {!showMetaChip && !showGoogleChip && (
                               <span className="text-text-muted text-sm">Não configurado</span>
                             )}
                           </div>
@@ -610,7 +631,7 @@ export default function ContasCliente() {
               })}
             </div>
 
-            {/* ✅ EMPTY STATE */}
+            {/* EMPTY STATE */}
             {filteredAccounts.length === 0 && !loading && (
               <Card className="surface-elevated">
                 <CardContent className="p-12 text-center">
@@ -625,7 +646,7 @@ export default function ContasCliente() {
               </Card>
             )}
 
-            {/* ✅ FORMULÁRIO MODERNO (inalterado) */}
+            {/* FORMULÁRIO (inalterado) */}
             <ModernAccountForm
               open={showModernForm}
               onOpenChange={setShowModernForm}
