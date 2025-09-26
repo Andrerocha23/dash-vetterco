@@ -1,4 +1,4 @@
-// src/pages/ContasCliente.tsx
+// src/pages/ContasCliente.tsx - VERSÃO CORRIGIDA
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,27 +11,18 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-// ✅ IMPORTAR O NOVO FORMULÁRIO
 import { ModernAccountForm } from "@/components/forms/ModernAccountForm";
 import { 
   Search, 
   Plus, 
   Users, 
   Building2,
-  UserCheck,
-  Calendar,
   RefreshCw,
   MoreVertical,
   Edit,
   Eye,
   Archive,
   ArchiveRestore,
-  Phone,
-  Mail,
-  Target,
-  BarChart3,
-  DollarSign,
-  Activity,
   Facebook,
   Chrome,
   TrendingUp
@@ -57,13 +48,32 @@ interface AccountData {
   cliente_id: string;
   created_at: string;
   updated_at: string;
+  
+  // Campos Meta Ads
+  usa_meta_ads?: boolean;
+  meta_account_id?: string;
+  meta_business_id?: string;
+  meta_page_id?: string;
+  saldo_meta?: number;
+  budget_mensal_meta?: number;
+  webhook_meta?: string;
+  
+  // Campos Google Ads
+  usa_google_ads?: boolean;
+  google_ads_id?: string;
+  budget_mensal_google?: number;
+  webhook_google?: string;
+  
+  // Outros campos
+  link_drive?: string;
+  traqueamento_ativo?: boolean;
+  pixel_meta?: string;
+  ga4_stream_id?: string;
+  canal_relatorio?: string;
+  horario_relatorio?: string;
+  
   gestor_name?: string;
   cliente_nome?: string;
-  stats?: {
-    total_leads: number;
-    conversoes: number;
-    gasto_total: number;
-  };
 }
 
 const STATUS_OPTIONS = [
@@ -87,10 +97,8 @@ export default function ContasCliente() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterManager, setFilterManager] = useState("all");
   const [filterCliente, setFilterCliente] = useState("all");
   
-  // ✅ NOVO ESTADO PARA O FORMULÁRIO MODERNO
   const [showModernForm, setShowModernForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<AccountData | null>(null);
 
@@ -101,7 +109,7 @@ export default function ContasCliente() {
     try {
       setLoading(true);
 
-      // Buscar contas
+      // Buscar contas da tabela accounts (principal)
       const { data: accountsData, error: accountsError } = await supabase
         .from('accounts')
         .select('*')
@@ -153,22 +161,88 @@ export default function ContasCliente() {
     }
   };
 
-  // ✅ FUNÇÃO PARA CRIAR/EDITAR CONTA COM NOVO FORMULÁRIO
+  // ✅ FUNÇÃO PARA CRIAR/EDITAR CONTA COM MAPEAMENTO CORRETO
   const handleAccountSubmit = async (data: any) => {
     try {
+      // Mapear dados do formulário para estrutura do banco
+      const accountData = {
+        // Dados básicos
+        nome_cliente: data.nome_cliente,
+        nome_empresa: data.nome_empresa,
+        telefone: data.telefone,
+        email: data.email || null,
+        gestor_id: data.gestor_id,
+        cliente_id: data.cliente_id,
+        link_drive: data.link_drive || null,
+        id_grupo: data.id_grupo || null,
+        status: data.status,
+        observacoes: data.observacoes || null,
+
+        // Canais e comunicação
+        canais: data.canais,
+        canal_relatorio: data.canal_relatorio,
+        horario_relatorio: data.horario_relatorio,
+        templates_padrao: data.templates_padrao || [],
+        notificacao_saldo_baixo: data.notificacao_saldo_baixo || false,
+        notificacao_erro_sync: data.notificacao_erro_sync || false,
+        notificacao_leads_diarios: data.notificacao_leads_diarios || false,
+
+        // Meta Ads
+        usa_meta_ads: data.usa_meta_ads,
+        ativar_campanhas_meta: data.ativar_campanhas_meta || false,
+        meta_account_id: data.meta_account_id || null,
+        meta_business_id: data.meta_business_id || null,
+        meta_page_id: data.meta_page_id || null,
+        modo_saldo_meta: data.modo_saldo_meta || null,
+        monitorar_saldo_meta: data.monitorar_saldo_meta || false,
+        saldo_meta: data.saldo_meta || null,
+        alerta_saldo_baixo: data.alerta_saldo_baixo || null,
+        budget_mensal_meta: data.budget_mensal_meta || null,
+        link_meta: data.link_meta || null,
+        utm_padrao: data.utm_padrao || null,
+        webhook_meta: data.webhook_meta || null,
+
+        // Google Ads
+        usa_google_ads: data.usa_google_ads,
+        google_ads_id: data.google_ads_id || null,
+        budget_mensal_google: data.budget_mensal_google || null,
+        conversoes: data.conversoes || [],
+        link_google: data.link_google || null,
+        webhook_google: data.webhook_google || null,
+
+        // Rastreamento
+        traqueamento_ativo: data.traqueamento_ativo,
+        pixel_meta: data.pixel_meta || null,
+        ga4_stream_id: data.ga4_stream_id || null,
+        gtm_id: data.gtm_id || null,
+        typebot_ativo: data.typebot_ativo || false,
+        typebot_url: data.typebot_url || null,
+
+        // Financeiro
+        budget_mensal_global: data.budget_mensal_global || null,
+        forma_pagamento: data.forma_pagamento || null,
+        centro_custo: data.centro_custo || null,
+        contrato_inicio: data.contrato_inicio || null,
+        contrato_renovacao: data.contrato_renovacao || null,
+
+        // Permissões
+        papel_padrao: data.papel_padrao || null,
+        usuarios_vinculados: data.usuarios_vinculados || [],
+        ocultar_ranking: data.ocultar_ranking || false,
+        somar_metricas: data.somar_metricas || true,
+        usa_crm_externo: data.usa_crm_externo || false,
+        url_crm: data.url_crm || null,
+
+        // Campos obrigatórios do sistema
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+        updated_at: new Date().toISOString(),
+      };
+
       if (editingAccount) {
-        // Atualizar conta existente
+        // ✅ ATUALIZAR CONTA EXISTENTE
         const { error } = await supabase
           .from('accounts')
-          .update({
-            nome_cliente: data.nome_conta,
-            cliente_id: data.cliente_id,
-            canais: data.plataformas,
-            gestor_id: data.gestor_id,
-            status: data.status,
-            observacoes: data.observacoes,
-            updated_at: new Date().toISOString()
-          })
+          .update(accountData)
           .eq('id', editingAccount.id);
 
         if (error) throw error;
@@ -178,19 +252,10 @@ export default function ContasCliente() {
           description: "Conta atualizada com sucesso",
         });
       } else {
-        // Criar nova conta
+        // ✅ CRIAR NOVA CONTA
         const { error } = await supabase
           .from('accounts')
-          .insert({
-            nome_cliente: data.nome_conta,
-            nome_empresa: data.nome_conta,
-            telefone: "000000000", // Campo obrigatório, pode ser preenchido depois
-            cliente_id: data.cliente_id,
-            canais: data.plataformas,
-            gestor_id: data.gestor_id,
-            status: data.status,
-            observacoes: data.observacoes,
-          });
+          .insert(accountData);
 
         if (error) throw error;
 
@@ -209,13 +274,93 @@ export default function ContasCliente() {
       console.error('Erro ao salvar conta:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível salvar a conta",
+        description: `Não foi possível salvar a conta: ${error.message}`,
         variant: "destructive",
       });
     }
   };
 
-  // Alterar status da conta
+  // ✅ FUNÇÃO PARA CARREGAR DADOS NA EDIÇÃO
+  const handleEditAccount = (account: AccountData) => {
+    // Mapear dados da conta para formato do formulário
+    const formData = {
+      // Dados básicos
+      cliente_id: account.cliente_id,
+      nome_cliente: account.nome_cliente,
+      nome_empresa: account.nome_empresa,
+      telefone: account.telefone,
+      email: account.email || "",
+      gestor_id: account.gestor_id,
+      link_drive: account.link_drive || "",
+      id_grupo: account.id_grupo || "",
+      status: account.status as "Ativo" | "Pausado" | "Arquivado",
+      observacoes: account.observacoes || "",
+
+      // Canais e comunicação
+      canais: account.canais || [],
+      canal_relatorio: (account.canal_relatorio as "WhatsApp" | "Email" | "Ambos") || "WhatsApp",
+      horario_relatorio: account.horario_relatorio || "09:00",
+      templates_padrao: account.templates_padrao || [],
+      notificacao_saldo_baixo: account.notificacao_saldo_baixo || false,
+      notificacao_erro_sync: account.notificacao_erro_sync || false,
+      notificacao_leads_diarios: account.notificacao_leads_diarios || false,
+
+      // Meta Ads
+      usa_meta_ads: account.usa_meta_ads || false,
+      ativar_campanhas_meta: account.ativar_campanhas_meta || false,
+      meta_account_id: account.meta_account_id || "",
+      meta_business_id: account.meta_business_id || "",
+      meta_page_id: account.meta_page_id || "",
+      modo_saldo_meta: (account.modo_saldo_meta as "Cartão" | "Pix" | "Pré-pago (crédito)") || "Pix",
+      monitorar_saldo_meta: account.monitorar_saldo_meta || false,
+      saldo_meta: account.saldo_meta || 0,
+      alerta_saldo_baixo: account.alerta_saldo_baixo || 100,
+      budget_mensal_meta: account.budget_mensal_meta || 0,
+      link_meta: account.link_meta || "",
+      utm_padrao: account.utm_padrao || "",
+      webhook_meta: account.webhook_meta || "",
+
+      // Google Ads
+      usa_google_ads: account.usa_google_ads || false,
+      google_ads_id: account.google_ads_id || "",
+      budget_mensal_google: account.budget_mensal_google || 0,
+      conversoes: account.conversoes || [],
+      link_google: account.link_google || "",
+      webhook_google: account.webhook_google || "",
+
+      // Rastreamento
+      traqueamento_ativo: account.traqueamento_ativo || false,
+      pixel_meta: account.pixel_meta || "",
+      ga4_stream_id: account.ga4_stream_id || "",
+      gtm_id: account.gtm_id || "",
+      typebot_ativo: account.typebot_ativo || false,
+      typebot_url: account.typebot_url || "",
+
+      // Financeiro
+      budget_mensal_global: account.budget_mensal_global || 0,
+      forma_pagamento: (account.forma_pagamento as "Cartão" | "Pix" | "Boleto" | "Misto") || "Pix",
+      centro_custo: account.centro_custo || "",
+      contrato_inicio: account.contrato_inicio || "",
+      contrato_renovacao: account.contrato_renovacao || "",
+
+      // Permissões
+      papel_padrao: (account.papel_padrao as "Usuário padrão" | "Gestor" | "Administrador") || "Usuário padrão",
+      usuarios_vinculados: account.usuarios_vinculados || [],
+      ocultar_ranking: account.ocultar_ranking || false,
+      somar_metricas: account.somar_metricas ?? true,
+      usa_crm_externo: account.usa_crm_externo || false,
+      url_crm: account.url_crm || "",
+    };
+
+    setEditingAccount(account);
+    setShowModernForm(true);
+  };
+
+  const handleCreateAccount = () => {
+    setEditingAccount(null);
+    setShowModernForm(true);
+  };
+
   const handleChangeStatus = async (accountId: string, newStatus: string) => {
     try {
       const { error } = await supabase
@@ -245,19 +390,6 @@ export default function ContasCliente() {
     }
   };
 
-  // ✅ ABRIR FORMULÁRIO PARA EDIÇÃO
-  const handleEditAccount = (account: AccountData) => {
-    setEditingAccount(account);
-    setShowModernForm(true);
-  };
-
-  // ✅ ABRIR FORMULÁRIO PARA CRIAÇÃO
-  const handleCreateAccount = () => {
-    setEditingAccount(null);
-    setShowModernForm(true);
-  };
-
-  // Navegar para detalhes da conta
   const handleViewAccount = (accountId: string) => {
     navigate(`/contas/${accountId}`);
   };
@@ -273,10 +405,9 @@ export default function ContasCliente() {
                          account.gestor_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = filterStatus === "all" || account.status === filterStatus;
-    const matchesManager = filterManager === "all" || account.gestor_id === filterManager;
     const matchesCliente = filterCliente === "all" || account.cliente_id === filterCliente;
 
-    return matchesSearch && matchesStatus && matchesManager && matchesCliente;
+    return matchesSearch && matchesStatus && matchesCliente;
   });
 
   if (loading) {
@@ -312,7 +443,6 @@ export default function ContasCliente() {
               <RefreshCw className="h-4 w-4" />
               Atualizar
             </Button>
-            {/* ✅ BOTÃO PARA NOVO FORMULÁRIO */}
             <Button className="gap-2" onClick={handleCreateAccount}>
               <Plus className="h-4 w-4" />
               Nova Conta
@@ -398,7 +528,6 @@ export default function ContasCliente() {
                         <Eye className="mr-2 h-4 w-4" />
                         Ver detalhes
                       </DropdownMenuItem>
-                      {/* ✅ EDITAR COM NOVO FORMULÁRIO */}
                       <DropdownMenuItem onClick={() => handleEditAccount(account)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
@@ -478,12 +607,12 @@ export default function ContasCliente() {
                   Nenhuma conta encontrada
                 </h3>
                 <p className="text-text-secondary mb-4">
-                  {searchTerm || filterStatus !== "all" || filterManager !== "all" || filterCliente !== "all"
+                  {searchTerm || filterStatus !== "all" || filterCliente !== "all"
                     ? "Tente ajustar os filtros para encontrar as contas que procura."
                     : "Comece criando sua primeira conta de anúncio."
                   }
                 </p>
-                {!searchTerm && filterStatus === "all" && filterManager === "all" && filterCliente === "all" && (
+                {!searchTerm && filterStatus === "all" && filterCliente === "all" && (
                   <Button onClick={handleCreateAccount}>
                     <Plus className="mr-2 h-4 w-4" />
                     Criar primeira conta
@@ -494,21 +623,32 @@ export default function ContasCliente() {
           )}
         </div>
 
-        {/* ✅ NOVO FORMULÁRIO MODERNO */}
+        {/* ✅ FORMULÁRIO MODERNO COM DADOS MAPEADOS */}
         <ModernAccountForm
           open={showModernForm}
           onOpenChange={setShowModernForm}
           onSubmit={handleAccountSubmit}
           initialData={editingAccount ? {
+            // Dados mapeados corretamente para edição
             cliente_id: editingAccount.cliente_id,
-            nome_conta: editingAccount.nome_cliente,
-            cidade: "", // Extrair da nome_conta se necessário
-            segmento: "", // Extrair da nome_conta se necessário
-            plataformas: editingAccount.canais || [],
-            orcamento_mensal: 1000, // Valor padrão
+            nome_cliente: editingAccount.nome_cliente,
+            nome_empresa: editingAccount.nome_empresa,
+            telefone: editingAccount.telefone,
+            email: editingAccount.email || "",
             gestor_id: editingAccount.gestor_id,
+            link_drive: editingAccount.link_drive || "",
+            id_grupo: editingAccount.id_grupo || "",
             status: editingAccount.status as "Ativo" | "Pausado" | "Arquivado",
             observacoes: editingAccount.observacoes || "",
+            canais: editingAccount.canais || [],
+            canal_relatorio: (editingAccount.canal_relatorio as "WhatsApp" | "Email" | "Ambos") || "WhatsApp",
+            horario_relatorio: editingAccount.horario_relatorio || "09:00",
+            usa_meta_ads: editingAccount.usa_meta_ads || false,
+            meta_account_id: editingAccount.meta_account_id || "",
+            usa_google_ads: editingAccount.usa_google_ads || false,
+            google_ads_id: editingAccount.google_ads_id || "",
+            traqueamento_ativo: editingAccount.traqueamento_ativo || false,
+            budget_mensal_global: editingAccount.budget_mensal_global || 0,
           } : undefined}
           isEdit={!!editingAccount}
         />
