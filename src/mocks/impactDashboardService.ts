@@ -184,14 +184,14 @@ const mockAlerts: Alert[] = [
 export const impactDashboardService = {
   async getHealthScore(): Promise<HealthScore> {
     try {
-      const { data: clients, error } = await supabase
-        .from('clients')
+      const { data: accounts, error } = await supabase
+        .from('accounts')
         .select('*')
         .eq('status', 'Ativo');
 
       if (error) throw error;
       
-      return calculateHealthScore(clients || []);
+      return calculateHealthScore(accounts || []);
     } catch (error) {
       console.error('Erro ao buscar health score:', error);
       return { score: 0, factors: { contasSaldoBaixo: 0, contasSemLeads48h: 0, campanhasPausadas: 0, contasSemRastreamento: 0 } };
@@ -215,17 +215,17 @@ export const impactDashboardService = {
 
   async getAccountsWithLowBalance(): Promise<AccountsWithLowBalance> {
     try {
-      const { data: clients, error } = await supabase
-        .from('clients')
+      const { data: accounts, error } = await supabase
+        .from('accounts')
         .select('id, nome_cliente, saldo_meta, alerta_saldo_baixo, usa_meta_ads')
         .eq('status', 'Ativo')
         .eq('usa_meta_ads', true);
 
       if (error) throw error;
 
-      const lowBalanceAccounts = (clients || []).filter(client => {
-        const balance = (client.saldo_meta || 0) / 100; // Convertendo de centavos para reais
-        const threshold = (client.alerta_saldo_baixo || 100) / 100;
+      const lowBalanceAccounts = (accounts || []).filter(account => {
+        const balance = (account.saldo_meta || 0) / 100; // Convertendo de centavos para reais
+        const threshold = (account.alerta_saldo_baixo || 100) / 100;
         return balance < threshold;
       });
 
@@ -246,19 +246,19 @@ export const impactDashboardService = {
 
   async getAccountsWithoutLeads(): Promise<AccountsWithoutLeads> {
     try {
-      const { data: clients, error } = await supabase
-        .from('clients')
+      const { data: accounts, error } = await supabase
+        .from('accounts')
         .select('id, nome_cliente')
         .eq('status', 'Ativo');
 
       if (error) throw error;
 
-      const totalClients = clients?.length || 0;
+      const totalAccounts = accounts?.length || 0;
       
       // TODO: Implementar quando tivermos tabela de leads
       // Por enquanto simula 10% das contas sem leads
-      const withoutLeadsCount = Math.floor(totalClients * 0.1);
-      const percentage = totalClients > 0 ? (withoutLeadsCount / totalClients) * 100 : 0;
+      const withoutLeadsCount = Math.floor(totalAccounts * 0.1);
+      const percentage = totalAccounts > 0 ? (withoutLeadsCount / totalAccounts) * 100 : 0;
 
       return {
         count: withoutLeadsCount,
@@ -273,21 +273,21 @@ export const impactDashboardService = {
 
   async getPausedCampaigns(): Promise<PausedCampaigns> {
     try {
-      const { data: clients, error } = await supabase
-        .from('clients')
+      const { data: accounts, error } = await supabase
+        .from('accounts')
         .select('id, nome_cliente')
         .eq('status', 'Pausado');
 
       if (error) throw error;
 
       // TODO: Implementar quando tivermos tabela de campanhas
-      // Por enquanto considera clientes pausados como campanhas pausadas
+      // Por enquanto considera contas pausadas como campanhas pausadas
       return {
-        count: clients?.length || 0,
-        campaigns: (clients || []).map(client => ({
-          id: client.id,
+        count: accounts?.length || 0,
+        campaigns: (accounts || []).map(account => ({
+          id: account.id,
           name: 'Campanha Principal',
-          accountName: client.nome_cliente,
+          accountName: account.nome_cliente,
           pausedDate: new Date().toISOString()
         }))
       };
@@ -299,14 +299,14 @@ export const impactDashboardService = {
 
   async getLeadsByChannel(period: string): Promise<LeadsByChannel> {
     try {
-      const { data: clients, error } = await supabase
-        .from('clients')
+      const { data: accounts, error } = await supabase
+        .from('accounts')
         .select('canais')
         .eq('status', 'Ativo');
 
       if (error) throw error;
 
-      // Conta quantos clientes usam cada canal
+      // Conta quantas contas usam cada canal
       const channelCounts = {
         meta: 0,
         google: 0,
@@ -314,8 +314,8 @@ export const impactDashboardService = {
         outro: 0
       };
 
-      (clients || []).forEach(client => {
-        const canais = client.canais || [];
+      (accounts || []).forEach(account => {
+        const canais = account.canais || [];
         if (canais.includes('Meta')) channelCounts.meta++;
         if (canais.includes('Google')) channelCounts.google++;
         if (canais.includes('Orgânico')) channelCounts.organico++;
