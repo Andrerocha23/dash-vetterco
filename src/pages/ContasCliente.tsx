@@ -1,4 +1,4 @@
-// src/pages/ContasCliente.tsx — Layout seguindo o padrão do print (FUNÇÕES INTACTAS)
+// src/pages/ContasCliente.tsx — Layout padrão do print + tooltip dinâmico + mostrar Gestor (sem mexer nas funções)
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -24,11 +24,11 @@ import {
   Archive,
   BarChart3,
   Zap,
-  Phone,
   Facebook,
   Chrome,
   Info,
-  Filter
+  Filter,
+  User, // ⬅️ usamos para "Gestor responsável"
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -297,7 +297,6 @@ export default function ContasCliente() {
       <CardContent className="p-5">
         <div className="flex items-center gap-4">
           <div className={`h-12 w-12 rounded-xl ring-1 flex items-center justify-center ${iconWrapClass}`}>
-            {/* ícone */}
             <div className={iconClass}>{icon}</div>
           </div>
           <div className="flex flex-col">
@@ -326,7 +325,6 @@ export default function ContasCliente() {
     <AppLayout>
       <TooltipProvider delayDuration={200}>
         <div className="relative">
-          {/* container centralizado e responsivo */}
           <div className="mx-auto max-w-screen-2xl px-3 sm:px-4 md:px-6 pb-24 sm:pb-12 space-y-6">
             {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -386,7 +384,7 @@ export default function ContasCliente() {
               />
             </div>
 
-            {/* Filtros no padrão do print: busca grande + botão filtro + select */}
+            {/* Filtros no padrão do print */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
@@ -471,9 +469,10 @@ export default function ContasCliente() {
                                   {account.cliente_nome !== 'Cliente não vinculado' ? account.cliente_nome : 'Cliente não vinculado'}
                                 </span>
                               </div>
+                              {/* ⬇️ Troca telefone por Gestor responsável */}
                               <div className="flex items-center gap-1">
-                                <Phone className="h-3.5 w-3.5" />
-                                <span>{account.telefone}</span>
+                                <User className="h-3.5 w-3.5" />
+                                <span>{account.gestor_name || "Gestor não definido"}</span>
                               </div>
                             </div>
                           </div>
@@ -637,7 +636,7 @@ function CheckCircleIcon() {
 function TargetIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-      <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2Zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6Zm1 5h7v2h-7v-2Z"/>
+      <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2Zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6Zm1 5h7v2h-2 0-5Z"/>
     </svg>
   );
 }
