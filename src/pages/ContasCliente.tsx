@@ -236,7 +236,20 @@ export default function ContasCliente() {
 
   const handleToggleStatus = async (accountId: string, currentStatus: string) => {
     try {
-      const newStatus = currentStatus === 'Ativo' ? 'Pausado' : 'Ativo';
+      let newStatus: string;
+      
+      // Se for arquivado, volta para ativo
+      if (currentStatus === 'Arquivado') {
+        newStatus = 'Ativo';
+      } 
+      // Se for ativo, vai para pausado
+      else if (currentStatus === 'Ativo') {
+        newStatus = 'Pausado';
+      } 
+      // Se for pausado, vai para ativo
+      else {
+        newStatus = 'Ativo';
+      }
       
       const { error } = await supabase
         .from('accounts')
@@ -256,6 +269,31 @@ export default function ContasCliente() {
       toast({
         title: "Erro",
         description: "Não foi possível alterar o status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleArchiveAccount = async (accountId: string) => {
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update({ status: 'Arquivado', updated_at: new Date().toISOString() })
+        .eq('id', accountId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Conta arquivada",
+      });
+
+      await loadAccountsData();
+    } catch (error) {
+      console.error('Erro ao arquivar conta:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível arquivar a conta",
         variant: "destructive",
       });
     }
@@ -480,7 +518,7 @@ export default function ContasCliente() {
           </div>
         </div>
 
-        {/* ✅ LISTA HORIZONTAL IGUAL AO RELATÓRIOS */}
+        {/* ✅ LISTA HORIZONTAL COM INFORMAÇÕES DE CONTAS */}
         <div className="space-y-3">
           {filteredAccounts.map((account) => (
             <Card key={account.id} className="surface-elevated">
@@ -497,18 +535,25 @@ export default function ContasCliente() {
                       </AvatarFallback>
                     </Avatar>
 
-                    {/* Nome e ID */}
+                    {/* Nome e Empresa */}
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-foreground">
                           {account.nome_cliente}
                         </h3>
+                        {/* Status visual */}
                         {account.status === 'Ativo' && (
                           <CheckCircle className="h-4 w-4 text-success" />
                         )}
+                        {account.status === 'Pausado' && (
+                          <Clock className="h-4 w-4 text-warning" />
+                        )}
+                        {account.status === 'Arquivado' && (
+                          <Archive className="h-4 w-4 text-text-muted" />
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-text-secondary">
-                        <span>ID: {account.meta_account_id || account.google_ads_id || 'Não configurado'}</span>
+                        <span>{account.nome_empresa}</span>
                         {account.cliente_nome && account.cliente_nome !== 'Cliente não vinculado' && (
                           <span>• {account.cliente_nome}</span>
                         )}
@@ -516,46 +561,106 @@ export default function ContasCliente() {
                     </div>
                   </div>
 
-                  {/* ✅ CENTRO - HORÁRIO E PLATAFORMA */}
+                  {/* ✅ CENTRO - PLATAFORMAS E CONFIGURAÇÕES */}
                   <div className="flex items-center gap-6">
                     
-                    {/* Horário */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-text-secondary" />
-                      <span className="text-foreground font-medium">
-                        {account.horario_relatorio || '09:00'}
-                      </span>
+                    {/* Plataformas configuradas */}
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xs text-text-secondary font-medium">Plataformas</div>
+                      <div className="flex items-center gap-2">
+                        {account.usa_meta_ads && account.meta_account_id ? (
+                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
+                            <Facebook className="h-3 w-3 mr-1" />
+                            Meta
+                          </Badge>
+                        ) : account.usa_meta_ads ? (
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
+                            <Facebook className="h-3 w-3 mr-1" />
+                            Meta (sem ID)
+                          </Badge>
+                        ) : null}
+                        
+                        {account.usa_google_ads && account.google_ads_id ? (
+                          <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
+                            <Chrome className="h-3 w-3 mr-1" />
+                            Google
+                          </Badge>
+                        ) : account.usa_google_ads ? (
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
+                            <Chrome className="h-3 w-3 mr-1" />
+                            Google (sem ID)
+                          </Badge>
+                        ) : null}
+                        
+                        {!account.usa_meta_ads && !account.usa_google_ads && (
+                          <Badge variant="secondary" className="bg-text-muted/10 text-text-muted border-text-muted/20 text-xs">
+                            Não configurado
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Badges das plataformas */}
-                    <div className="flex items-center gap-2">
-                      {account.usa_meta_ads && account.meta_account_id && (
-                        <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                          Meta
-                        </Badge>
-                      )}
-                      {account.usa_google_ads && account.google_ads_id && (
-                        <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20">
-                          Google
-                        </Badge>
-                      )}
+                    {/* Budget Mensal */}
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xs text-text-secondary font-medium">Budget/mês</div>
+                      <div className="text-sm font-medium text-foreground">
+                        {account.total_budget && account.total_budget > 0 ? (
+                          <span className="text-success">
+                            R$ {account.total_budget.toLocaleString('pt-BR')}
+                          </span>
+                        ) : (
+                          <span className="text-text-muted">Não definido</span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Último Envio */}
-                    <div className="text-sm text-text-secondary">
-                      <div className="font-medium">Último Envio</div>
-                      <div>Nunca enviado</div>
+                    {/* Saldo Meta */}
+                    {account.usa_meta_ads && (
+                      <div className="flex flex-col gap-1">
+                        <div className="text-xs text-text-secondary font-medium">Saldo Meta</div>
+                        <div className="text-sm font-medium">
+                          {account.saldo_meta && account.saldo_meta > 0 ? (
+                            <span className="text-success">
+                              R$ {(account.saldo_meta / 100).toLocaleString('pt-BR')}
+                            </span>
+                          ) : (
+                            <span className="text-warning">R$ 0,00</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Gestor */}
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xs text-text-secondary font-medium">Gestor</div>
+                      <div className="text-sm font-medium text-foreground">
+                        {account.gestor_name !== 'Gestor não encontrado' ? (
+                          account.gestor_name
+                        ) : (
+                          <span className="text-warning">Não atribuído</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* ✅ LADO DIREITO - AÇÕES */}
+                  {/* ✅ LADO DIREITO - STATUS E AÇÕES */}
                   <div className="flex items-center gap-4">
                     
-                    {/* Switch de ativo/inativo igual ao relatórios */}
+                    {/* Status Badge */}
+                    <Badge className={
+                      account.status === 'Ativo' ? 'bg-success/10 text-success border-success/20' :
+                      account.status === 'Pausado' ? 'bg-warning/10 text-warning border-warning/20' :
+                      'bg-text-muted/10 text-text-muted border-text-muted/20'
+                    }>
+                      {account.status}
+                    </Badge>
+                    
+                    {/* Switch de ativo/pausado */}
                     <Switch 
                       checked={account.status === 'Ativo'}
                       onCheckedChange={() => handleToggleStatus(account.id, account.status)}
                       className="data-[state=checked]:bg-success"
+                      disabled={account.status === 'Arquivado'}
                     />
 
                     {/* Menu de ações */}
@@ -575,13 +680,23 @@ export default function ContasCliente() {
                           Editar conta
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => {}}
-                          className="text-warning"
-                        >
-                          <Archive className="h-4 w-4 mr-2" />
-                          Arquivar
-                        </DropdownMenuItem>
+                        {account.status !== 'Arquivado' ? (
+                          <DropdownMenuItem 
+                            onClick={() => handleArchiveAccount(account.id)}
+                            className="text-warning"
+                          >
+                            <Archive className="h-4 w-4 mr-2" />
+                            Arquivar
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem 
+                            onClick={() => handleToggleStatus(account.id, 'Arquivado')}
+                            className="text-success"
+                          >
+                            <ArchiveRestore className="h-4 w-4 mr-2" />
+                            Desarquivar
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
