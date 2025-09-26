@@ -14,194 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      accounts: {
-        Row: {
-          alerta_saldo_baixo: number | null
-          ativar_campanhas_meta: boolean | null
-          budget_mensal_global: number | null
-          budget_mensal_google: number | null
-          budget_mensal_meta: number | null
-          canais: string[]
-          canal_relatorio: string | null
-          centro_custo: string | null
-          cliente_id: string | null
-          contrato_inicio: string | null
-          contrato_renovacao: string | null
-          conversoes: string[] | null
-          created_at: string
-          email: string | null
-          forma_pagamento: string | null
-          ga4_stream_id: string | null
-          gestor_id: string
-          google_ads_id: string | null
-          gtm_id: string | null
-          horario_relatorio: string | null
-          id: string
-          id_grupo: string | null
-          link_drive: string | null
-          link_google: string | null
-          link_meta: string | null
-          meta_account_id: string | null
-          meta_business_id: string | null
-          meta_page_id: string | null
-          modo_saldo_meta: string | null
-          monitorar_saldo_meta: boolean | null
-          nome_cliente: string
-          nome_empresa: string
-          notificacao_erro_sync: boolean | null
-          notificacao_leads_diarios: boolean | null
-          notificacao_saldo_baixo: boolean | null
-          observacoes: string | null
-          ocultar_ranking: boolean | null
-          papel_padrao: string | null
-          pixel_meta: string | null
-          saldo_meta: number | null
-          somar_metricas: boolean | null
-          status: string
-          telefone: string
-          templates_padrao: string[] | null
-          traqueamento_ativo: boolean | null
-          typebot_ativo: boolean | null
-          typebot_url: string | null
-          updated_at: string
-          url_crm: string | null
-          usa_crm_externo: boolean | null
-          usa_google_ads: boolean | null
-          usa_meta_ads: boolean | null
-          user_id: string
-          usuarios_vinculados: string[] | null
-          utm_padrao: string | null
-          webhook_google: string | null
-          webhook_meta: string | null
-        }
-        Insert: {
-          alerta_saldo_baixo?: number | null
-          ativar_campanhas_meta?: boolean | null
-          budget_mensal_global?: number | null
-          budget_mensal_google?: number | null
-          budget_mensal_meta?: number | null
-          canais?: string[]
-          canal_relatorio?: string | null
-          centro_custo?: string | null
-          cliente_id?: string | null
-          contrato_inicio?: string | null
-          contrato_renovacao?: string | null
-          conversoes?: string[] | null
-          created_at?: string
-          email?: string | null
-          forma_pagamento?: string | null
-          ga4_stream_id?: string | null
-          gestor_id: string
-          google_ads_id?: string | null
-          gtm_id?: string | null
-          horario_relatorio?: string | null
-          id?: string
-          id_grupo?: string | null
-          link_drive?: string | null
-          link_google?: string | null
-          link_meta?: string | null
-          meta_account_id?: string | null
-          meta_business_id?: string | null
-          meta_page_id?: string | null
-          modo_saldo_meta?: string | null
-          monitorar_saldo_meta?: boolean | null
-          nome_cliente: string
-          nome_empresa: string
-          notificacao_erro_sync?: boolean | null
-          notificacao_leads_diarios?: boolean | null
-          notificacao_saldo_baixo?: boolean | null
-          observacoes?: string | null
-          ocultar_ranking?: boolean | null
-          papel_padrao?: string | null
-          pixel_meta?: string | null
-          saldo_meta?: number | null
-          somar_metricas?: boolean | null
-          status?: string
-          telefone: string
-          templates_padrao?: string[] | null
-          traqueamento_ativo?: boolean | null
-          typebot_ativo?: boolean | null
-          typebot_url?: string | null
-          updated_at?: string
-          url_crm?: string | null
-          usa_crm_externo?: boolean | null
-          usa_google_ads?: boolean | null
-          usa_meta_ads?: boolean | null
-          user_id?: string
-          usuarios_vinculados?: string[] | null
-          utm_padrao?: string | null
-          webhook_google?: string | null
-          webhook_meta?: string | null
-        }
-        Update: {
-          alerta_saldo_baixo?: number | null
-          ativar_campanhas_meta?: boolean | null
-          budget_mensal_global?: number | null
-          budget_mensal_google?: number | null
-          budget_mensal_meta?: number | null
-          canais?: string[]
-          canal_relatorio?: string | null
-          centro_custo?: string | null
-          cliente_id?: string | null
-          contrato_inicio?: string | null
-          contrato_renovacao?: string | null
-          conversoes?: string[] | null
-          created_at?: string
-          email?: string | null
-          forma_pagamento?: string | null
-          ga4_stream_id?: string | null
-          gestor_id?: string
-          google_ads_id?: string | null
-          gtm_id?: string | null
-          horario_relatorio?: string | null
-          id?: string
-          id_grupo?: string | null
-          link_drive?: string | null
-          link_google?: string | null
-          link_meta?: string | null
-          meta_account_id?: string | null
-          meta_business_id?: string | null
-          meta_page_id?: string | null
-          modo_saldo_meta?: string | null
-          monitorar_saldo_meta?: boolean | null
-          nome_cliente?: string
-          nome_empresa?: string
-          notificacao_erro_sync?: boolean | null
-          notificacao_leads_diarios?: boolean | null
-          notificacao_saldo_baixo?: boolean | null
-          observacoes?: string | null
-          ocultar_ranking?: boolean | null
-          papel_padrao?: string | null
-          pixel_meta?: string | null
-          saldo_meta?: number | null
-          somar_metricas?: boolean | null
-          status?: string
-          telefone?: string
-          templates_padrao?: string[] | null
-          traqueamento_ativo?: boolean | null
-          typebot_ativo?: boolean | null
-          typebot_url?: string | null
-          updated_at?: string
-          url_crm?: string | null
-          usa_crm_externo?: boolean | null
-          usa_google_ads?: boolean | null
-          usa_meta_ads?: boolean | null
-          user_id?: string
-          usuarios_vinculados?: string[] | null
-          utm_padrao?: string | null
-          webhook_google?: string | null
-          webhook_meta?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "accounts_cliente_id_fkey"
-            columns: ["cliente_id"]
-            isOneToOne: false
-            referencedRelation: "clientes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       campaign_leads_daily: {
         Row: {
           campaign_id: string
@@ -292,15 +104,15 @@ export type Database = {
             foreignKeyName: "campaign_leads_daily_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "campaign_leads_daily_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "campaign_leads_daily_client_id_fkey"
@@ -354,15 +166,15 @@ export type Database = {
             foreignKeyName: "client_accounts_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_accounts_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "client_accounts_client_id_fkey"
@@ -380,39 +192,180 @@ export type Database = {
           },
         ]
       }
-      clientes: {
+      clients: {
         Row: {
-          cnpj: string | null
+          alerta_saldo_baixo: number | null
+          ativar_campanhas_meta: boolean | null
+          budget_mensal_global: number | null
+          budget_mensal_google: number | null
+          budget_mensal_meta: number | null
+          canais: string[]
+          canal_relatorio: string | null
+          centro_custo: string | null
+          contrato_inicio: string | null
+          contrato_renovacao: string | null
+          conversoes: string[] | null
           created_at: string
           email: string | null
+          forma_pagamento: string | null
+          ga4_stream_id: string | null
+          gestor_id: string
+          google_ads_id: string | null
+          gtm_id: string | null
+          horario_relatorio: string | null
           id: string
-          instagram_handle: string | null
-          nome: string
-          site: string | null
-          telefone: string | null
+          id_grupo: string | null
+          link_drive: string | null
+          link_google: string | null
+          link_meta: string | null
+          meta_account_id: string | null
+          meta_business_id: string | null
+          meta_page_id: string | null
+          modo_saldo_meta: string | null
+          monitorar_saldo_meta: boolean | null
+          nome_cliente: string
+          nome_empresa: string
+          notificacao_erro_sync: boolean | null
+          notificacao_leads_diarios: boolean | null
+          notificacao_saldo_baixo: boolean | null
+          observacoes: string | null
+          ocultar_ranking: boolean | null
+          papel_padrao: string | null
+          pixel_meta: string | null
+          saldo_meta: number | null
+          somar_metricas: boolean | null
+          status: string
+          telefone: string
+          templates_padrao: string[] | null
+          traqueamento_ativo: boolean | null
+          typebot_ativo: boolean | null
+          typebot_url: string | null
           updated_at: string
+          url_crm: string | null
+          usa_crm_externo: boolean | null
+          usa_google_ads: boolean | null
+          usa_meta_ads: boolean | null
+          user_id: string
+          usuarios_vinculados: string[] | null
+          utm_padrao: string | null
+          webhook_google: string | null
+          webhook_meta: string | null
         }
         Insert: {
-          cnpj?: string | null
+          alerta_saldo_baixo?: number | null
+          ativar_campanhas_meta?: boolean | null
+          budget_mensal_global?: number | null
+          budget_mensal_google?: number | null
+          budget_mensal_meta?: number | null
+          canais?: string[]
+          canal_relatorio?: string | null
+          centro_custo?: string | null
+          contrato_inicio?: string | null
+          contrato_renovacao?: string | null
+          conversoes?: string[] | null
           created_at?: string
           email?: string | null
+          forma_pagamento?: string | null
+          ga4_stream_id?: string | null
+          gestor_id: string
+          google_ads_id?: string | null
+          gtm_id?: string | null
+          horario_relatorio?: string | null
           id?: string
-          instagram_handle?: string | null
-          nome: string
-          site?: string | null
-          telefone?: string | null
+          id_grupo?: string | null
+          link_drive?: string | null
+          link_google?: string | null
+          link_meta?: string | null
+          meta_account_id?: string | null
+          meta_business_id?: string | null
+          meta_page_id?: string | null
+          modo_saldo_meta?: string | null
+          monitorar_saldo_meta?: boolean | null
+          nome_cliente: string
+          nome_empresa: string
+          notificacao_erro_sync?: boolean | null
+          notificacao_leads_diarios?: boolean | null
+          notificacao_saldo_baixo?: boolean | null
+          observacoes?: string | null
+          ocultar_ranking?: boolean | null
+          papel_padrao?: string | null
+          pixel_meta?: string | null
+          saldo_meta?: number | null
+          somar_metricas?: boolean | null
+          status?: string
+          telefone: string
+          templates_padrao?: string[] | null
+          traqueamento_ativo?: boolean | null
+          typebot_ativo?: boolean | null
+          typebot_url?: string | null
           updated_at?: string
+          url_crm?: string | null
+          usa_crm_externo?: boolean | null
+          usa_google_ads?: boolean | null
+          usa_meta_ads?: boolean | null
+          user_id?: string
+          usuarios_vinculados?: string[] | null
+          utm_padrao?: string | null
+          webhook_google?: string | null
+          webhook_meta?: string | null
         }
         Update: {
-          cnpj?: string | null
+          alerta_saldo_baixo?: number | null
+          ativar_campanhas_meta?: boolean | null
+          budget_mensal_global?: number | null
+          budget_mensal_google?: number | null
+          budget_mensal_meta?: number | null
+          canais?: string[]
+          canal_relatorio?: string | null
+          centro_custo?: string | null
+          contrato_inicio?: string | null
+          contrato_renovacao?: string | null
+          conversoes?: string[] | null
           created_at?: string
           email?: string | null
+          forma_pagamento?: string | null
+          ga4_stream_id?: string | null
+          gestor_id?: string
+          google_ads_id?: string | null
+          gtm_id?: string | null
+          horario_relatorio?: string | null
           id?: string
-          instagram_handle?: string | null
-          nome?: string
-          site?: string | null
-          telefone?: string | null
+          id_grupo?: string | null
+          link_drive?: string | null
+          link_google?: string | null
+          link_meta?: string | null
+          meta_account_id?: string | null
+          meta_business_id?: string | null
+          meta_page_id?: string | null
+          modo_saldo_meta?: string | null
+          monitorar_saldo_meta?: boolean | null
+          nome_cliente?: string
+          nome_empresa?: string
+          notificacao_erro_sync?: boolean | null
+          notificacao_leads_diarios?: boolean | null
+          notificacao_saldo_baixo?: boolean | null
+          observacoes?: string | null
+          ocultar_ranking?: boolean | null
+          papel_padrao?: string | null
+          pixel_meta?: string | null
+          saldo_meta?: number | null
+          somar_metricas?: boolean | null
+          status?: string
+          telefone?: string
+          templates_padrao?: string[] | null
+          traqueamento_ativo?: boolean | null
+          typebot_ativo?: boolean | null
+          typebot_url?: string | null
           updated_at?: string
+          url_crm?: string | null
+          usa_crm_externo?: boolean | null
+          usa_google_ads?: boolean | null
+          usa_meta_ads?: boolean | null
+          user_id?: string
+          usuarios_vinculados?: string[] | null
+          utm_padrao?: string | null
+          webhook_google?: string | null
+          webhook_meta?: string | null
         }
         Relationships: []
       }
@@ -521,15 +474,15 @@ export type Database = {
             foreignKeyName: "leads_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "leads_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "leads_client_id_fkey"
@@ -712,15 +665,15 @@ export type Database = {
             foreignKeyName: "public_client_registrations_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "public_client_registrations_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "public_client_registrations_client_id_fkey"
@@ -771,15 +724,15 @@ export type Database = {
             foreignKeyName: "relatorio_config_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: true
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "relatorio_config_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: true
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "relatorio_config_client_id_fkey"
@@ -836,15 +789,15 @@ export type Database = {
             foreignKeyName: "relatorio_disparos_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "relatorio_disparos_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "relatorio_disparos_client_id_fkey"

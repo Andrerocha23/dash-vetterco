@@ -10,9 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import Boards from "./pages/Boards";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
-import Accounts from "./pages/Accounts";
-import ClientesNew from "./pages/ClientesNew";
-import ClienteDetail from "./pages/ClienteDetail";
 import Analytics from "./pages/Analytics";
 import Templates from "./pages/Templates";
 import Training from "./pages/Training";
@@ -57,20 +54,10 @@ const App = () => (
             } />
             <Route path="/clientes" element={
               <ProtectedRoute>
-                <ClientesNew />
+                <Clients />
               </ProtectedRoute>
             } />
             <Route path="/clientes/:id" element={
-              <ProtectedRoute>
-                <ClienteDetail />
-              </ProtectedRoute>
-            } />
-            <Route path="/contas" element={
-              <ProtectedRoute>
-                <Accounts />
-              </ProtectedRoute>
-            } />
-            <Route path="/contas/:id" element={
               <ProtectedRoute>
                 <ClientDetail />
               </ProtectedRoute>

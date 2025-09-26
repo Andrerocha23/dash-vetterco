@@ -107,7 +107,7 @@ export default function Clients() {
 
       // Buscar clientes
       const { data: clientsData, error: clientsError } = await supabase
-        .from('accounts')
+        .from('clients')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -172,7 +172,7 @@ export default function Clients() {
       }
 
       const { error } = await supabase
-        .from('accounts')
+        .from('clients')
         .insert({
           ...newClientData,
           email: newClientData.email || null
@@ -211,7 +211,7 @@ export default function Clients() {
   const handleChangeStatus = async (clientId: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from('accounts')
+        .from('clients')
         .update({ 
           status: newStatus,
           updated_at: new Date().toISOString()

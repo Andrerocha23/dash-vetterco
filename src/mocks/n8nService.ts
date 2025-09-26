@@ -5,7 +5,7 @@ export const n8nService = {
   async listRelatorios(filters: RelatorioFilters = {}): Promise<RelatorioN8n[]> {
     // Query simplificada e mais eficiente
     const { data: results, error } = await supabase
-    .from('accounts')
+      .from('clients')
       .select(`
         id,
         nome_cliente,
@@ -106,7 +106,7 @@ export const n8nService = {
     await new Promise(resolve => setTimeout(resolve, 600));
     
     const { data: client } = await supabase
-      .from('accounts')
+      .from('clients')
       .select('nome_cliente')
       .eq('id', contaId)
       .single();
@@ -133,7 +133,7 @@ export const n8nService = {
   async configurarDisparo(contaId: string, payload: ConfigurarDisparoPayload): Promise<void> {
     // Atualizar o id_grupo na tabela clients
     const { error: clientError } = await supabase
-      .from('accounts')
+      .from('clients')
       .update({
         id_grupo: payload.idGrupo,
         updated_at: new Date().toISOString()
