@@ -11,7 +11,7 @@ import Boards from "./pages/Boards";
 // ❌ REMOVIDO: import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
 import Accounts from "./pages/Accounts";
-import ClientesNew from "./pages/ClientesNew";
+import Clientes from "./pages/Clientes";
 import ClienteDetail from "./pages/ClienteDetail";
 import Analytics from "./pages/Analytics";
 import Templates from "./pages/Templates";
@@ -57,7 +57,7 @@ const App = () => (
             } />
             <Route path="/clientes" element={
               <ProtectedRoute>
-                <ClientesNew />
+                <Clientes />
               </ProtectedRoute>
             } />
             <Route path="/clientes/:id" element={
