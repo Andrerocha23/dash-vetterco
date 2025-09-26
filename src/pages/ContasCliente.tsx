@@ -519,7 +519,11 @@ export default function ContasCliente() {
         {/* ✅ LISTA DE CONTAS */}
         <div className="space-y-3">
           {filteredAccounts.map((account) => (
-            <Card key={account.id} className="surface-elevated">
+            <Card 
+              key={account.id} 
+              className="surface-elevated cursor-pointer hover:bg-surface-overlay transition-colors"
+              onClick={() => handleViewAccount(account.id)}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   
@@ -594,7 +598,11 @@ export default function ContasCliente() {
                     {/* Menu de ações */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
