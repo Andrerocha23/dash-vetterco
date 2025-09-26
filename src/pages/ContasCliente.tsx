@@ -1,13 +1,14 @@
-// src/pages/ContasCliente.tsx - VERSÃO SEGUINDO SEU DESIGN SYSTEM
+// src/pages/ContasCliente.tsx - LAYOUT HORIZONTAL IGUAL AO RELATÓRIOS N8N
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,12 +27,12 @@ import {
   Facebook,
   Chrome,
   TrendingUp,
-  Calendar,
+  Clock,
   DollarSign,
   Target,
-  AlertTriangle,
   CheckCircle,
-  Clock
+  Filter,
+  BarChart3
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -85,31 +86,6 @@ interface StatsData {
   saldoTotal: number;
 }
 
-const STATUS_CONFIG = {
-  'Ativo': { 
-    color: 'bg-success/10 text-success border-success/20', 
-    icon: CheckCircle,
-    dot: 'bg-success'
-  },
-  'Pausado': { 
-    color: 'bg-warning/10 text-warning border-warning/20', 
-    icon: Clock,
-    dot: 'bg-warning'
-  },
-  'Arquivado': { 
-    color: 'bg-text-muted/10 text-text-muted border-text-muted/20', 
-    icon: Archive,
-    dot: 'bg-text-muted'
-  }
-};
-
-const CANAL_CONFIG = {
-  'Meta': { icon: Facebook, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  'Google': { icon: Chrome, color: 'text-red-500', bg: 'bg-red-500/10' },
-  'TikTok': { icon: TrendingUp, color: 'text-pink-500', bg: 'bg-pink-500/10' },
-  'LinkedIn': { icon: Building2, color: 'text-blue-600', bg: 'bg-blue-600/10' },
-};
-
 export default function ContasCliente() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -132,9 +108,7 @@ export default function ContasCliente() {
 
   // Estados de filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterCliente, setFilterCliente] = useState("all");
-  const [filterGestor, setFilterGestor] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("Todos");
 
   // Estados do formulário
   const [showModernForm, setShowModernForm] = useState(false);
@@ -205,6 +179,12 @@ export default function ContasCliente() {
       setClientes(clientesData || []);
       setStats(calculatedStats);
 
+      // Toast informativo igual ao relatórios
+      toast({
+        title: "Dados carregados!",
+        description: `${processedAccounts.length} contas encontradas`,
+      });
+
     } catch (error) {
       console.error('Erro ao carregar contas:', error);
       toast({
@@ -222,10 +202,6 @@ export default function ContasCliente() {
     setRefreshing(true);
     await loadAccountsData();
     setRefreshing(false);
-    toast({
-      title: "Atualizado",
-      description: "Dados atualizados com sucesso",
-    });
   };
 
   // ✅ FILTROS APLICADOS
@@ -234,13 +210,13 @@ export default function ContasCliente() {
       account.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.telefone.includes(searchTerm) ||
-      (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase()));
+      (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (account.meta_account_id && account.meta_account_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (account.google_ads_id && account.google_ads_id.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    const matchesStatus = filterStatus === "all" || account.status === filterStatus;
-    const matchesCliente = filterCliente === "all" || account.cliente_id === filterCliente;
-    const matchesGestor = filterGestor === "all" || account.gestor_id === filterGestor;
+    const matchesStatus = filterStatus === "Todos" || account.status === filterStatus;
 
-    return matchesSearch && matchesStatus && matchesCliente && matchesGestor;
+    return matchesSearch && matchesStatus;
   });
 
   // ✅ AÇÕES DAS CONTAS
@@ -258,8 +234,10 @@ export default function ContasCliente() {
     navigate(`/contas/${accountId}`);
   };
 
-  const handleChangeStatus = async (accountId: string, newStatus: string) => {
+  const handleToggleStatus = async (accountId: string, currentStatus: string) => {
     try {
+      const newStatus = currentStatus === 'Ativo' ? 'Pausado' : 'Ativo';
+      
       const { error } = await supabase
         .from('accounts')
         .update({ status: newStatus, updated_at: new Date().toISOString() })
@@ -269,7 +247,7 @@ export default function ContasCliente() {
 
       toast({
         title: "Sucesso",
-        description: `Status alterado para ${newStatus}`,
+        description: `Conta ${newStatus.toLowerCase()}`,
       });
 
       await loadAccountsData();
@@ -375,33 +353,11 @@ export default function ContasCliente() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Contas de Anúncio</h1>
-              <p className="text-text-secondary">Gerencie todas as contas de anúncio dos seus clientes</p>
-            </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-text-secondary">Carregando contas...</p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i} className="surface-elevated">
-                <CardContent className="p-6">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
-                    <div className="h-8 bg-muted rounded w-3/4"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          <Card className="surface-elevated">
-            <CardContent className="p-12 text-center">
-              <RefreshCw className="h-8 w-8 mx-auto mb-4 text-primary animate-spin" />
-              <p className="text-text-secondary">Carregando contas...</p>
-            </CardContent>
-          </Card>
         </div>
       </AppLayout>
     );
@@ -409,245 +365,203 @@ export default function ContasCliente() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6">
         
-        {/* ✅ HEADER COM AÇÕES */}
+        {/* ✅ HEADER IGUAL AO RELATÓRIOS */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Contas de Anúncio</h1>
-            <p className="text-text-secondary">
-              {stats.total} {stats.total === 1 ? 'conta' : 'contas'} • {stats.ativos} ativas
+            <h1 className="text-2xl font-bold text-foreground">Gestão de Contas</h1>
+            <p className="text-text-secondary mt-1">
+              Gerencie todas as contas de anúncio dos seus clientes
             </p>
           </div>
-          
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
+            <Button 
+              variant="outline" 
+              className="gap-2" 
               onClick={handleRefresh}
               disabled={refreshing}
-              className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Atualizando...' : 'Atualizar'}
-            </Button>
-            
-            <Button onClick={handleCreateAccount} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nova Conta
+              Atualizar
             </Button>
           </div>
         </div>
 
-        {/* ✅ KPIs - SEGUINDO SEU DESIGN */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        {/* ✅ KPIs HORIZONTAIS IGUAL AO RELATÓRIOS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           
           {/* Total */}
-          <Card className="surface-elevated surface-hover">
-            <CardContent className="p-4">
+          <Card className="surface-elevated">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Users className="h-4 w-4 text-primary" />
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <Users className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-text-secondary font-medium">Total</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                  <p className="text-sm text-text-secondary font-medium">Total</p>
+                  <p className="text-3xl font-bold text-foreground">{stats.total}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Ativas */}
-          <Card className="surface-elevated surface-hover">
-            <CardContent className="p-4">
+          <Card className="surface-elevated">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <CheckCircle className="h-4 w-4 text-success" />
+                <div className="p-3 rounded-lg bg-success/10">
+                  <CheckCircle className="h-6 w-6 text-success" />
                 </div>
                 <div>
-                  <p className="text-xs text-text-secondary font-medium">Ativas</p>
-                  <p className="text-2xl font-bold text-success">{stats.ativos}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pausadas */}
-          <Card className="surface-elevated surface-hover">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-warning/10">
-                  <Clock className="h-4 w-4 text-warning" />
-                </div>
-                <div>
-                  <p className="text-xs text-text-secondary font-medium">Pausadas</p>
-                  <p className="text-2xl font-bold text-warning">{stats.pausados}</p>
+                  <p className="text-sm text-text-secondary font-medium">Ativos</p>
+                  <p className="text-3xl font-bold text-foreground">{stats.ativos}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Meta Ads */}
-          <Card className="surface-elevated surface-hover">
-            <CardContent className="p-4">
+          <Card className="surface-elevated">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Facebook className="h-4 w-4 text-blue-500" />
+                <div className="p-3 rounded-lg bg-blue-500/10">
+                  <BarChart3 className="h-6 w-6 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-text-secondary font-medium">Meta</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.metaAds}</p>
+                  <p className="text-sm text-text-secondary font-medium">Meta Ads</p>
+                  <p className="text-3xl font-bold text-foreground">{stats.metaAds}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Google Ads */}
-          <Card className="surface-elevated surface-hover">
-            <CardContent className="p-4">
+          <Card className="surface-elevated">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-500/10">
-                  <Chrome className="h-4 w-4 text-red-500" />
+                <div className="p-3 rounded-lg bg-red-500/10">
+                  <Target className="h-6 w-6 text-red-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-text-secondary font-medium">Google</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.googleAds}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Arquivadas */}
-          <Card className="surface-elevated surface-hover">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-text-muted/10">
-                  <Archive className="h-4 w-4 text-text-muted" />
-                </div>
-                <div>
-                  <p className="text-xs text-text-secondary font-medium">Arquivadas</p>
-                  <p className="text-2xl font-bold text-text-muted">{stats.arquivados}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Saldo Total */}
-          <Card className="surface-elevated surface-hover">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <DollarSign className="h-4 w-4 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-text-secondary font-medium">Saldo</p>
-                  <p className="text-lg font-bold text-foreground">
-                    R$ {(stats.saldoTotal / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
+                  <p className="text-sm text-text-secondary font-medium">Google Ads</p>
+                  <p className="text-3xl font-bold text-foreground">{stats.googleAds}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* ✅ FILTROS */}
-        <Card className="surface-elevated">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              
-              {/* Busca */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
-                <Input
-                  placeholder="Buscar por nome, empresa, telefone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 input-professional"
-                />
-              </div>
+        {/* ✅ BUSCA E FILTROS IGUAL AO RELATÓRIOS */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+            <Input
+              placeholder="Buscar por conta ou ID do grupo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-text-secondary" />
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todos">Todos</SelectItem>
+                <SelectItem value="Ativo">Ativo</SelectItem>
+                <SelectItem value="Pausado">Pausado</SelectItem>
+                <SelectItem value="Arquivado">Arquivado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-              {/* Filtro Status */}
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="Ativo">Ativo</SelectItem>
-                  <SelectItem value="Pausado">Pausado</SelectItem>
-                  <SelectItem value="Arquivado">Arquivado</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Filtro Cliente */}
-              <Select value={filterCliente} onValueChange={setFilterCliente}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os clientes</SelectItem>
-                  {clientes.map(cliente => (
-                    <SelectItem key={cliente.id} value={cliente.id}>
-                      {cliente.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Filtro Gestor */}
-              <Select value={filterGestor} onValueChange={setFilterGestor}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Gestor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os gestores</SelectItem>
-                  {managers.map(manager => (
-                    <SelectItem key={manager.id} value={manager.id}>
-                      {manager.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ✅ LISTA DE CONTAS - LAYOUT GRID MODERNO */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredAccounts.map((account) => {
-            const StatusIcon = STATUS_CONFIG[account.status]?.icon || CheckCircle;
-            
-            return (
-              <Card key={account.id} className="surface-elevated surface-hover group">
-                <CardContent className="p-6">
+        {/* ✅ LISTA HORIZONTAL IGUAL AO RELATÓRIOS */}
+        <div className="space-y-3">
+          {filteredAccounts.map((account) => (
+            <Card key={account.id} className="surface-elevated">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
                   
-                  {/* Header da Conta */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12 border-2 border-primary/20">
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {getInitials(account.nome_cliente)}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div>
-                        <h3 className="font-semibold text-foreground text-lg">
+                  {/* ✅ LADO ESQUERDO - INFO DA CONTA */}
+                  <div className="flex items-center gap-4">
+                    
+                    {/* Avatar com iniciais */}
+                    <Avatar className="h-12 w-12 border-2 border-primary/20">
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+                        {getInitials(account.nome_cliente)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* Nome e ID */}
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground">
                           {account.nome_cliente}
                         </h3>
-                        <p className="text-sm text-text-secondary">
-                          {account.nome_empresa}
-                        </p>
+                        {account.status === 'Ativo' && (
+                          <CheckCircle className="h-4 w-4 text-success" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-text-secondary">
+                        <span>ID: {account.meta_account_id || account.google_ads_id || 'Não configurado'}</span>
+                        {account.cliente_nome && account.cliente_nome !== 'Cliente não vinculado' && (
+                          <span>• {account.cliente_nome}</span>
+                        )}
                       </div>
                     </div>
+                  </div>
 
-                    {/* Menu de Ações */}
+                  {/* ✅ CENTRO - HORÁRIO E PLATAFORMA */}
+                  <div className="flex items-center gap-6">
+                    
+                    {/* Horário */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-text-secondary" />
+                      <span className="text-foreground font-medium">
+                        {account.horario_relatorio || '09:00'}
+                      </span>
+                    </div>
+
+                    {/* Badges das plataformas */}
+                    <div className="flex items-center gap-2">
+                      {account.usa_meta_ads && account.meta_account_id && (
+                        <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                          Meta
+                        </Badge>
+                      )}
+                      {account.usa_google_ads && account.google_ads_id && (
+                        <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20">
+                          Google
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Último Envio */}
+                    <div className="text-sm text-text-secondary">
+                      <div className="font-medium">Último Envio</div>
+                      <div>Nunca enviado</div>
+                    </div>
+                  </div>
+
+                  {/* ✅ LADO DIREITO - AÇÕES */}
+                  <div className="flex items-center gap-4">
+                    
+                    {/* Switch de ativo/inativo igual ao relatórios */}
+                    <Switch 
+                      checked={account.status === 'Ativo'}
+                      onCheckedChange={() => handleToggleStatus(account.id, account.status)}
+                      className="data-[state=checked]:bg-success"
+                    />
+
+                    {/* Menu de ações */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+                        <Button variant="ghost" size="icon">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -658,172 +572,23 @@ export default function ContasCliente() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditAccount(account)}>
                           <Edit className="h-4 w-4 mr-2" />
-                          Editar
+                          Editar conta
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        {account.status === 'Ativo' && (
-                          <DropdownMenuItem onClick={() => handleChangeStatus(account.id, 'Pausado')}>
-                            <Clock className="h-4 w-4 mr-2" />
-                            Pausar
-                          </DropdownMenuItem>
-                        )}
-                        {account.status === 'Pausado' && (
-                          <DropdownMenuItem onClick={() => handleChangeStatus(account.id, 'Ativo')}>
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Ativar
-                          </DropdownMenuItem>
-                        )}
-                        {account.status !== 'Arquivado' && (
-                          <DropdownMenuItem onClick={() => handleChangeStatus(account.id, 'Arquivado')}>
-                            <Archive className="h-4 w-4 mr-2" />
-                            Arquivar
-                          </DropdownMenuItem>
-                        )}
-                        {account.status === 'Arquivado' && (
-                          <DropdownMenuItem onClick={() => handleChangeStatus(account.id, 'Ativo')}>
-                            <ArchiveRestore className="h-4 w-4 mr-2" />
-                            Desarquivar
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem 
+                          onClick={() => {}}
+                          className="text-warning"
+                        >
+                          <Archive className="h-4 w-4 mr-2" />
+                          Arquivar
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-
-                  {/* Informações da Conta */}
-                  <div className="space-y-4">
-                    
-                    {/* Status e Cliente */}
-                    <div className="flex items-center justify-between">
-                      <Badge className={STATUS_CONFIG[account.status]?.color || 'bg-muted'}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {account.status}
-                      </Badge>
-                      
-                      <div className="text-right">
-                        <p className="text-xs text-text-secondary">Cliente</p>
-                        <p className="text-sm font-medium text-foreground">
-                          {account.cliente_nome}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Canais */}
-                    {account.canais && account.canais.length > 0 && (
-                      <div>
-                        <p className="text-xs text-text-secondary mb-2">Canais ativos</p>
-                        <div className="flex flex-wrap gap-2">
-                          {account.canais.map((canal) => {
-                            const config = CANAL_CONFIG[canal];
-                            if (!config) return null;
-                            
-                            const Icon = config.icon;
-                            
-                            return (
-                              <div
-                                key={canal}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-md ${config.bg}`}
-                              >
-                                <Icon className={`h-3 w-3 ${config.color}`} />
-                                <span className={`text-xs font-medium ${config.color}`}>
-                                  {canal}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Métricas */}
-                    <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border">
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-foreground">
-                          {account.leads_mes}
-                        </p>
-                        <p className="text-xs text-text-secondary">Leads/mês</p>
-                      </div>
-                      
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-foreground">
-                          {account.conversoes_mes}
-                        </p>
-                        <p className="text-xs text-text-secondary">Conversões</p>
-                      </div>
-                      
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-success">
-                          R$ {((account.saldo_meta || 0) / 100).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                        </p>
-                        <p className="text-xs text-text-secondary">Saldo</p>
-                      </div>
-                    </div>
-
-                    {/* Informações Adicionais */}
-                    <div className="space-y-2 pt-3 border-t border-border">
-                      
-                      {/* Gestor */}
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-text-secondary">Gestor:</span>
-                        <span className="text-foreground font-medium">
-                          {account.gestor_name}
-                        </span>
-                      </div>
-
-                      {/* Horário de Relatório */}
-                      {account.horario_relatorio && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-text-secondary">Relatório:</span>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-text-secondary" />
-                            <span className="text-foreground font-medium">
-                              {account.horario_relatorio} • {account.canal_relatorio || 'WhatsApp'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Budget Mensal */}
-                      {account.total_budget > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-text-secondary">Budget/mês:</span>
-                          <div className="flex items-center gap-1">
-                            <Target className="h-3 w-3 text-primary" />
-                            <span className="text-foreground font-medium">
-                              R$ {account.total_budget.toLocaleString('pt-BR')}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* IDs das Contas */}
-                      <div className="pt-2 space-y-1">
-                        {account.meta_account_id && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <Facebook className="h-3 w-3 text-blue-500" />
-                            <span className="text-text-secondary">Meta:</span>
-                            <code className="bg-muted/50 px-1 py-0.5 rounded text-foreground">
-                              {account.meta_account_id}
-                            </code>
-                          </div>
-                        )}
-                        
-                        {account.google_ads_id && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <Chrome className="h-3 w-3 text-red-500" />
-                            <span className="text-text-secondary">Google:</span>
-                            <code className="bg-muted/50 px-1 py-0.5 rounded text-foreground">
-                              {account.google_ads_id}
-                            </code>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* ✅ EMPTY STATE */}
@@ -835,12 +600,12 @@ export default function ContasCliente() {
               </div>
               <h3 className="font-semibold text-lg mb-2">Nenhuma conta encontrada</h3>
               <p className="text-text-secondary mb-6">
-                {searchTerm || filterStatus !== "all" || filterCliente !== "all" || filterGestor !== "all"
+                {searchTerm || filterStatus !== "Todos"
                   ? "Tente ajustar os filtros para encontrar as contas que procura."
                   : "Comece criando sua primeira conta de anúncio."
                 }
               </p>
-              {!searchTerm && filterStatus === "all" && filterCliente === "all" && filterGestor === "all" && (
+              {!searchTerm && filterStatus === "Todos" && (
                 <Button onClick={handleCreateAccount} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Criar primeira conta
@@ -850,20 +615,12 @@ export default function ContasCliente() {
           </Card>
         )}
 
-        {/* ✅ FOOTER COM INFORMAÇÕES */}
+        {/* ✅ FOOTER IGUAL AO RELATÓRIOS */}
         {filteredAccounts.length > 0 && (
-          <Card className="surface-elevated">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between text-sm text-text-secondary">
-                <span>
-                  Mostrando {filteredAccounts.length} de {accounts.length} conta{accounts.length !== 1 ? 's' : ''}
-                </span>
-                <span>
-                  Última atualização: {new Date().toLocaleTimeString('pt-BR')}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center justify-between text-sm text-text-secondary bg-surface-elevated rounded-lg px-4 py-3">
+            <span>Dados carregados!</span>
+            <span>{filteredAccounts.length} contas encontradas</span>
+          </div>
         )}
 
         {/* ✅ FORMULÁRIO MODERNO */}
