@@ -3,180 +3,209 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const n8nService = {
   async listRelatorios(filters: RelatorioFilters = {}): Promise<RelatorioN8n[]> {
-    // Query simplificada e mais eficiente
-    const { data: results, error } = await supabase
-    .from('accounts')
-      .select(`
-        id,
-        nome_cliente,
-        nome_empresa,
-        id_grupo,
-        meta_account_id,
-        google_ads_id,
-        status,
-        relatorio_config!inner(
-          ativo,
-          horario_disparo
-        )
-      `)
-      .eq('status', 'Ativo')
-      .order('nome_cliente');
+    try {
+      // Query simples - sem joins complexos
+      const { data: accountsData, error: accountsError } = await supabase
+        .from('accounts')
+        .select('id, nome_cliente, id_grupo, meta_account_id, google_ads_id, status')
+        .eq('status', 'Ativo')
+        .order('nome_cliente');
 
-    if (error) {
-      throw new Error(`Failed to fetch clients: ${error.message}`);
-    }
-
-    // Buscar último disparo separadamente para evitar problemas de JOIN
-    const { data: ultimosDisparos } = await supabase
-      .from('relatorio_disparos')
-      .select('client_id, horario_disparo, status')
-      .order('horario_disparo', { ascending: false });
-
-    // Criar mapa dos últimos disparos por cliente
-    const disparosMap = new Map();
-    ultimosDisparos?.forEach(disparo => {
-      if (!disparosMap.has(disparo.client_id)) {
-        disparosMap.set(disparo.client_id, disparo);
+      if (accountsError) {
+        throw new Error(`Failed to fetch accounts: ${accountsError.message}`);
       }
-    });
 
-    let relatorios: RelatorioN8n[] = (results || []).map(client => {
-      const config = Array.isArray(client.relatorio_config) ? client.relatorio_config[0] : client.relatorio_config;
-      const ultimoDisparo = disparosMap.get(client.id);
+      // Buscar configurações separadamente
+      const { data: configsData } = await supabase
+        .from('relatorio_config')
+        .select('client_id, ativo, horario_disparo');
+
+      // Buscar últimos disparos separadamente
+      const { data: disparosData } = await supabase
+        .from('relatorio_disparos')
+        .select('client_id, horario_disparo, data_disparo')
+        .order('data_disparo', { ascending: false });
+
+      // Processar dados
+      let relatorios: RelatorioN8n[] = (accountsData || []).map(account => {
+        // Encontrar config desta conta
+        const config = configsData?.find(c => c.client_id === account.id);
+        
+        // Encontrar último disparo desta conta
+        const ultimoDisparo = disparosData?.find(d => d.client_id === account.id);
+        
+        return {
+          contaId: account.id,
+          contaNome: account.nome_cliente,
+          idGrupo: account.id_grupo || "",
+          metaAccountId: account.meta_account_id || "",
+          googleAdsId: account.google_ads_id || "",
+          ativo: config?.ativo || false,
+          ultimoEnvio: ultimoDisparo?.data_disparo || null,
+          horarioPadrao: config?.horario_disparo?.slice(0, 5) || "09:00"
+        };
+      });
+
+      // Aplicar filtros
+      if (filters.busca) {
+        const searchTerm = filters.busca.toLowerCase();
+        relatorios = relatorios.filter(relatorio =>
+          relatorio.contaNome.toLowerCase().includes(searchTerm) ||
+          relatorio.idGrupo.toLowerCase().includes(searchTerm) ||
+          (relatorio.metaAccountId && relatorio.metaAccountId.toLowerCase().includes(searchTerm)) ||
+          (relatorio.googleAdsId && relatorio.googleAdsId.toLowerCase().includes(searchTerm))
+        );
+      }
       
-      return {
-        contaId: client.id,
-        contaNome: client.nome_cliente,
-        idGrupo: client.id_grupo || "",
-        metaAccountId: client.meta_account_id || "",
-        googleAdsId: client.google_ads_id || "",
-        ativo: config?.ativo ?? true,
-        ultimoEnvio: ultimoDisparo?.horario_disparo || null,
-        horarioPadrao: config?.horario_disparo?.toString().slice(0, 5) || "09:00"
-      };
-    });
-
-    // Aplicar filtros
-    if (filters.busca) {
-      const searchTerm = filters.busca.toLowerCase();
-      relatorios = relatorios.filter(relatorio =>
-        relatorio.contaNome.toLowerCase().includes(searchTerm) ||
-        relatorio.idGrupo.toLowerCase().includes(searchTerm) ||
-        (relatorio.metaAccountId && relatorio.metaAccountId.toLowerCase().includes(searchTerm)) ||
-        (relatorio.googleAdsId && relatorio.googleAdsId.toLowerCase().includes(searchTerm))
-      );
+      if (filters.status && filters.status !== "Todos") {
+        const isAtivo = filters.status === "Ativo";
+        relatorios = relatorios.filter(relatorio => relatorio.ativo === isAtivo);
+      }
+      
+      return relatorios;
+      
+    } catch (error) {
+      console.error('Erro em listRelatorios:', error);
+      throw error;
     }
-    
-    if (filters.status && filters.status !== "Todos") {
-      const isAtivo = filters.status === "Ativo";
-      relatorios = relatorios.filter(relatorio => relatorio.ativo === isAtivo);
-    }
-    
-    return relatorios;
   },
 
   async toggleAtivo(contaId: string): Promise<boolean> {
-    // Primeiro, buscar o estado atual
-    const { data: currentConfig, error: fetchError } = await supabase
-      .from('relatorio_config')
-      .select('ativo')
-      .eq('client_id', contaId)
-      .single();
+    try {
+      // Buscar configuração atual
+      const { data: currentConfig, error: fetchError } = await supabase
+        .from('relatorio_config')
+        .select('ativo')
+        .eq('client_id', contaId)
+        .single();
 
-    if (fetchError) {
-      throw new Error(`Failed to fetch current config: ${fetchError.message}`);
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw new Error(`Failed to fetch current config: ${fetchError.message}`);
+      }
+
+      const novoStatus = !currentConfig?.ativo;
+
+      if (currentConfig) {
+        // Atualizar existente
+        const { error: updateError } = await supabase
+          .from('relatorio_config')
+          .update({ ativo: novoStatus, updated_at: new Date().toISOString() })
+          .eq('client_id', contaId);
+
+        if (updateError) {
+          throw new Error(`Failed to update config: ${updateError.message}`);
+        }
+      } else {
+        // Criar nova configuração
+        const { error: insertError } = await supabase
+          .from('relatorio_config')
+          .insert({
+            client_id: contaId,
+            ativo: novoStatus,
+            horario_disparo: '09:00:00'
+          });
+
+        if (insertError) {
+          throw new Error(`Failed to create config: ${insertError.message}`);
+        }
+      }
+
+      return novoStatus;
+      
+    } catch (error) {
+      console.error('Erro em toggleAtivo:', error);
+      throw error;
     }
-
-    const novoStatus = !currentConfig.ativo;
-
-    // Atualizar no banco
-    const { error: updateError } = await supabase
-      .from('relatorio_config')
-      .update({ ativo: novoStatus, updated_at: new Date().toISOString() })
-      .eq('client_id', contaId);
-
-    if (updateError) {
-      throw new Error(`Failed to update config: ${updateError.message}`);
-    }
-
-    return novoStatus;
   },
 
   async testarDisparo(contaId: string): Promise<{ ok: boolean; message: string }> {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    const { data: client } = await supabase
-      .from('accounts')
-      .select('nome_cliente')
-      .eq('id', contaId)
-      .single();
-    
-    if (!client) {
-      return { ok: false, message: "Conta não encontrada" };
-    }
-    
-    const success = Math.random() > 0.2; // 80% de sucesso
-    
-    if (success) {
-      return { 
-        ok: true, 
-        message: `Disparo teste enviado para ${client.nome_cliente}`
-      };
-    } else {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      const { data: account } = await supabase
+        .from('accounts')
+        .select('nome_cliente')
+        .eq('id', contaId)
+        .single();
+      
+      if (!account) {
+        return { ok: false, message: "Conta não encontrada" };
+      }
+      
+      const success = Math.random() > 0.2; // 80% de sucesso
+      
+      if (success) {
+        return { 
+          ok: true, 
+          message: `Disparo teste enviado para ${account.nome_cliente}`
+        };
+      } else {
+        return { 
+          ok: false, 
+          message: "Erro na comunicação com n8n. Tente novamente."
+        };
+      }
+    } catch (error) {
+      console.error('Erro em testarDisparo:', error);
       return { 
         ok: false, 
-        message: "Erro na comunicação com n8n. Tente novamente."
+        message: "Erro interno. Tente novamente."
       };
     }
   },
 
   async configurarDisparo(contaId: string, payload: ConfigurarDisparoPayload): Promise<void> {
-    // Atualizar o id_grupo na tabela clients
-    const { error: clientError } = await supabase
-      .from('accounts')
-      .update({
-        id_grupo: payload.idGrupo,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', contaId);
-
-    if (clientError) {
-      throw new Error(`Failed to update client: ${clientError.message}`);
-    }
-
-    // Atualizar horário na configuração - verificar se existe primeiro
-    const { data: existingConfig } = await supabase
-      .from('relatorio_config')
-      .select('id')
-      .eq('client_id', contaId)
-      .single();
-
-    if (existingConfig) {
-      // Atualizar configuração existente
-      const { error: configError } = await supabase
-        .from('relatorio_config')
+    try {
+      // Atualizar id_grupo na conta
+      const { error: accountError } = await supabase
+        .from('accounts')
         .update({
-          horario_disparo: payload.horarioPadrao + ':00',
+          id_grupo: payload.idGrupo,
           updated_at: new Date().toISOString()
         })
-        .eq('client_id', contaId);
+        .eq('id', contaId);
 
-      if (configError) {
-        throw new Error(`Failed to update config: ${configError.message}`);
+      if (accountError) {
+        throw new Error(`Failed to update account: ${accountError.message}`);
       }
-    } else {
-      // Criar nova configuração se não existir
-      const { error: insertError } = await supabase
+
+      // Verificar se configuração existe
+      const { data: existingConfig } = await supabase
         .from('relatorio_config')
-        .insert({
-          client_id: contaId,
-          horario_disparo: payload.horarioPadrao + ':00',
-          ativo: true
-        });
+        .select('id')
+        .eq('client_id', contaId)
+        .single();
 
-      if (insertError) {
-        throw new Error(`Failed to create config: ${insertError.message}`);
+      if (existingConfig) {
+        // Atualizar configuração existente
+        const { error: configError } = await supabase
+          .from('relatorio_config')
+          .update({
+            horario_disparo: payload.horarioPadrao + ':00',
+            updated_at: new Date().toISOString()
+          })
+          .eq('client_id', contaId);
+
+        if (configError) {
+          throw new Error(`Failed to update config: ${configError.message}`);
+        }
+      } else {
+        // Criar nova configuração
+        const { error: insertError } = await supabase
+          .from('relatorio_config')
+          .insert({
+            client_id: contaId,
+            horario_disparo: payload.horarioPadrao + ':00',
+            ativo: true
+          });
+
+        if (insertError) {
+          throw new Error(`Failed to create config: ${insertError.message}`);
+        }
       }
+    } catch (error) {
+      console.error('Erro em configurarDisparo:', error);
+      throw error;
     }
   }
 };
