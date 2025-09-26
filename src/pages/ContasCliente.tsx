@@ -1,4 +1,5 @@
-// src/pages/ContasCliente.tsx — Layout padrão do print + tooltip dinâmico + mostrar Gestor (sem mexer nas funções)
+// src/pages/ContasCliente.tsx — Layout do print + KPIs com Pausados + filtro por Gestor
+// (lógica/queries/estados inalterados; só UI/UX)
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -28,7 +29,7 @@ import {
   Chrome,
   Info,
   Filter,
-  User, // ⬅️ usamos para "Gestor responsável"
+  User
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -352,8 +353,8 @@ export default function ContasCliente() {
               </div>
             </div>
 
-            {/* KPIs no padrão do print */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* KPIs — agora com Pausados (5 cards no desktop) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               <StatCard
                 icon={<Users className="h-5 w-5" />}
                 title="Total"
@@ -367,6 +368,13 @@ export default function ContasCliente() {
                 value={stats.ativos}
                 iconWrapClass="bg-success/10 ring-success/20"
                 iconClass="text-success"
+              />
+              <StatCard
+                icon={<Zap className="h-5 w-5" />}
+                title="Pausados"
+                value={stats.pausados}
+                iconWrapClass="bg-yellow-500/10 ring-yellow-500/20"
+                iconClass="text-yellow-500"
               />
               <StatCard
                 icon={<BarChart3 className="h-5 w-5" />}
@@ -384,7 +392,7 @@ export default function ContasCliente() {
               />
             </div>
 
-            {/* Filtros no padrão do print */}
+            {/* FILTROS — adiciona Select de Gestor */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
@@ -402,8 +410,24 @@ export default function ContasCliente() {
                 Filtros
               </Button>
 
+              {/* Gestor */}
+              <Select value={filterGestor} onValueChange={setFilterGestor}>
+                <SelectTrigger className="w-full md:w-56 h-12" aria-label="Filtrar por gestor">
+                  <SelectValue placeholder="Gestor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos os Gestores">Todos os Gestores</SelectItem>
+                  {managers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Status */}
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full md:w-48 h-12">
+                <SelectTrigger className="w-full md:w-48 h-12" aria-label="Filtrar por status">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -420,7 +444,7 @@ export default function ContasCliente() {
               {filteredAccounts.map((account) => {
                 const statusColor =
                   account.status === 'Ativo' ? 'from-success/70 to-success/10' :
-                  account.status === 'Pausado' ? 'from-warning/70 to-warning/10' :
+                  account.status === 'Pausado' ? 'from-yellow-500/70 to-yellow-500/10' :
                   'from-text-muted/70 to-text-muted/10';
 
                 // Dinâmica de configuração por ID
@@ -454,7 +478,7 @@ export default function ContasCliente() {
                               <Badge
                                 className={
                                   account.status === 'Ativo' ? 'bg-success text-white' :
-                                  account.status === 'Pausado' ? 'bg-warning text-white' :
+                                  account.status === 'Pausado' ? 'bg-yellow-500 text-black dark:text-white' :
                                   'bg-text-muted text-white'
                                 }
                               >
@@ -469,7 +493,7 @@ export default function ContasCliente() {
                                   {account.cliente_nome !== 'Cliente não vinculado' ? account.cliente_nome : 'Cliente não vinculado'}
                                 </span>
                               </div>
-                              {/* ⬇️ Troca telefone por Gestor responsável */}
+                              {/* Gestor responsável (no lugar do telefone) */}
                               <div className="flex items-center gap-1">
                                 <User className="h-3.5 w-3.5" />
                                 <span>{account.gestor_name || "Gestor não definido"}</span>
@@ -628,15 +652,15 @@ export default function ContasCliente() {
 /** Ícones auxiliares para ficar mais perto do print */
 function CheckCircleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
       <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14-4-4 1.414-1.414L11 12.172l4.586-4.586L17 9l-6 7Z"/>
     </svg>
   );
 }
 function TargetIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-      <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2Zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6Zm1 5h7v2h-2 0-5Z"/>
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+      <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2Zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6Zm1 5h7v2h-7v-2Z"/>
     </svg>
   );
 }
