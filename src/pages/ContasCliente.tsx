@@ -1,4 +1,4 @@
-// src/pages/ContasCliente.tsx - VERSÃO CORRIGIDA SEM ERROS
+// src/pages/ContasCliente.tsx - LAYOUT FINAL SEGUINDO O PRINT
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +31,9 @@ import {
   Target,
   CheckCircle,
   Filter,
-  BarChart3
+  BarChart3,
+  Zap,
+  Phone
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -108,7 +109,9 @@ export default function ContasCliente() {
 
   // Estados de filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("Todos");
+  const [filterStatus, setFilterStatus] = useState("Todos os Status");
+  const [filterGestor, setFilterGestor] = useState("Todos os Gestores");
+  const [filterCliente, setFilterCliente] = useState("Todos os Clientes");
 
   // Estados do formulário
   const [showModernForm, setShowModernForm] = useState(false);
@@ -179,12 +182,6 @@ export default function ContasCliente() {
       setClientes(clientesData || []);
       setStats(calculatedStats);
 
-      // Toast informativo
-      toast({
-        title: "Dados carregados!",
-        description: `${processedAccounts.length} contas encontradas`,
-      });
-
     } catch (error) {
       console.error('Erro ao carregar contas:', error);
       toast({
@@ -210,13 +207,13 @@ export default function ContasCliente() {
       account.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.telefone.includes(searchTerm) ||
-      (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (account.meta_account_id && account.meta_account_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (account.google_ads_id && account.google_ads_id.toLowerCase().includes(searchTerm.toLowerCase()));
+      (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    const matchesStatus = filterStatus === "Todos" || account.status === filterStatus;
+    const matchesStatus = filterStatus === "Todos os Status" || account.status === filterStatus;
+    const matchesGestor = filterGestor === "Todos os Gestores" || account.gestor_id === filterGestor;
+    const matchesCliente = filterCliente === "Todos os Clientes" || account.cliente_id === filterCliente;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesGestor && matchesCliente;
   });
 
   // ✅ AÇÕES DAS CONTAS
@@ -232,71 +229,6 @@ export default function ContasCliente() {
 
   const handleViewAccount = (accountId: string) => {
     navigate(`/contas/${accountId}`);
-  };
-
-  const handleToggleStatus = async (accountId: string, currentStatus: string) => {
-    try {
-      let newStatus: string;
-      
-      // Se for arquivado, volta para ativo
-      if (currentStatus === 'Arquivado') {
-        newStatus = 'Ativo';
-      } 
-      // Se for ativo, vai para pausado
-      else if (currentStatus === 'Ativo') {
-        newStatus = 'Pausado';
-      } 
-      // Se for pausado, vai para ativo
-      else {
-        newStatus = 'Ativo';
-      }
-      
-      const { error } = await supabase
-        .from('accounts')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', accountId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: `Conta ${newStatus.toLowerCase()}`,
-      });
-
-      await loadAccountsData();
-    } catch (error) {
-      console.error('Erro ao alterar status:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível alterar o status",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleArchiveAccount = async (accountId: string) => {
-    try {
-      const { error } = await supabase
-        .from('accounts')
-        .update({ status: 'Arquivado', updated_at: new Date().toISOString() })
-        .eq('id', accountId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Conta arquivada",
-      });
-
-      await loadAccountsData();
-    } catch (error) {
-      console.error('Erro ao arquivar conta:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível arquivar a conta",
-        variant: "destructive",
-      });
-    }
   };
 
   // ✅ FUNÇÃO PARA SALVAR CONTA (CREATE/UPDATE)
@@ -387,6 +319,11 @@ export default function ContasCliente() {
       .slice(0, 2);
   };
 
+  // ✅ FORMATAÇÃO DE DATA
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
   // ✅ LOADING STATE
   if (loading) {
     return (
@@ -405,12 +342,12 @@ export default function ContasCliente() {
     <AppLayout>
       <div className="space-y-6">
         
-        {/* ✅ HEADER */}
+        {/* ✅ HEADER IGUAL AO PRINT */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Gestão de Contas</h1>
             <p className="text-text-secondary mt-1">
-              Gerencie todas as contas de anúncio dos seus clientes
+              Controle completo da sua carteira de contas de anúncio
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -423,18 +360,22 @@ export default function ContasCliente() {
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
+            <Button onClick={handleCreateAccount} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Conta
+            </Button>
           </div>
         </div>
 
-        {/* ✅ KPIs HORIZONTAIS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* ✅ KPIs IGUAL AO PRINT */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           
           {/* Total */}
           <Card className="surface-elevated">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-lg bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
+                  <Building2 className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary font-medium">Total</p>
@@ -444,12 +385,12 @@ export default function ContasCliente() {
             </CardContent>
           </Card>
 
-          {/* Ativas */}
+          {/* Ativos */}
           <Card className="surface-elevated">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-lg bg-success/10">
-                  <CheckCircle className="h-6 w-6 text-success" />
+                  <Users className="h-6 w-6 text-success" />
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary font-medium">Ativos</p>
@@ -459,7 +400,22 @@ export default function ContasCliente() {
             </CardContent>
           </Card>
 
-          {/* Meta Ads */}
+          {/* Pausados */}
+          <Card className="surface-elevated">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-warning/10">
+                  <Zap className="h-6 w-6 text-warning" />
+                </div>
+                <div>
+                  <p className="text-sm text-text-secondary font-medium">Pausados</p>
+                  <p className="text-3xl font-bold text-foreground">{stats.pausados}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Meta */}
           <Card className="surface-elevated">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
@@ -467,14 +423,14 @@ export default function ContasCliente() {
                   <BarChart3 className="h-6 w-6 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-text-secondary font-medium">Meta Ads</p>
+                  <p className="text-sm text-text-secondary font-medium">Meta</p>
                   <p className="text-3xl font-bold text-foreground">{stats.metaAds}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Google Ads */}
+          {/* Google */}
           <Card className="surface-elevated">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
@@ -482,184 +438,170 @@ export default function ContasCliente() {
                   <Target className="h-6 w-6 text-red-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-text-secondary font-medium">Google Ads</p>
+                  <p className="text-sm text-text-secondary font-medium">Google</p>
                   <p className="text-3xl font-bold text-foreground">{stats.googleAds}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Saldo Total */}
+          <Card className="surface-elevated">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-green-500/10">
+                  <DollarSign className="h-6 w-6 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-text-secondary font-medium">Saldo Total</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    R$ {(stats.saldoTotal / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* ✅ BUSCA E FILTROS */}
+        {/* ✅ FILTROS IGUAL AO PRINT */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
             <Input
-              placeholder="Buscar por conta ou ID do grupo..."
+              placeholder="Buscar por nome, empresa, telefone, email ou cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
             />
           </div>
           
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-text-secondary" />
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todos">Todos</SelectItem>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Pausado">Pausado</SelectItem>
-                <SelectItem value="Arquivado">Arquivado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos os Status">Todos os Status</SelectItem>
+              <SelectItem value="Ativo">Ativo</SelectItem>
+              <SelectItem value="Pausado">Pausado</SelectItem>
+              <SelectItem value="Arquivado">Arquivado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterGestor} onValueChange={setFilterGestor}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos os Gestores">Todos os Gestores</SelectItem>
+              {managers.map(manager => (
+                <SelectItem key={manager.id} value={manager.id}>
+                  {manager.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterCliente} onValueChange={setFilterCliente}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos os Clientes">Todos os Clientes</SelectItem>
+              {clientes.map(cliente => (
+                <SelectItem key={cliente.id} value={cliente.id}>
+                  {cliente.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* ✅ LISTA HORIZONTAL COM COLUNAS ALINHADAS */}
+        {/* ✅ LISTA SEGUINDO EXATAMENTE O PRINT */}
         <div className="space-y-3">
           {filteredAccounts.map((account) => (
             <Card key={account.id} className="surface-elevated">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   
-                  {/* ✅ LADO ESQUERDO - CLIENTE + INFORMAÇÕES */}
-                  <div className="flex items-center gap-6 flex-1">
+                  {/* ✅ LADO ESQUERDO - IGUAL AO PRINT */}
+                  <div className="flex items-center gap-4 flex-1">
                     
-                    {/* Avatar e Nome */}
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-surface-elevated text-foreground font-bold text-sm border border-border">
-                          {getInitials(account.nome_cliente)}
-                        </AvatarFallback>
-                      </Avatar>
+                    {/* Avatar com iniciais */}
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
+                        {getInitials(account.nome_cliente)}
+                      </AvatarFallback>
+                    </Avatar>
 
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground">
-                            {account.nome_cliente}
-                          </h3>
-                          {/* Status visual */}
-                          {account.status === 'Ativo' && (
-                            <CheckCircle className="h-4 w-4 text-success" />
-                          )}
-                          {account.status === 'Pausado' && (
-                            <Clock className="h-4 w-4 text-warning" />
-                          )}
-                          {account.status === 'Arquivado' && (
-                            <Archive className="h-4 w-4 text-text-muted" />
-                          )}
-                        </div>
-                        <div className="text-sm text-text-secondary">
-                          ID: {account.meta_account_id || account.google_ads_id || 'Não configurado'}
-                        </div>
+                    {/* Informações do cliente */}
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-foreground text-lg">
+                          {account.nome_cliente}
+                        </h3>
+                        
+                        {/* Badge de status igual ao print */}
+                        <Badge className={
+                          account.status === 'Ativo' ? 'bg-success text-white' :
+                          account.status === 'Pausado' ? 'bg-warning text-white' :
+                          'bg-text-muted text-white'
+                        }>
+                          {account.status}
+                        </Badge>
+                        
+                        <span className="text-text-secondary">
+                          {account.cliente_nome !== 'Cliente não vinculado' ? account.cliente_nome : 'Cliente não vinculado'}
+                        </span>
                       </div>
-                    </div>
 
-                    {/* Informações organizadas horizontalmente */}
-                    <div className="flex items-center gap-8">
-                      
-                      {/* Plataformas */}
-                      <div className="flex flex-col">
-                        <div className="text-xs text-text-secondary font-medium mb-1">Plataformas</div>
-                        <div className="flex items-center gap-2">
-                          {account.usa_meta_ads && account.meta_account_id ? (
-                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
-                              <Facebook className="h-3 w-3 mr-1" />
-                              Meta
-                            </Badge>
-                          ) : account.usa_meta_ads ? (
-                            <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
-                              <Facebook className="h-3 w-3 mr-1" />
-                              Meta (sem ID)
-                            </Badge>
-                          ) : null}
-                          
-                          {account.usa_google_ads && account.google_ads_id ? (
-                            <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
-                              <Chrome className="h-3 w-3 mr-1" />
-                              Google
-                            </Badge>
-                          ) : account.usa_google_ads ? (
-                            <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
-                              <Chrome className="h-3 w-3 mr-1" />
-                              Google (sem ID)
-                            </Badge>
-                          ) : null}
-                          
-                          {!account.usa_meta_ads && !account.usa_google_ads && (
-                            <span className="text-text-muted text-xs">Não configurado</span>
-                          )}
+                      {/* Segunda linha - empresa e telefone */}
+                      <div className="flex items-center gap-4 text-sm text-text-secondary">
+                        <div className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3" />
+                          <span>{account.nome_empresa}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          <span>{account.telefone}</span>
                         </div>
                       </div>
 
-                      {/* Budget/mês */}
-                      <div className="flex flex-col">
-                        <div className="text-xs text-text-secondary font-medium mb-1">Budget/mês</div>
-                        <div className="text-sm font-medium">
-                          {account.total_budget && account.total_budget > 0 ? (
-                            <span className="text-success">
-                              R$ {account.total_budget.toLocaleString('pt-BR')}
-                            </span>
-                          ) : (
-                            <span className="text-text-muted">Não definido</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Saldo Meta */}
-                      <div className="flex flex-col">
-                        <div className="text-xs text-text-secondary font-medium mb-1">Saldo Meta</div>
-                        <div className="text-sm font-medium">
-                          {account.usa_meta_ads ? (
-                            account.saldo_meta && account.saldo_meta > 0 ? (
-                              <span className="text-success">
-                                R$ {(account.saldo_meta / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            ) : (
-                              <span className="text-warning">R$ 0,00</span>
-                            )
-                          ) : (
-                            <span className="text-text-muted">-</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Gestor */}
-                      <div className="flex flex-col">
-                        <div className="text-xs text-text-secondary font-medium mb-1">Gestor</div>
-                        <div className="text-sm font-medium">
-                          {account.gestor_name !== 'Gestor não encontrado' ? (
-                            <span className="text-foreground">{account.gestor_name}</span>
-                          ) : (
-                            <span className="text-warning">Não atribuído</span>
-                          )}
-                        </div>
+                      {/* Terceira linha - badge da plataforma */}
+                      <div className="flex items-center gap-2 mt-1">
+                        {account.usa_meta_ads && (
+                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
+                            meta
+                          </Badge>
+                        )}
+                        {account.usa_google_ads && (
+                          <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
+                            google
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* ✅ LADO DIREITO - STATUS E AÇÕES */}
-                  <div className="flex items-center gap-4">
+                  {/* ✅ LADO DIREITO - PERFORMANCE E AÇÕES */}
+                  <div className="flex items-center gap-6">
                     
-                    {/* Status Badge */}
-                    <Badge className={
-                      account.status === 'Ativo' ? 'bg-success/10 text-success border-success/20' :
-                      account.status === 'Pausado' ? 'bg-warning/10 text-warning border-warning/20' :
-                      'bg-text-muted/10 text-text-muted border-text-muted/20'
-                    }>
-                      {account.status}
-                    </Badge>
-                    
-                    {/* Switch de ativo/pausado */}
-                    <Switch 
-                      checked={account.status === 'Ativo'}
-                      onCheckedChange={() => handleToggleStatus(account.id, account.status)}
-                      className="data-[state=checked]:bg-success"
-                      disabled={account.status === 'Arquivado'}
-                    />
+                    {/* Performance igual ao print */}
+                    <div className="text-right">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Performance</div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span><span className="text-foreground font-medium">{account.leads_mes || 0}</span> leads</span>
+                        <span><span className="text-success font-medium">{account.conversoes_mes || 0}</span> conversões</span>
+                        <span><span className="text-foreground font-medium">R$ {((account.saldo_meta || 0) / 100).toFixed(0)}</span></span>
+                      </div>
+                    </div>
+
+                    {/* Data atualização */}
+                    <div className="text-right">
+                      <div className="text-xs text-text-secondary font-medium mb-1">Atualizado</div>
+                      <div className="text-sm text-foreground font-medium">
+                        {formatDate(account.updated_at)}
+                      </div>
+                    </div>
 
                     {/* Menu de ações */}
                     <DropdownMenu>
@@ -678,23 +620,10 @@ export default function ContasCliente() {
                           Editar conta
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        {account.status !== 'Arquivado' ? (
-                          <DropdownMenuItem 
-                            onClick={() => handleArchiveAccount(account.id)}
-                            className="text-warning"
-                          >
-                            <Archive className="h-4 w-4 mr-2" />
-                            Arquivar
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem 
-                            onClick={() => handleToggleStatus(account.id, 'Arquivado')}
-                            className="text-success"
-                          >
-                            <ArchiveRestore className="h-4 w-4 mr-2" />
-                            Desarquivar
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem className="text-warning">
+                          <Archive className="h-4 w-4 mr-2" />
+                          Arquivar
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -713,27 +642,10 @@ export default function ContasCliente() {
               </div>
               <h3 className="font-semibold text-lg mb-2">Nenhuma conta encontrada</h3>
               <p className="text-text-secondary mb-6">
-                {searchTerm || filterStatus !== "Todos"
-                  ? "Tente ajustar os filtros para encontrar as contas que procura."
-                  : "Comece criando sua primeira conta de anúncio."
-                }
+                Tente ajustar os filtros para encontrar as contas que procura.
               </p>
-              {!searchTerm && filterStatus === "Todos" && (
-                <Button onClick={handleCreateAccount} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Criar primeira conta
-                </Button>
-              )}
             </CardContent>
           </Card>
-        )}
-
-        {/* ✅ FOOTER */}
-        {filteredAccounts.length > 0 && (
-          <div className="flex items-center justify-between text-sm text-text-secondary bg-surface-elevated rounded-lg px-4 py-3">
-            <span>Dados carregados!</span>
-            <span>{filteredAccounts.length} contas encontradas</span>
-          </div>
         )}
 
         {/* ✅ FORMULÁRIO MODERNO */}
@@ -742,7 +654,6 @@ export default function ContasCliente() {
           onOpenChange={setShowModernForm}
           onSubmit={handleAccountSubmit}
           initialData={editingAccount ? {
-            // Mapear dados corretamente para edição
             cliente_id: editingAccount.cliente_id,
             nome_cliente: editingAccount.nome_cliente,
             nome_empresa: editingAccount.nome_empresa,
