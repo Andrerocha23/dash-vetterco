@@ -561,20 +561,6 @@ export default function ContasCliente() {
                           <span>{account.telefone}</span>
                         </div>
                       </div>
-
-                      {/* Terceira linha - badge da plataforma */}
-                      <div className="flex items-center gap-2 mt-1">
-                        {account.usa_meta_ads && (
-                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
-                            meta
-                          </Badge>
-                        )}
-                        {account.usa_google_ads && (
-                          <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
-                            google
-                          </Badge>
-                        )}
-                      </div>
                     </div>
                   </div>
 
@@ -584,19 +570,13 @@ export default function ContasCliente() {
                     {/* Configurações - Meta/Google */}
                     <div className="text-right">
                       <div className="text-xs text-text-secondary font-medium mb-1">Configurações</div>
-                      <div className="flex items-center gap-4 text-sm">
-                        {account.usa_meta_ads && account.meta_account_id ? (
-                          <span><span className="text-blue-500 font-medium">Meta</span> configurado</span>
-                        ) : account.usa_meta_ads ? (
-                          <span><span className="text-yellow-600 font-medium">Meta</span> sem ID</span>
-                        ) : null}
-                        
-                        {account.usa_google_ads && account.google_ads_id ? (
-                          <span><span className="text-red-500 font-medium">Google</span> configurado</span>
-                        ) : account.usa_google_ads ? (
-                          <span><span className="text-yellow-600 font-medium">Google</span> sem ID</span>
-                        ) : null}
-                        
+                      <div className="flex items-center gap-3 text-sm">
+                        {account.usa_meta_ads && (
+                          <span className="text-blue-500 font-medium">Meta</span>
+                        )}
+                        {account.usa_google_ads && (
+                          <span className="text-red-500 font-medium">Google</span>
+                        )}
                         {!account.usa_meta_ads && !account.usa_google_ads && (
                           <span className="text-text-muted">Não configurado</span>
                         )}
