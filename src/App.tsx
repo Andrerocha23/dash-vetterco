@@ -10,7 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Boards from "./pages/Boards";
 // ❌ REMOVIDO: import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
-import Accounts from "./pages/Accounts";
+import Accounts from "./pages/ContasCliente";
 import Clientes from "./pages/Clientes";
 import ClienteDetail from "./pages/ClienteDetail";
 import Analytics from "./pages/Analytics";
