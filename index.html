@@ -1,23 +1,55 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MetaFlow - Marketing Dashboard</title>
-    <meta name="description" content="Premium Apple-style dark marketing dashboard for managing Meta and Google advertising campaigns" />
-    <meta name="author" content="MetaFlow" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta property="og:title" content="MetaFlow - Marketing Dashboard" />
-    <meta property="og:description" content="Premium Apple-style dark marketing dashboard for managing Meta and Google advertising campaigns" />
+    <!-- SEO básico -->
+    <title>Vetter Command — Painel de Marketing</title>
+    <meta name="description" content="Painel unificado de marketing para Meta e Google Ads: métricas confiáveis, alertas inteligentes e visual Apple-style." />
+    <link rel="canonical" href="https://app.vetter.company/" />
+
+    <!-- Cor/tema e aparência -->
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0B0B0F" />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:title" content="Vetter Command — Painel de Marketing" />
+    <meta property="og:description" content="Painel unificado de marketing para Meta e Google Ads: métricas confiáveis, alertas inteligentes e visual Apple-style." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:site_name" content="Vetter Command" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:image" content="https://app.vetter.company/assets/og-cover.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:image" content="https://app.vetter.company/assets/og-cover.png" />
+
+    <!-- PWA / Manifest / Ícones -->
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/icons/favicon.ico" sizes="any" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- Performance (opcional) -->
+    <!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> -->
+    <!-- <link rel="preload" href="/fonts/Inter-var.woff2" as="font" type="font/woff2" crossorigin> -->
+
+    <!-- Segurança (CSP simplificada; ajuste domínios conforme seu stack) -->
+    <meta http-equiv="Content-Security-Policy"
+          content="
+            default-src 'self';
+            script-src 'self' 'unsafe-inline' 'unsafe-eval';
+            style-src 'self' 'unsafe-inline';
+            img-src 'self' data: https:;
+            font-src 'self' https: data:;
+            connect-src 'self' https://api.vetter.company https://*.supabase.co https://*.googleapis.com;
+            frame-ancestors 'self';
+            base-uri 'self';
+            form-action 'self';
+          " />
   </head>
 
-  <body>
+  <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
