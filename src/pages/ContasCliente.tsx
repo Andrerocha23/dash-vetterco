@@ -1,4 +1,4 @@
-// src/pages/ContasCliente.tsx - LAYOUT FINAL SEGUINDO O PRINT
+// src/pages/ContasCliente.tsx - CÓDIGO FINAL AJUSTADO
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -342,7 +342,7 @@ export default function ContasCliente() {
     <AppLayout>
       <div className="space-y-6">
         
-        {/* ✅ HEADER IGUAL AO PRINT */}
+        {/* ✅ HEADER */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Gestão de Contas</h1>
@@ -367,7 +367,7 @@ export default function ContasCliente() {
           </div>
         </div>
 
-        {/* ✅ KPIs IGUAL AO PRINT */}
+        {/* ✅ KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           
           {/* Total */}
@@ -463,7 +463,7 @@ export default function ContasCliente() {
           </Card>
         </div>
 
-        {/* ✅ FILTROS IGUAL AO PRINT */}
+        {/* ✅ FILTROS */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
@@ -516,14 +516,14 @@ export default function ContasCliente() {
           </Select>
         </div>
 
-        {/* ✅ LISTA SEGUINDO EXATAMENTE O PRINT */}
+        {/* ✅ LISTA DE CONTAS */}
         <div className="space-y-3">
           {filteredAccounts.map((account) => (
             <Card key={account.id} className="surface-elevated">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   
-                  {/* ✅ LADO ESQUERDO - IGUAL AO PRINT */}
+                  {/* ✅ LADO ESQUERDO */}
                   <div className="flex items-center gap-4 flex-1">
                     
                     {/* Avatar com iniciais */}
@@ -540,7 +540,7 @@ export default function ContasCliente() {
                           {account.nome_cliente}
                         </h3>
                         
-                        {/* Badge de status igual ao print */}
+                        {/* Badge de status */}
                         <Badge className={
                           account.status === 'Ativo' ? 'bg-success text-white' :
                           account.status === 'Pausado' ? 'bg-warning text-white' :
@@ -548,17 +548,13 @@ export default function ContasCliente() {
                         }>
                           {account.status}
                         </Badge>
-                        
-                        <span className="text-text-secondary">
-                          {account.cliente_nome !== 'Cliente não vinculado' ? account.cliente_nome : 'Cliente não vinculado'}
-                        </span>
                       </div>
 
-                      {/* Segunda linha - empresa e telefone */}
+                      {/* Segunda linha - nome do cliente */}
                       <div className="flex items-center gap-4 text-sm text-text-secondary">
                         <div className="flex items-center gap-1">
                           <Building2 className="h-3 w-3" />
-                          <span>{account.nome_empresa}</span>
+                          <span>{account.cliente_nome !== 'Cliente não vinculado' ? account.cliente_nome : 'Cliente não vinculado'}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
@@ -582,16 +578,28 @@ export default function ContasCliente() {
                     </div>
                   </div>
 
-                  {/* ✅ LADO DIREITO - PERFORMANCE E AÇÕES */}
+                  {/* ✅ LADO DIREITO */}
                   <div className="flex items-center gap-6">
                     
-                    {/* Performance igual ao print */}
+                    {/* Configurações - Meta/Google */}
                     <div className="text-right">
-                      <div className="text-xs text-text-secondary font-medium mb-1">Performance</div>
+                      <div className="text-xs text-text-secondary font-medium mb-1">Configurações</div>
                       <div className="flex items-center gap-4 text-sm">
-                        <span><span className="text-foreground font-medium">{account.leads_mes || 0}</span> leads</span>
-                        <span><span className="text-success font-medium">{account.conversoes_mes || 0}</span> conversões</span>
-                        <span><span className="text-foreground font-medium">R$ {((account.saldo_meta || 0) / 100).toFixed(0)}</span></span>
+                        {account.usa_meta_ads && account.meta_account_id ? (
+                          <span><span className="text-blue-500 font-medium">Meta</span> configurado</span>
+                        ) : account.usa_meta_ads ? (
+                          <span><span className="text-yellow-600 font-medium">Meta</span> sem ID</span>
+                        ) : null}
+                        
+                        {account.usa_google_ads && account.google_ads_id ? (
+                          <span><span className="text-red-500 font-medium">Google</span> configurado</span>
+                        ) : account.usa_google_ads ? (
+                          <span><span className="text-yellow-600 font-medium">Google</span> sem ID</span>
+                        ) : null}
+                        
+                        {!account.usa_meta_ads && !account.usa_google_ads && (
+                          <span className="text-text-muted">Não configurado</span>
+                        )}
                       </div>
                     </div>
 
