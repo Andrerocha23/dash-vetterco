@@ -54,7 +54,7 @@ export default function Dashboard() {
 
       // Buscar todos os clientes
       const { data: clients, error } = await supabase
-        .from('clients')
+        .from('accounts')
         .select('*');
 
       if (error) throw error;

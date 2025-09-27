@@ -84,7 +84,7 @@ export default function MetaConfigPage() {
       
       // Buscar configuração global (primeiro cliente ou configuração padrão)
       const { data, error } = await supabase
-        .from('clients')
+        .from('accounts')
         .select(`
           usa_meta_ads,
           ativar_campanhas_meta,
@@ -156,7 +156,7 @@ export default function MetaConfigPage() {
 
       // Atualizar todos os clientes que usam Meta
       const { error } = await supabase
-        .from('clients')
+        .from('accounts')
         .update({
           usa_meta_ads: config.usaMetaAds,
           ativar_campanhas_meta: config.ativarCampanhasMeta,

@@ -94,7 +94,7 @@ export default function Managers() {
 
       // Buscar todos os clientes
       const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
+        .from('accounts')
         .select(`
           id, 
           nome_cliente, 

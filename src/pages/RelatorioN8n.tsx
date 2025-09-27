@@ -90,7 +90,7 @@ export default function RelatorioN8n() {
       } catch {
         try {
           const { data, error } = await supabase
-            .from("clients")
+            .from("accounts")
             .select("id, nome_cliente, nome_empresa, id_grupo, meta_account_id, google_ads_id, status")
             .eq("status", "Ativo")
             .order("nome_cliente");

@@ -60,7 +60,7 @@ class ManagersService {
           try {
             // Contar clientes por gestor
             const { count: clientsCount, error: countError } = await supabase
-              .from('clients')
+              .from('accounts')
               .select('*', { count: 'exact', head: true })
               .eq('gestor_id', manager.id);
 
@@ -120,7 +120,7 @@ class ManagersService {
 
       // Contar clientes
       const { count: clientsCount } = await supabase
-        .from('clients')
+        .from('accounts')
         .select('*', { count: 'exact', head: true })
         .eq('gestor_id', id);
 
@@ -212,7 +212,7 @@ class ManagersService {
         const managersWithCount = await Promise.all(
           data.map(async (manager) => {
             const { count } = await supabase
-              .from('clients')
+              .from('accounts')
               .select('*', { count: 'exact', head: true })
               .eq('gestor_id', manager.id);
 

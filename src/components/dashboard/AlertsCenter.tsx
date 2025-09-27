@@ -2,7 +2,16 @@ import { AlertTriangle, CreditCard, Users, Pause, Eye, Zap, ChevronRight } from 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert } from "@/mocks/impactDashboardService";
+// Definindo o tipo Alert localmente
+interface Alert {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  count?: number;
+  severity: string;
+  action: string;
+}
 
 interface AlertsCenterProps {
   alerts: Alert[];

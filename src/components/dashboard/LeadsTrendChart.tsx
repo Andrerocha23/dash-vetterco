@@ -1,7 +1,12 @@
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LeadsTrend } from "@/mocks/impactDashboardService";
+// Definindo o tipo LeadsTrend localmente
+interface LeadsTrend {
+  current: number;
+  previous: number;
+  variation: number;
+}
 
 interface LeadsTrendChartProps {
   data: LeadsTrend;
@@ -66,7 +71,7 @@ export function LeadsTrendChart({ data, isLoading }: LeadsTrendChartProps) {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={80}>
-          <LineChart data={data.data}>
+          <LineChart data={[{current: data.current, previous: data.previous}]}>
             <Tooltip content={<CustomTooltip />} />
             <Line 
               type="monotone" 

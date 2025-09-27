@@ -2,7 +2,10 @@ import { Shield, AlertTriangle, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HealthScore } from "@/mocks/impactDashboardService";
+// Definindo o tipo HealthScore localmente
+interface HealthScore {
+  score: number;
+}
 
 interface HealthScoreCardProps {
   data: HealthScore;

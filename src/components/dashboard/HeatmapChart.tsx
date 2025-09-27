@@ -1,6 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HeatmapData } from "@/mocks/impactDashboardService";
+// Definindo o tipo HeatmapData localmente
+interface HeatmapData {
+  hour: string;
+  leads: number;
+}
 
 interface HeatmapChartProps {
   data: HeatmapData[];
@@ -76,7 +80,7 @@ export function HeatmapChart({ data, isLoading }: HeatmapChartProps) {
                 <div className="text-xs text-muted-foreground w-8">{day}</div>
                 <div className="flex gap-1">
                   {hours.map(hour => {
-                    const cellData = data.find(d => d.day === day && d.hour === hour);
+                    const cellData = data.find(d => d.hour === `${hour}:00`);
                     const leads = cellData?.leads || 0;
                     const intensity = getIntensity(leads);
                     

@@ -1,6 +1,10 @@
 import { Target, TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LeadsMetrics } from "@/mocks/impactDashboardService";
+// Definindo o tipo LeadsMetrics localmente
+interface LeadsMetrics {
+  current: number;
+  variation: number;
+}
 
 interface LeadsCardProps {
   data: LeadsMetrics;

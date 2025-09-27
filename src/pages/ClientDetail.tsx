@@ -48,6 +48,7 @@ interface ClientData {
   budget_mensal_google: number | null;
   typebot_ativo: boolean | null;
   typebot_url: string | null;
+  traqueamento_ativo: boolean | null;
   created_at: string;
 }
 
@@ -100,7 +101,7 @@ export default function ClientDetail() {
     try {
       // Buscar dados do cliente
       const { data: clientData, error: clientError } = await supabase
-        .from('clients')
+        .from('accounts')
         .select('*')
         .eq('id', id)
         .single();
@@ -175,8 +176,8 @@ export default function ClientDetail() {
     if (!client) return;
 
     try {
-      const { error } = await supabase
-        .from('clients')
+        const { error } = await supabase
+        .from('accounts')
         .update({
           nome_cliente: data.nomeCliente,
           nome_empresa: data.nomeEmpresa,
@@ -250,10 +251,11 @@ export default function ClientDetail() {
       email: client.email,
       observacoes: client.observacoes,
       gestorId: client.gestor_id,
-      canais: client.canais,
-      status: client.status,
+      canais: client.canais as any,
+      status: client.status as any,
       usaMetaAds: client.usa_meta_ads,
       usaGoogleAds: client.usa_google_ads,
+      traqueamentoAtivo: client.traqueamento_ativo || false,
       metaAccountId: client.meta_account_id,
       googleAdsId: client.google_ads_id,
       saldoMeta: client.saldo_meta ? client.saldo_meta / 100 : 0,
