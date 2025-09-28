@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Edit, RefreshCw, ExternalLink, DollarSign, Target, 
   TrendingUp, Users, Settings, Activity, CheckCircle, AlertTriangle, 
-  Phone, Mail, Building, Eye, BarChart3, Award, Star, Calendar
+  Phone, Mail, Building, Eye, BarChart3, Award, Star, Calendar,
+  User, FolderOpen, X, AlertCircle
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -23,6 +25,7 @@ import { ClienteFormModal } from "@/components/forms/ClienteFormModal";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ClienteFormData } from "@/types/client";
+import { useClientManagers } from "@/hooks/useClientManagers";
 
 // Interfaces
 interface ClientData {
@@ -79,6 +82,7 @@ export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { getManagerById, getManagerName, getManagerAvatar } = useClientManagers();
   
   const [client, setClient] = useState<ClientData | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
@@ -326,6 +330,33 @@ export default function ClientDetail() {
     return Math.round((score / total) * 100);
   };
 
+  const getMissingConfigurations = () => {
+    const missing: string[] = [];
+    
+    if (client?.usa_meta_ads && !client?.meta_account_id) {
+      missing.push("Meta Account ID");
+    }
+    if (client?.usa_google_ads && !client?.google_ads_id) {
+      missing.push("Google Ads ID");
+    }
+    if (!client?.pixel_meta && client?.canais.includes('Meta')) {
+      missing.push("Pixel Meta");
+    }
+    if (!client?.ga4_stream_id) {
+      missing.push("GA4 Stream ID");
+    }
+    if (!client?.gtm_id) {
+      missing.push("GTM ID");
+    }
+    if (!client?.typebot_ativo && client?.canais.length > 0) {
+      missing.push("Typebot");
+    }
+    
+    return missing;
+  };
+
+  const manager = client ? getManagerById(client.gestor_id) : null;
+
   // Loading State
   if (loading) {
     return (
@@ -372,46 +403,167 @@ export default function ClientDetail() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header Simples */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost" 
-              size="sm"
-              onClick={() => navigate("/clientes")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">{client.nome_cliente}</h1>
-              <p className="text-sm text-muted-foreground">{client.nome_empresa}</p>
+        {/* Header Aprimorado */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate("/contas")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">{client.nome_cliente}</h1>
+                <p className="text-sm text-muted-foreground">{client.nome_empresa}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {client.link_drive && (
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open(client.link_drive!, '_blank')}
+                >
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Abrir Drive
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                onClick={() => setShowEditModal(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+              <Button 
+                onClick={handleSyncClient}
+                disabled={syncLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+                {syncLoading ? 'Sincronizando...' : 'Sincronizar'}
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            {client.link_drive && (
-              <Button 
-                variant="outline"
-                onClick={() => window.open(client.link_drive!, '_blank')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Abrir Drive
-              </Button>
-            )}
-            <Button 
-              variant="outline" 
-              onClick={() => setShowEditModal(true)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
-            <Button 
-              onClick={handleSyncClient}
-              disabled={syncLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
-              {syncLoading ? 'Sincronizando...' : 'Sincronizar'}
-            </Button>
+
+          {/* Informações Principais da Conta */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Manager Info */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={manager?.avatar_url} />
+                    <AvatarFallback>
+                      {getManagerAvatar(client.gestor_id)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">Gestor</p>
+                    <p className="text-sm text-muted-foreground">
+                      {getManagerName(client.gestor_id)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Status da Conta */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-full ${
+                    client.status === 'Ativo' ? 'bg-green-100' :
+                    client.status === 'Pausado' ? 'bg-yellow-100' : 'bg-red-100'
+                  }`}>
+                    <Activity className={`h-4 w-4 ${
+                      client.status === 'Ativo' ? 'text-green-600' :
+                      client.status === 'Pausado' ? 'text-yellow-600' : 'text-red-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Status</p>
+                    <Badge className={getStatusColor(client.status)}>
+                      {client.status}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Drive Link */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-full bg-blue-100">
+                    <FolderOpen className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Drive do Projeto</p>
+                    {client.link_drive ? (
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="h-auto p-0 text-blue-600"
+                        onClick={() => window.open(client.link_drive!, '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Acessar
+                      </Button>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Não configurado</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Score de Configuração */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-full ${
+                    implementationScore >= 80 ? 'bg-green-100' :
+                    implementationScore >= 60 ? 'bg-yellow-100' : 'bg-red-100'
+                  }`}>
+                    <Settings className={`h-4 w-4 ${
+                      implementationScore >= 80 ? 'text-green-600' :
+                      implementationScore >= 60 ? 'text-yellow-600' : 'text-red-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Configuração</p>
+                    <p className="text-sm font-bold">{implementationScore}% completo</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Alertas de Configuração Pendente */}
+          {getMissingConfigurations().length > 0 && (
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-yellow-800 mb-2">Configurações Pendentes</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {getMissingConfigurations().map((config, index) => (
+                        <Badge key={index} variant="outline" className="border-yellow-300 text-yellow-700">
+                          <X className="h-3 w-3 mr-1" />
+                          {config}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-sm text-yellow-700 mt-2">
+                      Complete essas configurações para otimizar o desempenho da conta.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Informações do Cliente */}
