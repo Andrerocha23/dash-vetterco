@@ -1,44 +1,33 @@
+// src/pages/ContaDetalhes.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Edit, 
-  RefreshCw, 
-  ExternalLink, 
-  DollarSign, 
-  Target, 
-  TrendingUp, 
-  Users, 
-  Settings, 
-  Activity, 
-  CheckCircle, 
-  AlertTriangle, 
-  Phone, 
-  Mail, 
-  Building, 
-  Eye, 
-  BarChart3, 
-  Award, 
-  Star, 
-  Calendar,
-  User, 
-  FolderOpen, 
-  X, 
-  AlertCircle,
+import {
+  ArrowLeft,
+  Edit,
+  RefreshCw,
+  ExternalLink,
+  DollarSign,
+  Target,
+  TrendingUp,
+  Users,
+  Settings,
+  Activity,
+  CheckCircle,
+  AlertTriangle,
+  Phone,
+  Mail,
+  FolderOpen,
   Clock,
-  Globe,
   Zap,
   Shield,
-  PlayCircle,
-  PauseCircle,
   Link as LinkIcon,
   MessageSquare,
   FileText,
   TrendingDown,
-  Download,
-  Share2,
+  Calendar,
   Copy,
-  Smartphone
+  Chrome,
+  Facebook,
 } from 'lucide-react';
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from '@/components/ui/button';
@@ -48,7 +37,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -57,6 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ClienteFormModal } from '@/components/forms/ClienteFormModal';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -135,7 +124,7 @@ export default function ContaDetalhes() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { getManagerById, getManagerName, getManagerAvatar } = useClientManagers();
-  
+
   const [client, setClient] = useState<ClientData | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
   const [stats, setStats] = useState<ClientStats | null>(null);
@@ -152,7 +141,7 @@ export default function ContaDetalhes() {
 
   const loadClientData = async () => {
     if (!id) return;
-    
+
     setLoading(true);
     try {
       // Buscar dados do cliente
@@ -178,13 +167,13 @@ export default function ContaDetalhes() {
       setCampaigns(campaignsData || []);
 
       // Buscar estatísticas
-      const { data: statsData, error: statsError } = await supabase
+      const { data: statsData } = await supabase
         .from('campaign_performance_stats')
         .select('*')
         .eq('client_id', id)
         .single();
 
-      let finalStats = null;
+      let finalStats: ClientStats | null = null;
       if (statsData) {
         finalStats = {
           total_leads: statsData.total_leads || 0,
@@ -192,7 +181,7 @@ export default function ContaDetalhes() {
           leads_qualificados: statsData.total_qualified || 0,
           total_spend: statsData.total_spend || 0,
           avg_quality_score: statsData.avg_quality_score || 0,
-          conversion_rate: statsData.conversion_rate || 0
+          conversion_rate: statsData.conversion_rate || 0,
         };
       } else {
         const { data: leadsStatsData } = await supabase
@@ -208,15 +197,15 @@ export default function ContaDetalhes() {
             leads_qualificados: leadsStatsData.leads_qualificados || 0,
             total_spend: leadsStatsData.valor_total_conversoes || 0,
             avg_quality_score: leadsStatsData.nota_media || 0,
-            conversion_rate: leadsStatsData.leads_convertidos && leadsStatsData.leads_qualificados 
-              ? (leadsStatsData.leads_convertidos / leadsStatsData.leads_qualificados) * 100 
-              : 0
+            conversion_rate:
+              leadsStatsData.leads_convertidos && leadsStatsData.leads_qualificados
+                ? (leadsStatsData.leads_convertidos / leadsStatsData.leads_qualificados) * 100
+                : 0,
           };
         }
       }
-      
-      setStats(finalStats);
 
+      setStats(finalStats);
     } catch (error) {
       console.error('Erro ao carregar cliente:', error);
       toast({
@@ -240,7 +229,7 @@ export default function ContaDetalhes() {
         completed: !!(data.nome_cliente && data.telefone && data.email),
         priority: 'high',
         required: true,
-        value: data.email
+        value: data.email,
       },
       {
         id: 'drive-link',
@@ -250,7 +239,7 @@ export default function ContaDetalhes() {
         completed: !!data.link_drive,
         priority: 'medium',
         required: false,
-        value: data.link_drive
+        value: data.link_drive,
       },
       {
         id: 'report-config',
@@ -260,7 +249,7 @@ export default function ContaDetalhes() {
         completed: !!(data.canal_relatorio && data.horario_relatorio),
         priority: 'high',
         required: true,
-        value: `${data.canal_relatorio} às ${data.horario_relatorio}`
+        value: `${data.canal_relatorio} às ${data.horario_relatorio}`,
       },
 
       // Meta Ads
@@ -269,20 +258,20 @@ export default function ContaDetalhes() {
         category: 'Meta Ads',
         title: 'Conta Meta Configurada',
         description: 'ID da conta Meta Ads configurado',
-        completed: !!(data.usa_meta_ads && data.meta_account_id),
+        completed: !!data.meta_account_id, // ✅ Configurado apenas se tiver ID
         priority: 'high',
         required: data.usa_meta_ads,
-        value: data.meta_account_id
+        value: data.meta_account_id,
       },
       {
         id: 'meta-webhook',
         category: 'Meta Ads',
         title: 'Webhook Meta',
         description: 'Webhook para receber dados da Meta configurado',
-        completed: !!(data.usa_meta_ads && data.webhook_meta),
+        completed: !!data.webhook_meta,
         priority: 'medium',
         required: data.usa_meta_ads,
-        value: data.webhook_meta
+        value: data.webhook_meta,
       },
 
       // Google Ads
@@ -291,20 +280,20 @@ export default function ContaDetalhes() {
         category: 'Google Ads',
         title: 'Conta Google Ads',
         description: 'ID da conta Google Ads configurado',
-        completed: !!(data.usa_google_ads && data.google_ads_id),
+        completed: !!data.google_ads_id, // ✅ Configurado apenas se tiver ID
         priority: 'high',
         required: data.usa_google_ads,
-        value: data.google_ads_id
+        value: data.google_ads_id,
       },
       {
         id: 'google-webhook',
         category: 'Google Ads',
         title: 'Webhook Google',
         description: 'Webhook para receber dados do Google configurado',
-        completed: !!(data.usa_google_ads && data.webhook_google),
+        completed: !!data.webhook_google,
         priority: 'medium',
         required: data.usa_google_ads,
-        value: data.webhook_google
+        value: data.webhook_google,
       },
 
       // Rastreamento
@@ -316,7 +305,7 @@ export default function ContaDetalhes() {
         completed: !!data.pixel_meta,
         priority: 'high',
         required: true,
-        value: data.pixel_meta
+        value: data.pixel_meta,
       },
       {
         id: 'ga4-config',
@@ -326,7 +315,7 @@ export default function ContaDetalhes() {
         completed: !!data.ga4_stream_id,
         priority: 'high',
         required: true,
-        value: data.ga4_stream_id
+        value: data.ga4_stream_id,
       },
       {
         id: 'gtm-config',
@@ -336,7 +325,7 @@ export default function ContaDetalhes() {
         completed: !!data.gtm_id,
         priority: 'medium',
         required: false,
-        value: data.gtm_id
+        value: data.gtm_id,
       },
       {
         id: 'typebot-config',
@@ -346,8 +335,8 @@ export default function ContaDetalhes() {
         completed: !!(data.typebot_ativo && data.typebot_url),
         priority: 'medium',
         required: false,
-        value: data.typebot_url
-      }
+        value: data.typebot_url,
+      },
     ];
 
     setChecklist(items);
@@ -376,7 +365,7 @@ export default function ContaDetalhes() {
           gtm_id: data.gtmId || null,
           typebot_ativo: data.typebotAtivo,
           typebot_url: data.typebotUrl || null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', client.id);
 
@@ -386,9 +375,8 @@ export default function ContaDetalhes() {
         title: "Sucesso!",
         description: `Cliente ${data.nomeCliente} atualizado com sucesso.`,
       });
-      
+
       await loadClientData();
-      
     } catch (error) {
       console.error('Erro ao editar cliente:', error);
       toast({
@@ -403,14 +391,13 @@ export default function ContaDetalhes() {
     setSyncLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       toast({
         title: "Sincronizado!",
         description: "Dados atualizados com sucesso.",
       });
-      
+
       await loadClientData();
-      
     } catch (error) {
       toast({
         title: "Erro na sincronização",
@@ -438,7 +425,7 @@ export default function ContaDetalhes() {
 
   const getClientFormData = (): ClienteFormData => {
     if (!client) return {} as ClienteFormData;
-    
+
     return {
       nomeCliente: client.nome_cliente,
       nomeEmpresa: client.nome_empresa,
@@ -474,31 +461,36 @@ export default function ContaDetalhes() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Ativo': return 'bg-green-500/20 text-green-400 border-green-500/50';
-      case 'Pausado': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
-      case 'Inativo': return 'bg-red-500/20 text-red-400 border-red-500/50';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
+      case 'Ativo':
+        return 'bg-green-500/20 text-green-400 border-green-500/50';
+      case 'Pausado':
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
+      case 'Arquivado':
+        return 'bg-gray-500/20 text-gray-300 border-gray-500/50';
+      default:
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
     }
   };
 
   const getChannelBadges = (channels: string[]) => {
-    return channels.map(channel => (
-      <Badge 
-        key={channel}
-        variant="outline" 
-        className={
-          channel === 'Meta' 
-            ? 'border-blue-500 text-blue-600 bg-blue-50'
-            : channel === 'Google'
-            ? 'border-green-500 text-green-600 bg-green-50'
-            : channel === 'TikTok'
-            ? 'border-black text-black bg-gray-50'
-            : 'border-gray-500 text-gray-600 bg-gray-50'
-        }
-      >
-        {channel}
-      </Badge>
-    ));
+    return channels.map(channel => {
+      const style =
+        channel === 'Meta'
+          ? 'border-blue-500/30 bg-blue-500/10 text-blue-400'
+          : channel === 'Google'
+          ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+          : channel === 'TikTok'
+          ? 'border-pink-500/30 bg-pink-500/10 text-pink-400'
+          : 'border-border/40 text-foreground/80';
+      return (
+        <span
+          key={channel}
+          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border ${style}`}
+        >
+          {channel}
+        </span>
+      );
+    });
   };
 
   const getCompletionStats = () => {
@@ -506,14 +498,14 @@ export default function ContaDetalhes() {
     const completed = checklist.filter(item => item.completed).length;
     const required = checklist.filter(item => item.required).length;
     const requiredCompleted = checklist.filter(item => item.required && item.completed).length;
-    
+
     return {
       total,
       completed,
       required,
       requiredCompleted,
       percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
-      requiredPercentage: required > 0 ? Math.round((requiredCompleted / required) * 100) : 100
+      requiredPercentage: required > 0 ? Math.round((requiredCompleted / required) * 100) : 100,
     };
   };
 
@@ -534,7 +526,7 @@ export default function ContaDetalhes() {
     if (completed) {
       return <CheckCircle className="h-5 w-5 text-green-400" />;
     } else if (required) {
-      return <AlertCircle className="h-5 w-5 text-red-400" />;
+      return <AlertTriangle className="h-5 w-5 text-red-400" />;
     } else {
       return <Clock className="h-5 w-5 text-yellow-400" />;
     }
@@ -555,13 +547,13 @@ export default function ContaDetalhes() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="space-y-6">
+        <div className="mx-auto max-w-screen-2xl px-3 sm:px-4 md:px-6 space-y-6 py-10">
           <div className="flex items-center gap-4">
             <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-48" />
           </div>
-          
-          <Card>
+
+          <Card className="surface-elevated">
             <CardContent className="p-6">
               <div className="space-y-4">
                 {[...Array(6)].map((_, i) => (
@@ -592,344 +584,373 @@ export default function ContaDetalhes() {
     );
   }
 
+  // Helpers de plataforma (tooltip/estado visual baseado no ID)
+  const metaConfigured = !!(client.meta_account_id && String(client.meta_account_id).trim().length > 0);
+  const googleConfigured = !!(client.google_ads_id && String(client.google_ads_id).trim().length > 0);
+
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header Aprimorado */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost" 
-                size="sm"
-                onClick={() => navigate("/contas")}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold">{client.nome_cliente}</h1>
-                <p className="text-lg text-muted-foreground">{client.nome_empresa}</p>
-              </div>
-              <Badge className={getStatusColor(client.status)}>
-                {client.status}
-              </Badge>
-            </div>
-            
-            <div className="flex gap-2">
-              {client.link_drive && (
-                <Button 
-                  variant="outline"
-                  onClick={openDriveLink}
-                  className="gap-2"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  Abrir Drive
-                  <ExternalLink className="h-3 w-3" />
+      <TooltipProvider delayDuration={200}>
+        <div className="mx-auto max-w-screen-2xl px-3 sm:px-4 md:px-6 space-y-6 pb-24 sm:pb-12">
+          {/* Header */}
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/contas")} aria-label="Voltar">
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
-              )}
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditModal(true)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-              <Button 
-                onClick={handleSyncClient}
-                disabled={syncLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
-                {syncLoading ? 'Sincronizando...' : 'Sincronizar'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Cards de Status Principais */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Progresso Geral */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Progresso Geral</p>
-                    <p className="text-3xl font-bold">{stats_completion.percentage}%</p>
-                  </div>
-                  <div className="p-3 bg-green-500/20 rounded-full">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  </div>
+                <div className="min-w-0">
+                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight truncate">{client.nome_cliente}</h1>
+                  <p className="text-text-secondary text-base truncate">{client.nome_empresa}</p>
                 </div>
-                <Progress value={stats_completion.percentage} className="mt-3" />
-                <p className="text-xs text-muted-foreground mt-2">
-                  {stats_completion.completed} de {stats_completion.total} concluídos
-                </p>
-              </CardContent>
-            </Card>
+                <Badge className={getStatusColor(client.status)}>{client.status}</Badge>
+              </div>
 
-            {/* Itens Obrigatórios */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Obrigatórios</p>
-                    <p className="text-3xl font-bold">{stats_completion.requiredPercentage}%</p>
-                  </div>
-                  <div className="p-3 bg-red-500/20 rounded-full">
-                    <AlertTriangle className="h-6 w-6 text-red-500" />
-                  </div>
-                </div>
-                <Progress value={stats_completion.requiredPercentage} className="mt-3" />
-                <p className="text-xs text-muted-foreground mt-2">
-                  {stats_completion.requiredCompleted} de {stats_completion.required} obrigatórios
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Saldo Meta */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Saldo Meta</p>
-                    <p className="text-2xl font-bold">{formatCurrency((client.saldo_meta || 0) / 100)}</p>
-                  </div>
-                  <div className="p-3 bg-blue-500/20 rounded-full">
-                    <DollarSign className="h-6 w-6 text-blue-500" />
-                  </div>
-                </div>
-                {client.budget_mensal_meta && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Budget: {formatCurrency(client.budget_mensal_meta)}
-                  </p>
+              <div className="flex items-center gap-2 self-start md:self-auto">
+                {client.link_drive && (
+                  <Button variant="outline" onClick={openDriveLink} className="gap-2">
+                    <FolderOpen className="h-4 w-4" />
+                    Abrir Drive
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
                 )}
-              </CardContent>
-            </Card>
+                <Button variant="outline" onClick={() => setShowEditModal(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+                <Button onClick={handleSyncClient} disabled={syncLoading}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+                  {syncLoading ? 'Sincronizando...' : 'Sincronizar'}
+                </Button>
+              </div>
+            </div>
 
-            {/* Gestor */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={manager?.avatar_url} />
-                    <AvatarFallback className="bg-purple-500/20 text-purple-600">
-                      {getManagerAvatar(client.gestor_id)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Gestor</p>
-                    <p className="font-semibold">{getManagerName(client.gestor_id)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        <Tabs defaultValue="checklist" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="checklist" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Checklist
-            </TabsTrigger>
-            <TabsTrigger value="details" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Detalhes
-            </TabsTrigger>
-            <TabsTrigger value="campaigns" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Campanhas
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Atividade
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="checklist" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Checklist de Configuração
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Acompanhe o progresso da configuração da conta e identifique itens pendentes
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {Object.entries(groupedChecklist).map(([category, items]) => (
-                  <div key={category} className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">{category}</h3>
-                      <Badge variant="secondary">
-                        {items.filter(item => item.completed).length}/{items.length}
-                      </Badge>
+            {/* KPIs topo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* Progresso Geral */}
+              <Card className="surface-elevated rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-text-secondary">Progresso Geral</p>
+                      <p className="text-3xl font-bold">{stats_completion.percentage}%</p>
                     </div>
-                    
-                    <div className="space-y-3">
-                      {items.map((item) => (
-                        <div
-                          key={item.id}
-                          className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-all ${
-                            item.completed 
-                              ? 'bg-green-50 border-green-200' 
-                              : item.required 
-                                ? 'bg-red-50 border-red-200'
-                                : 'bg-yellow-50 border-yellow-200'
-                          }`}
-                        >
-                          {getChecklistIcon(item.completed, item.required)}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-medium">{item.title}</h4>
-                              {getPriorityIcon(item.priority)}
-                              {item.required && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Obrigatório
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                            {item.value && (
-                              <div className="flex items-center gap-2 mt-2 p-2 bg-white/60 rounded border">
-                                <code className="text-xs font-mono text-gray-700 flex-1 truncate">
-                                  {item.value}
-                                </code>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleCopyToClipboard(item.value!, item.title)}
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="p-3 rounded-xl bg-success/10 ring-1 ring-success/20">
+                      <CheckCircle className="h-6 w-6 text-success" />
                     </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  <Progress value={stats_completion.percentage} className="mt-3" />
+                  <p className="text-xs text-text-tertiary mt-2">
+                    {stats_completion.completed} de {stats_completion.total} concluídos
+                  </p>
+                </CardContent>
+              </Card>
 
-          <TabsContent value="details" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Informações Básicas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Informações Básicas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Mail className="h-5 w-5 text-blue-500" />
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Email</p>
-                        <p className="font-medium">{client.email || 'Não informado'}</p>
-                      </div>
-                      {client.email && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleCopyToClipboard(client.email!, 'Email')}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      )}
+              {/* Obrigatórios */}
+              <Card className="surface-elevated rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-text-secondary">Obrigatórios</p>
+                      <p className="text-3xl font-bold">{stats_completion.requiredPercentage}%</p>
                     </div>
-                    
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Phone className="h-5 w-5 text-green-500" />
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{client.telefone}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleCopyToClipboard(client.telefone, 'Telefone')}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
+                    <div className="p-3 rounded-xl bg-red-500/10 ring-1 ring-red-500/20">
+                      <AlertTriangle className="h-6 w-6 text-red-500" />
                     </div>
+                  </div>
+                  <Progress value={stats_completion.requiredPercentage} className="mt-3" />
+                  <p className="text-xs text-text-tertiary mt-2">
+                    {stats_completion.requiredCompleted} de {stats_completion.required} obrigatórios
+                  </p>
+                </CardContent>
+              </Card>
 
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-purple-500" />
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Relatórios</p>
-                        <p className="font-medium">{client.canal_relatorio} às {client.horario_relatorio}</p>
-                      </div>
+              {/* Saldo Meta */}
+              <Card className="surface-elevated rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-text-secondary">Saldo Meta</p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency((client.saldo_meta || 0) / 100)}
+                      </p>
                     </div>
+                    <div className="p-3 rounded-xl bg-blue-500/10 ring-1 ring-blue-500/20">
+                      <DollarSign className="h-6 w-6 text-blue-500" />
+                    </div>
+                  </div>
+                  {client.budget_mensal_meta && (
+                    <p className="text-xs text-text-tertiary mt-2">
+                      Budget: {formatCurrency(client.budget_mensal_meta)}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <LinkIcon className="h-5 w-5 text-orange-500" />
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Canais Ativos</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {getChannelBadges(client.canais)}
-                        </div>
-                      </div>
+              {/* Gestor */}
+              <Card className="surface-elevated rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={manager?.avatar_url} />
+                      <AvatarFallback className="bg-purple-500/20 text-purple-600">
+                        {getManagerAvatar(client.gestor_id)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm text-text-tertiary">Gestor</p>
+                      <p className="font-semibold">{getManagerName(client.gestor_id)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </div>
 
-              {/* Configurações de Plataforma */}
-              <Card>
+          <Tabs defaultValue="checklist" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="checklist" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Checklist
+              </TabsTrigger>
+              <TabsTrigger value="details" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Detalhes
+              </TabsTrigger>
+              <TabsTrigger value="campaigns" className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Campanhas
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Atividade
+              </TabsTrigger>
+            </TabsList>
+
+            {/* CHECKLIST */}
+            <TabsContent value="checklist" className="space-y-6">
+              <Card className="surface-elevated">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5" />
-                    Plataformas de Anúncios
+                    <Settings className="h-5 w-5" />
+                    Checklist de Configuração
                   </CardTitle>
+                  <p className="text-sm text-text-secondary">
+                    Acompanhe o progresso da configuração da conta e identifique itens pendentes
+                  </p>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
+                <CardContent className="space-y-6">
+                  {Object.entries(groupedChecklist).map(([category, items]) => (
+                    <div key={category} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-lg">{category}</h3>
+                        <Badge variant="secondary">
+                          {items.filter(item => item.completed).length}/{items.length}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-3">
+                        {items.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-all ${
+                              item.completed
+                                ? 'bg-green-50 border-green-200'
+                                : item.required
+                                  ? 'bg-red-50 border-red-200'
+                                  : 'bg-yellow-50 border-yellow-200'
+                            }`}
+                          >
+                            {getChecklistIcon(item.completed, item.required)}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-medium">{item.title}</h4>
+                                {getPriorityIcon(item.priority)}
+                                {item.required && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    Obrigatório
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
+                              {item.value && (
+                                <div className="flex items-center gap-2 mt-2 p-2 bg-white/60 rounded border">
+                                  <code className="text-xs font-mono text-gray-700 flex-1 truncate">
+                                    {item.value}
+                                  </code>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleCopyToClipboard(item.value!, item.title)}
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* DETALHES */}
+            <TabsContent value="details" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Informações Básicas */}
+                <Card className="surface-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Informações Básicas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
+                        <Mail className="h-5 w-5 text-blue-500" />
+                        <div className="flex-1">
+                          <p className="text-sm text-text-tertiary">Email</p>
+                          <p className="font-medium break-all">{client.email || 'Não informado'}</p>
+                        </div>
+                        {client.email && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleCopyToClipboard(client.email!, 'Email')}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
+                        <Phone className="h-5 w-5 text-green-500" />
+                        <div className="flex-1">
+                          <p className="text-sm text-text-tertiary">Telefone</p>
+                          <p className="font-medium">{client.telefone}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleCopyToClipboard(client.telefone, 'Telefone')}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
+                        <MessageSquare className="h-5 w-5 text-purple-500" />
+                        <div className="flex-1">
+                          <p className="text-sm text-text-tertiary">Relatórios</p>
+                          <p className="font-medium">
+                            {client.canal_relatorio} às {client.horario_relatorio}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
+                        <LinkIcon className="h-5 w-5 text-orange-500" />
+                        <div className="flex-1">
+                          <p className="text-sm text-text-tertiary">Canais Ativos</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {getChannelBadges(client.canais)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Plataformas de Anúncios */}
+                <Card className="surface-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      Plataformas de Anúncios
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Meta */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/20 rounded-full">
-                          <Globe className="h-4 w-4 text-blue-600" />
+                        <div className="p-2 bg-blue-500/10 rounded-lg ring-1 ring-blue-500/20">
+                          <Facebook className="h-4 w-4 text-blue-500" />
                         </div>
                         <div>
                           <p className="font-medium">Meta Ads</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-text-tertiary break-all">
                             {client.meta_account_id || 'Não configurado'}
                           </p>
                         </div>
                       </div>
-                      <Badge variant={client.usa_meta_ads ? "default" : "secondary"}>
-                        {client.usa_meta_ads ? "Ativo" : "Inativo"}
-                      </Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className={[
+                              "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
+                              metaConfigured
+                                ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
+                                : "border-border/40 bg-transparent text-text-muted",
+                            ].join(" ")}
+                          >
+                            {metaConfigured ? 'Configurado' : 'Não configurado'}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {metaConfigured
+                            ? "Meta Ads configurado (ID presente)."
+                            : "Defina o ID da conta do Meta para configurar."}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border">
+                    {/* Google */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-500/20 rounded-full">
-                          <Globe className="h-4 w-4 text-green-600" />
+                        <div className="p-2 bg-amber-500/10 rounded-lg ring-1 ring-amber-500/20">
+                          <Chrome className="h-4 w-4 text-amber-500" />
                         </div>
                         <div>
                           <p className="font-medium">Google Ads</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-text-tertiary break-all">
                             {client.google_ads_id || 'Não configurado'}
                           </p>
                         </div>
                       </div>
-                      <Badge variant={client.usa_google_ads ? "default" : "secondary"}>
-                        {client.usa_google_ads ? "Ativo" : "Inativo"}
-                      </Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className={[
+                              "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
+                              googleConfigured
+                                ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                                : "border-border/40 bg-transparent text-text-muted",
+                            ].join(" ")}
+                          >
+                            {googleConfigured ? 'Configurado' : 'Não configurado'}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {googleConfigured
+                            ? "Google Ads configurado (ID presente)."
+                            : "Defina o ID da conta do Google para configurar."}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border">
+                    {/* Typebot */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-500/20 rounded-full">
+                        <div className="p-2 bg-purple-500/10 rounded-lg ring-1 ring-purple-500/20">
                           <Zap className="h-4 w-4 text-purple-600" />
                         </div>
                         <div>
                           <p className="font-medium">Typebot</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-text-tertiary">
                             {client.typebot_url ? 'Configurado' : 'Não configurado'}
                           </p>
                         </div>
@@ -938,335 +959,331 @@ export default function ContaDetalhes() {
                         {client.typebot_ativo ? "Ativo" : "Inativo"}
                       </Badge>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Rastreamento e Analytics */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Rastreamento & Analytics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    { label: 'Pixel Meta', value: client.pixel_meta, icon: Shield },
-                    { label: 'GA4 Stream ID', value: client.ga4_stream_id, icon: BarChart3 },
-                    { label: 'GTM ID', value: client.gtm_id, icon: Settings }
-                  ].map((config, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <config.icon className="h-4 w-4 text-gray-600" />
-                        <div>
-                          <p className="font-medium text-sm">{config.label}</p>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {config.value || 'Não configurado'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {config.value ? (
-                          <>
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCopyToClipboard(config.value!, config.label)}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Orçamentos */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Orçamentos e Financeiro
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="p-3 bg-blue-50 rounded-lg border">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Saldo Meta Atual</p>
-                          <p className="text-2xl font-bold text-blue-600">
-                            {formatCurrency((client.saldo_meta || 0) / 100)}
-                          </p>
-                        </div>
-                        <DollarSign className="h-8 w-8 text-blue-500" />
-                      </div>
-                    </div>
-
-                    {client.budget_mensal_meta && (
-                      <div className="p-3 bg-green-50 rounded-lg border">
-                        <div className="flex items-center justify-between">
+                {/* Rastreamento & Analytics */}
+                <Card className="surface-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Rastreamento & Analytics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      { label: 'Pixel Meta', value: client.pixel_meta, icon: Shield },
+                      { label: 'GA4 Stream ID', value: client.ga4_stream_id, icon: Target },
+                      { label: 'GTM ID', value: client.gtm_id, icon: Settings },
+                    ].map((config, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <config.icon className="h-4 w-4 text-foreground/70" />
                           <div>
-                            <p className="text-sm text-muted-foreground">Budget Meta Mensal</p>
-                            <p className="text-xl font-bold text-green-600">
-                              {formatCurrency(client.budget_mensal_meta)}
+                            <p className="font-medium text-sm">{config.label}</p>
+                            <p className="text-xs text-text-tertiary font-mono break-all">
+                              {config.value || 'Não configurado'}
                             </p>
                           </div>
-                          <Target className="h-6 w-6 text-green-500" />
+                        </div>
+                        <div className="flex gap-2">
+                          {config.value ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-success" />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleCopyToClipboard(config.value!, config.label)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-warning" />
+                          )}
                         </div>
                       </div>
-                    )}
+                    ))}
+                  </CardContent>
+                </Card>
 
-                    {client.budget_mensal_google && (
-                      <div className="p-3 bg-orange-50 rounded-lg border">
+                {/* Orçamentos */}
+                <Card className="surface-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Orçamentos e Financeiro
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="p-3 rounded-lg border bg-blue-500/5">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-muted-foreground">Budget Google Mensal</p>
-                            <p className="text-xl font-bold text-orange-600">
-                              {formatCurrency(client.budget_mensal_google)}
+                            <p className="text-sm text-text-secondary">Saldo Meta Atual</p>
+                            <p className="text-2xl font-bold text-foreground">
+                              {formatCurrency((client.saldo_meta || 0) / 100)}
                             </p>
                           </div>
-                          <Target className="h-6 w-6 text-orange-500" />
+                          <DollarSign className="h-7 w-7 text-blue-500" />
                         </div>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
 
-            {/* Observações */}
-            {client.observacoes && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Observações
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-4 bg-gray-50 rounded-lg border">
-                    <p className="whitespace-pre-wrap">{client.observacoes}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+                      {client.budget_mensal_meta && (
+                        <div className="p-3 rounded-lg border bg-green-500/5">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-text-secondary">Budget Meta Mensal</p>
+                              <p className="text-xl font-bold text-foreground">
+                                {formatCurrency(client.budget_mensal_meta)}
+                              </p>
+                            </div>
+                            <Target className="h-6 w-6 text-green-500" />
+                          </div>
+                        </div>
+                      )}
 
-          <TabsContent value="campaigns" className="space-y-6">
-            {/* KPIs de Performance */}
-            {stats && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total de Leads</p>
-                        <p className="text-3xl font-bold">{stats.total_leads}</p>
-                      </div>
-                      <Target className="h-8 w-8 text-blue-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Leads Convertidos</p>
-                        <p className="text-3xl font-bold">{stats.leads_convertidos}</p>
-                      </div>
-                      <CheckCircle className="h-8 w-8 text-green-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Taxa Conversão</p>
-                        <p className="text-3xl font-bold">{stats.conversion_rate.toFixed(1)}%</p>
-                      </div>
-                      <TrendingUp className="h-8 w-8 text-purple-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Investimento Total</p>
-                        <p className="text-2xl font-bold">{formatCurrency(stats.total_spend)}</p>
-                      </div>
-                      <DollarSign className="h-8 w-8 text-orange-500" />
+                      {client.budget_mensal_google && (
+                        <div className="p-3 rounded-lg border bg-amber-500/5">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-text-secondary">Budget Google Mensal</p>
+                              <p className="text-xl font-bold text-foreground">
+                                {formatCurrency(client.budget_mensal_google)}
+                              </p>
+                            </div>
+                            <Target className="h-6 w-6 text-amber-500" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               </div>
-            )}
 
-            {/* Tabela de Campanhas */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Atividade de Campanhas Recente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {campaigns.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhuma atividade encontrada</h3>
-                    <p className="text-muted-foreground">As campanhas aparecerão aqui quando houver dados disponíveis.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Plataforma</TableHead>
-                          <TableHead>Campanha</TableHead>
-                          <TableHead className="text-center">Leads</TableHead>
-                          <TableHead className="text-right">Gasto</TableHead>
-                          <TableHead className="text-center">CTR</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {campaigns.map((campaign) => (
-                          <TableRow key={`${campaign.id}-${campaign.date}`}>
-                            <TableCell className="font-mono text-sm">
-                              {new Date(campaign.date).toLocaleDateString('pt-BR')}
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant="outline" 
-                                className={
-                                  campaign.platform === 'Meta' 
-                                    ? 'border-blue-500 text-blue-600' 
-                                    : campaign.platform === 'Google'
-                                    ? 'border-green-500 text-green-600'
-                                    : 'border-gray-500 text-gray-600'
-                                }
-                              >
-                                {campaign.platform}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate">
-                              {campaign.campaign_name || 'Campanha sem nome'}
-                            </TableCell>
-                            <TableCell className="text-center font-medium">
-                              {campaign.leads_count || 0}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {campaign.spend ? formatCurrency(campaign.spend) : '—'}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {campaign.ctr ? `${campaign.ctr.toFixed(2)}%` : '—'}
-                            </TableCell>
+              {/* Observações */}
+              {client.observacoes && (
+                <Card className="surface-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Observações
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-4 rounded-lg border bg-muted/30">
+                      <p className="whitespace-pre-wrap">{client.observacoes}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* CAMPANHAS */}
+            <TabsContent value="campaigns" className="space-y-6">
+              {stats && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4">
+                  <Card className="surface-elevated rounded-2xl">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-text-secondary">Total de Leads</p>
+                          <p className="text-3xl font-bold">{stats.total_leads}</p>
+                        </div>
+                        <Target className="h-8 w-8 text-blue-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="surface-elevated rounded-2xl">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-text-secondary">Leads Convertidos</p>
+                          <p className="text-3xl font-bold">{stats.leads_convertidos}</p>
+                        </div>
+                        <CheckCircle className="h-8 w-8 text-success" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="surface-elevated rounded-2xl">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-text-secondary">Taxa Conversão</p>
+                          <p className="text-3xl font-bold">{stats.conversion_rate.toFixed(1)}%</p>
+                        </div>
+                        <TrendingUp className="h-8 w-8 text-purple-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="surface-elevated rounded-2xl">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-text-secondary">Investimento Total</p>
+                          <p className="text-2xl font-bold">{formatCurrency(stats.total_spend)}</p>
+                        </div>
+                        <DollarSign className="h-8 w-8 text-amber-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              <Card className="surface-elevated">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Atividade de Campanhas Recente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {campaigns.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Calendar className="h-12 w-12 text-text-muted mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma atividade encontrada</h3>
+                      <p className="text-text-secondary">As campanhas aparecerão aqui quando houver dados disponíveis.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Plataforma</TableHead>
+                            <TableHead>Campanha</TableHead>
+                            <TableHead className="text-center">Leads</TableHead>
+                            <TableHead className="text-right">Gasto</TableHead>
+                            <TableHead className="text-center">CTR</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Histórico de Atividades
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border">
-                    <div className="p-2 bg-green-500/20 rounded-full">
-                      <Calendar className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Conta criada</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(client.created_at).toLocaleDateString('pt-BR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border">
-                    <div className="p-2 bg-blue-500/20 rounded-full">
-                      <Edit className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Última atualização</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(client.updated_at).toLocaleDateString('pt-BR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-
-                  {client.link_drive && (
-                    <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border">
-                      <div className="p-2 bg-purple-500/20 rounded-full">
-                        <FolderOpen className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">Drive configurado</p>
-                        <p className="text-sm text-muted-foreground">Acesso ao drive do projeto disponível</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={openDriveLink}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
+                        </TableHeader>
+                        <TableBody>
+                          {campaigns.map((campaign) => (
+                            <TableRow key={`${campaign.id}-${campaign.date}`}>
+                              <TableCell className="font-mono text-sm">
+                                {new Date(campaign.date).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    campaign.platform === 'Meta'
+                                      ? 'border-blue-500/40 text-blue-400'
+                                      : campaign.platform === 'Google'
+                                      ? 'border-amber-500/40 text-amber-400'
+                                      : 'border-border/40 text-foreground/80'
+                                  }
+                                >
+                                  {campaign.platform}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="max-w-[240px] truncate">
+                                {campaign.campaign_name || 'Campanha sem nome'}
+                              </TableCell>
+                              <TableCell className="text-center font-medium">
+                                {campaign.leads_count || 0}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {campaign.spend ? formatCurrency(campaign.spend) : '—'}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {campaign.ctr ? `${campaign.ctr.toFixed(2)}%` : '—'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Mais atividades serão exibidas aqui conforme o uso da conta</p>
+            {/* ATIVIDADE */}
+            <TabsContent value="activity" className="space-y-6">
+              <Card className="surface-elevated">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Histórico de Atividades
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 bg-green-500/5 rounded-lg border">
+                      <div className="p-2 bg-green-500/10 rounded-full">
+                        <Calendar className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Conta criada</p>
+                        <p className="text-sm text-text-tertiary">
+                          {new Date(client.created_at).toLocaleDateString('pt-BR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-blue-500/5 rounded-lg border">
+                      <div className="p-2 bg-blue-500/10 rounded-full">
+                        <Edit className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Última atualização</p>
+                        <p className="text-sm text-text-tertiary">
+                          {new Date(client.updated_at).toLocaleDateString('pt-BR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {client.link_drive && (
+                      <div className="flex items-center gap-3 p-4 bg-purple-500/5 rounded-lg border">
+                        <div className="p-2 bg-purple-500/10 rounded-full">
+                          <FolderOpen className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">Drive configurado</p>
+                          <p className="text-sm text-text-tertiary">Acesso ao drive do projeto disponível</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={openDriveLink}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="text-center py-8 text-text-tertiary">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Mais atividades serão exibidas aqui conforme o uso da conta</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
 
-      {/* Modal de Edição */}
-      <ClienteFormModal
-        mode="edit"
-        open={showEditModal}
-        onOpenChange={setShowEditModal}
-        onSubmit={handleEditClient}
-        initialValues={getClientFormData()}
-      />
+        {/* Modal de Edição */}
+        <ClienteFormModal
+          mode="edit"
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          onSubmit={handleEditClient}
+          initialValues={getClientFormData()}
+        />
+      </TooltipProvider>
     </AppLayout>
   );
 }
