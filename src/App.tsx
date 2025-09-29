@@ -13,6 +13,7 @@ import ClientDetail from "./pages/ClientDetail";
 import Accounts from "./pages/ContasCliente";
 import Clientes from "./pages/Clientes";
 import ClienteDetail from "./pages/ClienteDetail";
+import ClienteEdit from "./pages/ClienteEdit";
 import Analytics from "./pages/Analytics";
 import Templates from "./pages/Templates";
 import Training from "./pages/Training";
@@ -63,6 +64,11 @@ const App = () => (
             <Route path="/clientes/:id" element={
               <ProtectedRoute>
                 <ClienteDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/clientes/:id/editar" element={
+              <ProtectedRoute>
+                <ClienteEdit />
               </ProtectedRoute>
             } />
             <Route path="/contas" element={
