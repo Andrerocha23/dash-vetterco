@@ -187,76 +187,20 @@ export default function RelatorioN8n() {
     loadClientsData();
   }, []);
 
-  // ======= FILTERS (mantido) =======
+  // ======= FILTERS (AGORA SÓ GOOGLE) =======
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
       client.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (client.id_grupo && client.id_grupo.includes(searchTerm));
+    const googleActive = !!client.config?.ativo_google;
     const matchesFilter =
       filterStatus === "all" ||
-      (filterStatus === "active" && (client.config?.ativo_meta || client.config?.ativo_google)) ||
-      (filterStatus === "inactive" && !client.config?.ativo_meta && !client.config?.ativo_google);
+      (filterStatus === "active" && googleActive) ||
+      (filterStatus === "inactive" && !googleActive);
     return matchesSearch && matchesFilter;
   });
 
-  // ======= Actions =======
-  const handleToggleMeta = async (clientId: string) => {
-    try {
-      const client = clients.find((c) => c.id === clientId);
-      const currentStatus = client?.config?.ativo_meta || false;
-      const newStatus = !currentStatus;
-
-      const { data: existingConfig } = await supabase
-        .from("relatorio_config")
-        .select("id")
-        .eq("client_id", clientId)
-        .maybeSingle();
-
-      if (existingConfig) {
-        const { error } = await supabase
-          .from("relatorio_config")
-          .update({ ativo_meta: newStatus, updated_at: new Date().toISOString() })
-          .eq("client_id", clientId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("relatorio_config").insert({
-          client_id: clientId,
-          ativo_meta: newStatus,
-          ativo_google: true,
-          horario_disparo: "09:00:00",
-          dias_semana: [1, 2, 3, 4, 5],
-        });
-        if (error) throw error;
-      }
-
-      setClients((prev) =>
-        prev.map((c) =>
-          c.id === clientId
-            ? {
-                ...c,
-                config: {
-                  ...c.config,
-                  ativo_meta: newStatus,
-                  ativo_google: c.config?.ativo_google || true,
-                  horario_disparo: c.config?.horario_disparo || "09:00:00",
-                  dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
-                },
-              }
-            : c
-        )
-      );
-
-      toast({ title: "Sucesso", description: `Relatório Meta ${newStatus ? "ativado" : "desativado"} para ${client?.nome_cliente}` });
-    } catch (error) {
-      console.error("Erro ao alterar status Meta:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível alterar o status Meta: " + (error as Error).message,
-        variant: "destructive",
-      });
-    }
-  };
-
+  // ======= Actions (só Google) =======
   const handleToggleGoogle = async (clientId: string) => {
     try {
       const client = clients.find((c) => c.id === clientId);
@@ -278,8 +222,8 @@ export default function RelatorioN8n() {
       } else {
         const { error } = await supabase.from("relatorio_config").insert({
           client_id: clientId,
-          ativo_meta: true,
-          ativo_google: newStatus,
+          ativo_meta: false,           // <- não controlamos Meta aqui
+          ativo_google: newStatus,     // <- só Google
           horario_disparo: "09:00:00",
           dias_semana: [1, 2, 3, 4, 5],
         });
@@ -293,7 +237,7 @@ export default function RelatorioN8n() {
                 ...c,
                 config: {
                   ...c.config,
-                  ativo_meta: c.config?.ativo_meta || true,
+                  ativo_meta: c.config?.ativo_meta ?? false,
                   ativo_google: newStatus,
                   horario_disparo: c.config?.horario_disparo || "09:00:00",
                   dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
@@ -335,10 +279,10 @@ export default function RelatorioN8n() {
     }
   };
 
-  // ======= Helpers UI =======
+  // ======= Helpers UI (baseados em Google) =======
   const getStatusIcon = (client: ClientReport) => {
-    const hasAnyActive = client.config?.ativo_meta || client.config?.ativo_google;
-    if (!hasAnyActive) return <XCircle className="h-4 w-4 text-text-muted" />;
+    const googleActive = !!client.config?.ativo_google;
+    if (!googleActive) return <XCircle className="h-4 w-4 text-text-muted" />;
     if (client.ultimo_disparo?.status === "erro") return <AlertTriangle className="h-4 w-4 text-warning" />;
     return <CheckCircle className="h-4 w-4 text-success" />;
   };
@@ -361,8 +305,8 @@ export default function RelatorioN8n() {
       .toUpperCase()
       .slice(0, 2);
 
-  // KPIs
-  const totalAtivos = clients.filter((c) => c.config?.ativo_meta || c.config?.ativo_google).length;
+  // KPIs (Ativos só Google)
+  const totalAtivos = clients.filter((c) => c.config?.ativo_google).length;
   const totalMeta = clients.filter((c) => c.meta_account_id).length;
   const totalGoogle = clients.filter((c) => c.google_ads_id).length;
 
@@ -427,7 +371,7 @@ export default function RelatorioN8n() {
             </div>
           </div>
 
-          {/* KPIs (mesmo padrão das outras páginas) */}
+          {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <StatCard
               icon={<Users className="h-5 w-5" />}
@@ -439,7 +383,7 @@ export default function RelatorioN8n() {
             <StatCard
               icon={<CheckCircle className="h-5 w-5" />}
               title="Ativos"
-              value={totalAtivos}
+              value={totalAtivos} // <- só Google
               iconWrapClass="bg-success/10 ring-success/20"
               iconClass="text-success"
             />
@@ -459,7 +403,7 @@ export default function RelatorioN8n() {
             />
           </div>
 
-          {/* FILTROS no padrão novo */}
+          {/* FILTROS */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
@@ -483,8 +427,8 @@ export default function RelatorioN8n() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="active">Ativos</SelectItem>
-                <SelectItem value="inactive">Inativos</SelectItem>
+                <SelectItem value="active">Ativos (Google)</SelectItem>
+                <SelectItem value="inactive">Inativos (Google)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -492,8 +436,8 @@ export default function RelatorioN8n() {
           {/* LISTA */}
           <div className="space-y-3">
             {filteredClients.map((client) => {
-              const hasAnyActive = client.config?.ativo_meta || client.config?.ativo_google;
-              const statusGradient = hasAnyActive
+              const googleActive = !!client.config?.ativo_google;
+              const statusGradient = googleActive
                 ? "from-success/70 to-success/10"
                 : "from-text-muted/70 to-text-muted/10";
 
@@ -525,7 +469,7 @@ export default function RelatorioN8n() {
                         </div>
                       </div>
 
-                      {/* CANAIS */}
+                      {/* CANAIS (apenas exibição) */}
                       <div className="text-right md:text-left">
                         <div className="text-xs text-text-tertiary font-medium mb-1">Canais</div>
                         <div className="flex items-center md:justify-start justify-end gap-2">
@@ -583,23 +527,8 @@ export default function RelatorioN8n() {
                         </div>
                       </div>
 
-                      {/* AÇÕES - SWITCHES SEPARADOS */}
+                      {/* AÇÕES - APENAS GOOGLE */}
                       <div className="flex items-center justify-end gap-4">
-                        {/* Switch Meta */}
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="flex items-center gap-2">
-                            <Facebook className="h-4 w-4 text-blue-600" />
-                            <Switch
-                              checked={client.config?.ativo_meta || false}
-                              onCheckedChange={() => handleToggleMeta(client.id)}
-                              className="data-[state=checked]:bg-blue-600"
-                              disabled={!metaConfigured}
-                            />
-                          </div>
-                          <span className="text-xs text-text-tertiary">Meta</span>
-                        </div>
-
-                        {/* Switch Google */}
                         <div className="flex flex-col items-center gap-1">
                           <div className="flex items-center gap-2">
                             <Chrome className="h-4 w-4 text-amber-600" />
