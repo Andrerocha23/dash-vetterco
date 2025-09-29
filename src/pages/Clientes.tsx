@@ -172,6 +172,23 @@ export default function ClientesNew() {
   // Deletar cliente
   const handleDeleteCliente = async (clienteId: string) => {
     try {
+      // Verificar se o cliente tem contas associadas
+      const { data: accounts, error: accountsError } = await supabase
+        .from('accounts')
+        .select('id')
+        .eq('cliente_id', clienteId);
+
+      if (accountsError) throw accountsError;
+
+      if (accounts && accounts.length > 0) {
+        toast({
+          title: "Não é possível remover",
+          description: `Este cliente possui ${accounts.length} conta(s) associada(s). Remova as contas primeiro.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('clientes')
         .delete()
