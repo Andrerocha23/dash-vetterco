@@ -4,7 +4,8 @@ export interface RelatorioN8n {
   idGrupo: string;
   metaAccountId?: string;
   googleAdsId?: string;
-  ativo: boolean;
+  ativoMeta: boolean;
+  ativoGoogle: boolean;
   ultimoEnvio?: string; // ISO
   horarioPadrao?: string;
 }

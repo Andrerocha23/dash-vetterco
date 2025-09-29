@@ -740,7 +740,8 @@ export type Database = {
       }
       relatorio_config: {
         Row: {
-          ativo: boolean | null
+          ativo_google: boolean | null
+          ativo_meta: boolean | null
           client_id: string
           created_at: string
           dias_semana: number[] | null
@@ -749,7 +750,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          ativo?: boolean | null
+          ativo_google?: boolean | null
+          ativo_meta?: boolean | null
           client_id: string
           created_at?: string
           dias_semana?: number[] | null
@@ -758,7 +760,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          ativo?: boolean | null
+          ativo_google?: boolean | null
+          ativo_meta?: boolean | null
           client_id?: string
           created_at?: string
           dias_semana?: number[] | null
@@ -901,7 +904,8 @@ export type Database = {
       }
       relatorio_n8n_consolidated: {
         Row: {
-          ativo: boolean | null
+          ativo_google: boolean | null
+          ativo_meta: boolean | null
           canal_relatorio: string | null
           cliente_status: string | null
           config_atualizado_em: string | null

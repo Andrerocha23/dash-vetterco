@@ -18,7 +18,7 @@ export const n8nService = {
       // Buscar configurações separadamente
       const { data: configsData } = await supabase
         .from('relatorio_config')
-        .select('client_id, ativo, horario_disparo');
+        .select('client_id, ativo_meta, ativo_google, horario_disparo');
 
       // Buscar últimos disparos separadamente
       const { data: disparosData } = await supabase
@@ -40,7 +40,8 @@ export const n8nService = {
           idGrupo: account.id_grupo || "",
           metaAccountId: account.meta_account_id || "",
           googleAdsId: account.google_ads_id || "",
-          ativo: config?.ativo || false,
+          ativoMeta: config?.ativo_meta || false,
+          ativoGoogle: config?.ativo_google || false,
           ultimoEnvio: ultimoDisparo?.data_disparo || null,
           horarioPadrao: config?.horario_disparo?.slice(0, 5) || "09:00"
         };
@@ -59,7 +60,9 @@ export const n8nService = {
       
       if (filters.status && filters.status !== "Todos") {
         const isAtivo = filters.status === "Ativo";
-        relatorios = relatorios.filter(relatorio => relatorio.ativo === isAtivo);
+        relatorios = relatorios.filter(relatorio => 
+          relatorio.ativoMeta === isAtivo || relatorio.ativoGoogle === isAtivo
+        );
       }
       
       return relatorios;
@@ -70,12 +73,12 @@ export const n8nService = {
     }
   },
 
-  async toggleAtivo(contaId: string): Promise<boolean> {
+  async toggleAtivoMeta(contaId: string): Promise<boolean> {
     try {
       // Buscar configuração atual
       const { data: currentConfig, error: fetchError } = await supabase
         .from('relatorio_config')
-        .select('ativo')
+        .select('ativo_meta')
         .eq('client_id', contaId)
         .single();
 
@@ -83,13 +86,13 @@ export const n8nService = {
         throw new Error(`Failed to fetch current config: ${fetchError.message}`);
       }
 
-      const novoStatus = !currentConfig?.ativo;
+      const novoStatus = !currentConfig?.ativo_meta;
 
       if (currentConfig) {
         // Atualizar existente
         const { error: updateError } = await supabase
           .from('relatorio_config')
-          .update({ ativo: novoStatus, updated_at: new Date().toISOString() })
+          .update({ ativo_meta: novoStatus, updated_at: new Date().toISOString() })
           .eq('client_id', contaId);
 
         if (updateError) {
@@ -101,7 +104,8 @@ export const n8nService = {
           .from('relatorio_config')
           .insert({
             client_id: contaId,
-            ativo: novoStatus,
+            ativo_meta: novoStatus,
+            ativo_google: true,
             horario_disparo: '09:00:00'
           });
 
@@ -113,7 +117,56 @@ export const n8nService = {
       return novoStatus;
       
     } catch (error) {
-      console.error('Erro em toggleAtivo:', error);
+      console.error('Erro em toggleAtivoMeta:', error);
+      throw error;
+    }
+  },
+
+  async toggleAtivoGoogle(contaId: string): Promise<boolean> {
+    try {
+      // Buscar configuração atual
+      const { data: currentConfig, error: fetchError } = await supabase
+        .from('relatorio_config')
+        .select('ativo_google')
+        .eq('client_id', contaId)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw new Error(`Failed to fetch current config: ${fetchError.message}`);
+      }
+
+      const novoStatus = !currentConfig?.ativo_google;
+
+      if (currentConfig) {
+        // Atualizar existente
+        const { error: updateError } = await supabase
+          .from('relatorio_config')
+          .update({ ativo_google: novoStatus, updated_at: new Date().toISOString() })
+          .eq('client_id', contaId);
+
+        if (updateError) {
+          throw new Error(`Failed to update config: ${updateError.message}`);
+        }
+      } else {
+        // Criar nova configuração
+        const { error: insertError } = await supabase
+          .from('relatorio_config')
+          .insert({
+            client_id: contaId,
+            ativo_meta: true,
+            ativo_google: novoStatus,
+            horario_disparo: '09:00:00'
+          });
+
+        if (insertError) {
+          throw new Error(`Failed to create config: ${insertError.message}`);
+        }
+      }
+
+      return novoStatus;
+      
+    } catch (error) {
+      console.error('Erro em toggleAtivoGoogle:', error);
       throw error;
     }
   },
@@ -196,7 +249,8 @@ export const n8nService = {
           .insert({
             client_id: contaId,
             horario_disparo: payload.horarioPadrao + ':00',
-            ativo: true
+            ativo_meta: true,
+            ativo_google: true
           });
 
         if (insertError) {

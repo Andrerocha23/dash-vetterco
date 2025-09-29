@@ -42,7 +42,8 @@ interface ClientReport {
   google_ads_id?: string;
   status: string;
   config?: {
-    ativo: boolean;
+    ativo_meta: boolean;
+    ativo_google: boolean;
     horario_disparo?: string;
     dias_semana?: number[];
   };
@@ -105,7 +106,7 @@ export default function RelatorioN8n() {
 
       const { data: configsData, error: configsError } = await supabase
         .from("relatorio_config")
-        .select("client_id, ativo, horario_disparo, dias_semana, updated_at");
+        .select("client_id, ativo_meta, ativo_google, horario_disparo, dias_semana, updated_at");
 
       const configs = configsError ? [] : (configsData || []);
 
@@ -129,12 +130,14 @@ export default function RelatorioN8n() {
           status: account.status,
           config: config
             ? {
-                ativo: config.ativo || false,
+                ativo_meta: config.ativo_meta || false,
+                ativo_google: config.ativo_google || false,
                 horario_disparo: config.horario_disparo,
                 dias_semana: config.dias_semana || [1, 2, 3, 4, 5],
               }
             : {
-                ativo: false,
+                ativo_meta: false,
+                ativo_google: false,
                 horario_disparo: "09:00:00",
                 dias_semana: [1, 2, 3, 4, 5],
               },
@@ -161,7 +164,7 @@ export default function RelatorioN8n() {
           id_grupo: "grupo_123",
           meta_account_id: "meta_123",
           status: "Ativo",
-          config: { ativo: true, horario_disparo: "09:00:00", dias_semana: [1, 2, 3, 4, 5] },
+          config: { ativo_meta: true, ativo_google: true, horario_disparo: "09:00:00", dias_semana: [1, 2, 3, 4, 5] },
           stats: { total_leads: 0, leads_convertidos: 0 },
         },
         {
@@ -169,7 +172,7 @@ export default function RelatorioN8n() {
           nome_cliente: "Exemplo Cliente 2",
           nome_empresa: "Outra Empresa",
           status: "Ativo",
-          config: { ativo: false, horario_disparo: "10:00:00", dias_semana: [1, 2, 3, 4, 5] },
+          config: { ativo_meta: false, ativo_google: false, horario_disparo: "10:00:00", dias_semana: [1, 2, 3, 4, 5] },
           stats: { total_leads: 0, leads_convertidos: 0 },
         },
       ];
@@ -191,17 +194,17 @@ export default function RelatorioN8n() {
       (client.id_grupo && client.id_grupo.includes(searchTerm));
     const matchesFilter =
       filterStatus === "all" ||
-      (filterStatus === "active" && client.config?.ativo) ||
-      (filterStatus === "inactive" && !client.config?.ativo);
+      (filterStatus === "active" && (client.config?.ativo_meta || client.config?.ativo_google)) ||
+      (filterStatus === "inactive" && !client.config?.ativo_meta && !client.config?.ativo_google);
     return matchesSearch && matchesFilter;
   });
 
-  // ======= Actions (mantidas) =======
-  const handleToggleClient = async (clientId: string) => {
+  // ======= Actions =======
+  const handleToggleMeta = async (clientId: string) => {
     try {
       const client = clients.find((c) => c.id === clientId);
-      const isActive = client?.config?.ativo || false;
-      const newStatus = !isActive;
+      const currentStatus = client?.config?.ativo_meta || false;
+      const newStatus = !currentStatus;
 
       const { data: existingConfig } = await supabase
         .from("relatorio_config")
@@ -212,13 +215,14 @@ export default function RelatorioN8n() {
       if (existingConfig) {
         const { error } = await supabase
           .from("relatorio_config")
-          .update({ ativo: newStatus, updated_at: new Date().toISOString() })
+          .update({ ativo_meta: newStatus, updated_at: new Date().toISOString() })
           .eq("client_id", clientId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("relatorio_config").insert({
           client_id: clientId,
-          ativo: newStatus,
+          ativo_meta: newStatus,
+          ativo_google: true,
           horario_disparo: "09:00:00",
           dias_semana: [1, 2, 3, 4, 5],
         });
@@ -232,7 +236,8 @@ export default function RelatorioN8n() {
                 ...c,
                 config: {
                   ...c.config,
-                  ativo: newStatus,
+                  ativo_meta: newStatus,
+                  ativo_google: c.config?.ativo_google || true,
                   horario_disparo: c.config?.horario_disparo || "09:00:00",
                   dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
                 },
@@ -241,12 +246,69 @@ export default function RelatorioN8n() {
         )
       );
 
-      toast({ title: "Sucesso", description: `Relatório ${newStatus ? "ativado" : "desativado"} para ${client?.nome_cliente}` });
+      toast({ title: "Sucesso", description: `Relatório Meta ${newStatus ? "ativado" : "desativado"} para ${client?.nome_cliente}` });
     } catch (error) {
-      console.error("Erro ao alterar status:", error);
+      console.error("Erro ao alterar status Meta:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível alterar o status: " + (error as Error).message,
+        description: "Não foi possível alterar o status Meta: " + (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleGoogle = async (clientId: string) => {
+    try {
+      const client = clients.find((c) => c.id === clientId);
+      const currentStatus = client?.config?.ativo_google || false;
+      const newStatus = !currentStatus;
+
+      const { data: existingConfig } = await supabase
+        .from("relatorio_config")
+        .select("id")
+        .eq("client_id", clientId)
+        .maybeSingle();
+
+      if (existingConfig) {
+        const { error } = await supabase
+          .from("relatorio_config")
+          .update({ ativo_google: newStatus, updated_at: new Date().toISOString() })
+          .eq("client_id", clientId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("relatorio_config").insert({
+          client_id: clientId,
+          ativo_meta: true,
+          ativo_google: newStatus,
+          horario_disparo: "09:00:00",
+          dias_semana: [1, 2, 3, 4, 5],
+        });
+        if (error) throw error;
+      }
+
+      setClients((prev) =>
+        prev.map((c) =>
+          c.id === clientId
+            ? {
+                ...c,
+                config: {
+                  ...c.config,
+                  ativo_meta: c.config?.ativo_meta || true,
+                  ativo_google: newStatus,
+                  horario_disparo: c.config?.horario_disparo || "09:00:00",
+                  dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
+                },
+              }
+            : c
+        )
+      );
+
+      toast({ title: "Sucesso", description: `Relatório Google ${newStatus ? "ativado" : "desativado"} para ${client?.nome_cliente}` });
+    } catch (error) {
+      console.error("Erro ao alterar status Google:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o status Google: " + (error as Error).message,
         variant: "destructive",
       });
     }
@@ -275,7 +337,8 @@ export default function RelatorioN8n() {
 
   // ======= Helpers UI =======
   const getStatusIcon = (client: ClientReport) => {
-    if (!client.config?.ativo) return <XCircle className="h-4 w-4 text-text-muted" />;
+    const hasAnyActive = client.config?.ativo_meta || client.config?.ativo_google;
+    if (!hasAnyActive) return <XCircle className="h-4 w-4 text-text-muted" />;
     if (client.ultimo_disparo?.status === "erro") return <AlertTriangle className="h-4 w-4 text-warning" />;
     return <CheckCircle className="h-4 w-4 text-success" />;
   };
@@ -299,7 +362,7 @@ export default function RelatorioN8n() {
       .slice(0, 2);
 
   // KPIs
-  const totalAtivos = clients.filter((c) => c.config?.ativo).length;
+  const totalAtivos = clients.filter((c) => c.config?.ativo_meta || c.config?.ativo_google).length;
   const totalMeta = clients.filter((c) => c.meta_account_id).length;
   const totalGoogle = clients.filter((c) => c.google_ads_id).length;
 
@@ -429,7 +492,8 @@ export default function RelatorioN8n() {
           {/* LISTA */}
           <div className="space-y-3">
             {filteredClients.map((client) => {
-              const statusGradient = client.config?.ativo
+              const hasAnyActive = client.config?.ativo_meta || client.config?.ativo_google;
+              const statusGradient = hasAnyActive
                 ? "from-success/70 to-success/10"
                 : "from-text-muted/70 to-text-muted/10";
 
@@ -519,13 +583,36 @@ export default function RelatorioN8n() {
                         </div>
                       </div>
 
-                      {/* AÇÕES */}
-                      <div className="flex items-center justify-end gap-3">
-                        <Switch
-                          checked={client.config?.ativo || false}
-                          onCheckedChange={() => handleToggleClient(client.id)}
-                          className="data-[state=checked]:bg-success"
-                        />
+                      {/* AÇÕES - SWITCHES SEPARADOS */}
+                      <div className="flex items-center justify-end gap-4">
+                        {/* Switch Meta */}
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-2">
+                            <Facebook className="h-4 w-4 text-blue-600" />
+                            <Switch
+                              checked={client.config?.ativo_meta || false}
+                              onCheckedChange={() => handleToggleMeta(client.id)}
+                              className="data-[state=checked]:bg-blue-600"
+                              disabled={!metaConfigured}
+                            />
+                          </div>
+                          <span className="text-xs text-text-tertiary">Meta</span>
+                        </div>
+
+                        {/* Switch Google */}
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-2">
+                            <Chrome className="h-4 w-4 text-amber-600" />
+                            <Switch
+                              checked={client.config?.ativo_google || false}
+                              onCheckedChange={() => handleToggleGoogle(client.id)}
+                              className="data-[state=checked]:bg-amber-600"
+                              disabled={!googleConfigured}
+                            />
+                          </div>
+                          <span className="text-xs text-text-tertiary">Google</span>
+                        </div>
+
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Abrir ações">
