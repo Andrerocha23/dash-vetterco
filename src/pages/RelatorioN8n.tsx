@@ -335,6 +335,46 @@ export default function RelatorioN8n() {
     }
   };
 
+  const handleDeactivateAll = async () => {
+    try {
+      const { error } = await supabase
+        .from("relatorio_config")
+        .update({ 
+          ativo_meta: false, 
+          ativo_google: false,
+          updated_at: new Date().toISOString() 
+        })
+        .in('client_id', clients.map(c => c.id));
+
+      if (error) throw error;
+
+      setClients((prev) =>
+        prev.map((c) => ({
+          ...c,
+          config: {
+            ...c.config,
+            ativo_meta: false,
+            ativo_google: false,
+            horario_disparo: c.config?.horario_disparo || "09:00:00",
+            dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
+          },
+        }))
+      );
+
+      toast({ 
+        title: "Sucesso", 
+        description: `Todos os relatórios foram desativados (${clients.length} contas)` 
+      });
+    } catch (error) {
+      console.error("Erro ao desativar todos:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível desativar todos os relatórios: " + (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
   // ======= Helpers UI =======
   const getStatusIcon = (client: ClientReport) => {
     const hasAnyActive = client.config?.ativo_meta || client.config?.ativo_google;
@@ -420,6 +460,15 @@ export default function RelatorioN8n() {
               </p>
             </div>
             <div className="flex items-center gap-3 self-start md:self-auto">
+              <Button 
+                variant="outline" 
+                className="gap-2 text-warning hover:text-warning" 
+                onClick={handleDeactivateAll}
+                aria-label="Desativar todos"
+              >
+                <XCircle className="h-4 w-4" />
+                Desativar Todos
+              </Button>
               <Button variant="outline" className="gap-2" onClick={() => loadClientsData()} aria-label="Atualizar">
                 <RefreshCw className="h-4 w-4" />
                 Atualizar
