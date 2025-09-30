@@ -29,7 +29,9 @@ import {
   Chrome,
   Info,
   Filter,
-  User
+  User,
+  Pause,
+  Play
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -266,6 +268,34 @@ export default function ContasCliente() {
       toast({
         title: "Erro",
         description: `Não foi possível salvar a conta: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleStatus = async (account: AccountData, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newStatus = account.status === 'Ativo' ? 'Pausado' : 'Ativo';
+    
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', account.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Conta ${newStatus === 'Ativo' ? 'ativada' : 'pausada'} com sucesso`,
+      });
+
+      await loadAccountsData();
+    } catch (error: any) {
+      console.error('Erro ao alterar status:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o status da conta",
         variant: "destructive",
       });
     }
@@ -586,6 +616,17 @@ export default function ContasCliente() {
                                 Editar conta
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
+                              {account.status === 'Ativo' ? (
+                                <DropdownMenuItem onClick={(e) => handleToggleStatus(account, e)}>
+                                  <Pause className="h-4 w-4 mr-2" />
+                                  Pausar conta
+                                </DropdownMenuItem>
+                              ) : account.status === 'Pausado' ? (
+                                <DropdownMenuItem onClick={(e) => handleToggleStatus(account, e)}>
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Despausar conta
+                                </DropdownMenuItem>
+                              ) : null}
                               <DropdownMenuItem className="text-warning">
                                 <Archive className="h-4 w-4 mr-2" />
                                 Arquivar
