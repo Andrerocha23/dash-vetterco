@@ -222,7 +222,7 @@ export default function RelatorioN8n() {
         const { error } = await supabase.from("relatorio_config").insert({
           client_id: clientId,
           ativo_meta: newStatus,
-          ativo_google: true,
+          ativo_google: false,
           horario_disparo: "09:00:00",
           dias_semana: [1, 2, 3, 4, 5],
         });
@@ -237,7 +237,7 @@ export default function RelatorioN8n() {
                 config: {
                   ...c.config,
                   ativo_meta: newStatus,
-                  ativo_google: c.config?.ativo_google || true,
+                  ativo_google: c.config?.ativo_google || false,
                   horario_disparo: c.config?.horario_disparo || "09:00:00",
                   dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
                 },
@@ -278,7 +278,7 @@ export default function RelatorioN8n() {
       } else {
         const { error } = await supabase.from("relatorio_config").insert({
           client_id: clientId,
-          ativo_meta: true,
+          ativo_meta: false,
           ativo_google: newStatus,
           horario_disparo: "09:00:00",
           dias_semana: [1, 2, 3, 4, 5],
@@ -293,7 +293,7 @@ export default function RelatorioN8n() {
                 ...c,
                 config: {
                   ...c.config,
-                  ativo_meta: c.config?.ativo_meta || true,
+                  ativo_meta: c.config?.ativo_meta || false,
                   ativo_google: newStatus,
                   horario_disparo: c.config?.horario_disparo || "09:00:00",
                   dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
