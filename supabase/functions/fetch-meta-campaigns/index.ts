@@ -56,6 +56,23 @@ Deno.serve(async (req) => {
 
     console.log('Formatted account ID:', formattedAccountId);
 
+    // Calculate date range (last 30 days)
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const since = formatDate(thirtyDaysAgo);
+    const until = formatDate(today);
+    
+    console.log('Date range:', { since, until });
+
     // Fetch campaigns
     const campaignsUrl = `${META_BASE_URL}/${formattedAccountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget&access_token=${accessToken}`;
     
@@ -72,7 +89,7 @@ Deno.serve(async (req) => {
     console.log('Campaigns fetched:', campaignsData.data?.length || 0);
 
     // Fetch account-level insights
-    const insightsUrl = `${META_BASE_URL}/${formattedAccountId}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&time_range={"since":"30 days ago","until":"today"}&access_token=${accessToken}`;
+    const insightsUrl = `${META_BASE_URL}/${formattedAccountId}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&time_range={"since":"${since}","until":"${until}"}&access_token=${accessToken}`;
     
     console.log('Fetching account insights from Meta API...');
     const insightsResponse = await fetch(insightsUrl);
@@ -95,7 +112,7 @@ Deno.serve(async (req) => {
     const campaignsWithInsights = await Promise.all(
       (campaignsData.data || []).map(async (campaign: MetaCampaignResponse) => {
         try {
-          const campaignInsightsUrl = `${META_BASE_URL}/${campaign.id}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&time_range={"since":"30 days ago","until":"today"}&access_token=${accessToken}`;
+          const campaignInsightsUrl = `${META_BASE_URL}/${campaign.id}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&time_range={"since":"${since}","until":"${until}"}&access_token=${accessToken}`;
           
           const response = await fetch(campaignInsightsUrl);
           if (!response.ok) {
