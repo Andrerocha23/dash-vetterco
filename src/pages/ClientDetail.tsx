@@ -53,6 +53,7 @@ import { ClienteFormData } from '@/types/client';
 import { useClientManagers } from '@/hooks/useClientManagers';
 import { MetaMetricsGrid } from '@/components/meta/MetaMetricsGrid';
 import { MetaCampaignTable } from '@/components/meta/MetaCampaignTable';
+import { MetaPeriodFilter, MetaPeriod } from '@/components/meta/MetaPeriodFilter';
 import { metaAdsService } from '@/services/metaAdsService';
 import type { MetaAdsResponse } from '@/types/meta';
 
@@ -140,6 +141,7 @@ export default function ContaDetalhes() {
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [lastMetaFetch, setLastMetaFetch] = useState<Date | null>(null);
+  const [metaPeriod, setMetaPeriod] = useState<MetaPeriod>('30');
 
   useEffect(() => {
     if (id) {
@@ -154,14 +156,14 @@ export default function ContaDetalhes() {
     }
 
     if (forceRefresh) {
-      metaAdsService.clearCache(client.meta_account_id);
+      metaAdsService.clearCache(`${client.meta_account_id}_${metaPeriod}`);
     }
 
     setMetaLoading(true);
     setMetaError(null);
 
     try {
-      const data = await metaAdsService.fetchMetaCampaigns(client.meta_account_id);
+      const data = await metaAdsService.fetchMetaCampaigns(client.meta_account_id, parseInt(metaPeriod));
       setMetaData(data);
       setLastMetaFetch(new Date());
     } catch (error: any) {
@@ -171,6 +173,13 @@ export default function ContaDetalhes() {
       setMetaLoading(false);
     }
   };
+
+  // Reload Meta data when period changes
+  useEffect(() => {
+    if (client?.meta_account_id && metaData) {
+      loadMetaData(true);
+    }
+  }, [metaPeriod]);
 
   const loadClientData = async () => {
     if (!id) return;
@@ -1170,12 +1179,17 @@ export default function ContaDetalhes() {
               {client?.usa_meta_ads && client?.meta_account_id && (
                 <Card className="surface-elevated">
                   <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       <CardTitle className="flex items-center gap-2">
                         <Facebook className="h-5 w-5 text-blue-600" />
                         Dados do Meta Ads
                       </CardTitle>
-                      <div className="flex items-center gap-2">
+                      
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <MetaPeriodFilter 
+                          value={metaPeriod} 
+                          onChange={setMetaPeriod} 
+                        />
                         {lastMetaFetch && (
                           <p className="text-xs text-muted-foreground">
                             Atualizado às {lastMetaFetch.toLocaleTimeString('pt-BR')}
@@ -1217,7 +1231,9 @@ export default function ContaDetalhes() {
                       <>
                         {/* Account Metrics */}
                         <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-3">Métricas da Conta (Últimos 30 dias)</h4>
+                          <h4 className="text-sm font-semibold text-foreground mb-3">
+                            Métricas da Conta (Últimos {metaPeriod} dias)
+                          </h4>
                           <MetaMetricsGrid 
                             metrics={metaData?.account_metrics || null} 
                             loading={metaLoading} 

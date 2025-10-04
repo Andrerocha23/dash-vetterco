@@ -36,9 +36,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { meta_account_id } = await req.json();
+    const { meta_account_id, days = 30 } = await req.json();
     
-    console.log('Fetching Meta campaigns for account:', meta_account_id);
+    console.log('Fetching Meta campaigns for account:', meta_account_id, 'Days:', days);
 
     if (!meta_account_id) {
       throw new Error('meta_account_id is required');
@@ -56,10 +56,10 @@ Deno.serve(async (req) => {
 
     console.log('Formatted account ID:', formattedAccountId);
 
-    // Calculate date range (last 30 days)
+    // Calculate date range based on days parameter
     const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - days);
     
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
@@ -68,10 +68,10 @@ Deno.serve(async (req) => {
       return `${year}-${month}-${day}`;
     };
     
-    const since = formatDate(thirtyDaysAgo);
+    const since = formatDate(startDate);
     const until = formatDate(today);
     
-    console.log('Date range:', { since, until });
+    console.log('Date range:', { since, until, days });
 
     // Fetch campaigns
     const campaignsUrl = `${META_BASE_URL}/${formattedAccountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget&access_token=${accessToken}`;

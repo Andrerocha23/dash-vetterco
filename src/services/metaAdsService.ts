@@ -14,23 +14,24 @@ export const metaAdsService = {
    * Fetches Meta Ads campaigns and metrics for a given account
    * Implements local caching to reduce API calls
    */
-  async fetchMetaCampaigns(metaAccountId: string): Promise<MetaAdsResponse> {
+  async fetchMetaCampaigns(metaAccountId: string, days: number = 30): Promise<MetaAdsResponse> {
     if (!metaAccountId) {
       throw new Error('Meta Account ID é obrigatório');
     }
 
-    // Check cache first
-    const cached = this.getCachedData(metaAccountId);
+    // Check cache first (cache key includes days parameter)
+    const cacheKey = `${metaAccountId}_${days}`;
+    const cached = this.getCachedData(cacheKey);
     if (cached) {
-      console.log('Using cached Meta Ads data');
+      console.log('Using cached Meta Ads data for', days, 'days');
       return cached;
     }
 
     try {
-      console.log('Fetching fresh Meta Ads data for account:', metaAccountId);
+      console.log('Fetching fresh Meta Ads data for account:', metaAccountId, 'Days:', days);
 
       const { data, error } = await supabase.functions.invoke('fetch-meta-campaigns', {
-        body: { meta_account_id: metaAccountId }
+        body: { meta_account_id: metaAccountId, days }
       });
 
       if (error) {
@@ -43,7 +44,7 @@ export const metaAdsService = {
       }
 
       // Cache the successful response
-      this.setCachedData(metaAccountId, data);
+      this.setCachedData(cacheKey, data);
 
       return data;
     } catch (error: any) {
