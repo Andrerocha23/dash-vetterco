@@ -51,6 +51,10 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ClienteFormData } from '@/types/client';
 import { useClientManagers } from '@/hooks/useClientManagers';
+import { MetaMetricsGrid } from '@/components/meta/MetaMetricsGrid';
+import { MetaCampaignTable } from '@/components/meta/MetaCampaignTable';
+import { metaAdsService } from '@/services/metaAdsService';
+import type { MetaAdsResponse } from '@/types/meta';
 
 // Interfaces
 interface ClientData {
@@ -132,12 +136,41 @@ export default function ContaDetalhes() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [metaData, setMetaData] = useState<MetaAdsResponse | null>(null);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [lastMetaFetch, setLastMetaFetch] = useState<Date | null>(null);
 
   useEffect(() => {
     if (id) {
       loadClientData();
     }
   }, [id]);
+
+  const loadMetaData = async (forceRefresh = false) => {
+    if (!client?.meta_account_id) {
+      setMetaError('ID da conta Meta não configurado');
+      return;
+    }
+
+    if (forceRefresh) {
+      metaAdsService.clearCache(client.meta_account_id);
+    }
+
+    setMetaLoading(true);
+    setMetaError(null);
+
+    try {
+      const data = await metaAdsService.fetchMetaCampaigns(client.meta_account_id);
+      setMetaData(data);
+      setLastMetaFetch(new Date());
+    } catch (error: any) {
+      console.error('Error loading Meta data:', error);
+      setMetaError(error.message || 'Erro ao carregar dados do Meta');
+    } finally {
+      setMetaLoading(false);
+    }
+  };
 
   const loadClientData = async () => {
     if (!id) return;
@@ -1133,11 +1166,83 @@ export default function ContaDetalhes() {
                 </div>
               )}
 
+              {/* Meta Ads Section */}
+              {client?.usa_meta_ads && client?.meta_account_id && (
+                <Card className="surface-elevated">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Facebook className="h-5 w-5 text-blue-600" />
+                        Dados do Meta Ads
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        {lastMetaFetch && (
+                          <p className="text-xs text-muted-foreground">
+                            Atualizado às {lastMetaFetch.toLocaleTimeString('pt-BR')}
+                          </p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => loadMetaData(true)}
+                          disabled={metaLoading}
+                        >
+                          <RefreshCw className={`h-4 w-4 mr-2 ${metaLoading ? 'animate-spin' : ''}`} />
+                          Atualizar
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {metaError ? (
+                      <div className="text-center py-8">
+                        <AlertTriangle className="h-12 w-12 text-warning mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-foreground mb-2">Erro ao carregar dados</h3>
+                        <p className="text-text-secondary mb-4">{metaError}</p>
+                        <Button onClick={() => loadMetaData(true)} variant="outline">
+                          Tentar Novamente
+                        </Button>
+                      </div>
+                    ) : !metaData && !metaLoading ? (
+                      <div className="text-center py-8">
+                        <Facebook className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-foreground mb-2">Carregar dados do Meta Ads</h3>
+                        <p className="text-text-secondary mb-4">Clique no botão abaixo para buscar as campanhas e métricas</p>
+                        <Button onClick={() => loadMetaData()} variant="default">
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Carregar Dados
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Account Metrics */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground mb-3">Métricas da Conta (Últimos 30 dias)</h4>
+                          <MetaMetricsGrid 
+                            metrics={metaData?.account_metrics || null} 
+                            loading={metaLoading} 
+                          />
+                        </div>
+
+                        {/* Campaigns Table */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground mb-3">Campanhas Ativas</h4>
+                          <MetaCampaignTable 
+                            campaigns={metaData?.campaigns || []} 
+                            loading={metaLoading} 
+                          />
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="surface-elevated">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Activity className="h-5 w-5" />
-                    Atividade de Campanhas Recente
+                    Atividade de Campanhas Recente (Dados Locais)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
