@@ -43,7 +43,6 @@ import { MetaSyncButton } from '@/components/meta/MetaSyncButton';
 import { metaAdsService } from '@/services/metaAdsService';
 import type { MetaAdsResponse } from '@/types/meta';
 
-// Interfaces
 interface ClientData {
   id: string;
   nome_cliente: string;
@@ -164,7 +163,6 @@ export default function ContaDetalhes() {
     }
   };
 
-  // Reload Meta data when period changes
   useEffect(() => {
     if (client?.meta_account_id && metaData) {
       loadMetaData(true);
@@ -172,12 +170,8 @@ export default function ContaDetalhes() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metaPeriod]);
 
-  // Callback quando sync for concluído
   const handleSyncComplete = () => {
-    // Recarregar dados do banco
     loadClientData();
-    
-    // Se tiver Meta configurado, recarregar também
     if (client?.meta_account_id) {
       loadMetaData(true);
     }
@@ -188,7 +182,6 @@ export default function ContaDetalhes() {
 
     setLoading(true);
     try {
-      // Buscar dados do cliente
       const { data: clientData, error: clientError } = await supabase
         .from('accounts')
         .select('*')
@@ -199,7 +192,6 @@ export default function ContaDetalhes() {
       setClient(clientData);
       generateChecklist(clientData);
 
-      // Buscar campanhas do BANCO (não da API)
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaign_leads_daily')
         .select('*')
@@ -210,7 +202,6 @@ export default function ContaDetalhes() {
       if (campaignsError) console.warn('Campaigns data not found:', campaignsError);
       setCampaigns(campaignsData || []);
 
-      // Buscar estatísticas
       const { data: statsData } = await supabase
         .from('campaign_performance_stats')
         .select('*')
@@ -251,7 +242,6 @@ export default function ContaDetalhes() {
 
       setStats(finalStats);
 
-      // Se tiver Meta configurado, carregar dados da API também
       if (clientData.usa_meta_ads && clientData.meta_account_id) {
         loadMetaData();
       }
@@ -270,7 +260,6 @@ export default function ContaDetalhes() {
 
   const generateChecklist = (data: ClientData) => {
     const items: ChecklistItem[] = [
-      // Configuração Básica
       {
         id: 'basic-info',
         category: 'Configuração Básica',
@@ -301,8 +290,6 @@ export default function ContaDetalhes() {
         required: true,
         value: `${data.canal_relatorio} às ${data.horario_relatorio}`,
       },
-
-      // Meta Ads
       {
         id: 'meta-account',
         category: 'Meta Ads',
@@ -323,8 +310,6 @@ export default function ContaDetalhes() {
         required: data.usa_meta_ads,
         value: data.webhook_meta,
       },
-
-      // Google Ads
       {
         id: 'google-account',
         category: 'Google Ads',
@@ -345,8 +330,6 @@ export default function ContaDetalhes() {
         required: data.usa_google_ads,
         value: data.webhook_google,
       },
-
-      // Rastreamento
       {
         id: 'pixel-meta',
         category: 'Rastreamento',
@@ -377,8 +360,6 @@ export default function ContaDetalhes() {
         required: false,
         value: data.gtm_id,
       },
-
-      // Automação
       {
         id: 'typebot',
         category: 'Automação',
@@ -440,7 +421,6 @@ export default function ContaDetalhes() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate('/contas')}>
@@ -456,10 +436,9 @@ export default function ContaDetalhes() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Botão de Sincronização Meta - CORRIGIDO ✅ */}
             {client.usa_meta_ads && client.meta_account_id && (
               <MetaSyncButton 
-                accountId={client.id}  {/* ✅ CORRETO - usa client.id, não meta_account_id */}
+                accountId={client.id}
                 onSyncComplete={handleSyncComplete}
                 showLastSync={true}
               />
@@ -472,7 +451,6 @@ export default function ContaDetalhes() {
           </div>
         </div>
 
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardContent className="pt-6">
@@ -523,7 +501,6 @@ export default function ContaDetalhes() {
           </Card>
         </div>
 
-        {/* Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
@@ -532,10 +509,8 @@ export default function ContaDetalhes() {
             <TabsTrigger value="checklist">Checklist</TabsTrigger>
           </TabsList>
 
-          {/* Tab: Visão Geral */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Informações Básicas */}
               <Card>
                 <CardHeader>
                   <CardTitle>Informações da Conta</CardTitle>
@@ -575,7 +550,6 @@ export default function ContaDetalhes() {
                 </CardContent>
               </Card>
 
-              {/* Gestor */}
               <Card>
                 <CardHeader>
                   <CardTitle>Gestor Responsável</CardTitle>
@@ -602,7 +576,6 @@ export default function ContaDetalhes() {
             </div>
           </TabsContent>
 
-          {/* Tab: Campanhas */}
           <TabsContent value="campaigns">
             <Card>
               <CardHeader>
@@ -680,7 +653,6 @@ export default function ContaDetalhes() {
             </Card>
           </TabsContent>
 
-          {/* Tab: Meta Ads */}
           {client.usa_meta_ads && (
             <TabsContent value="meta" className="space-y-6">
               <div className="flex items-center justify-between">
@@ -735,7 +707,6 @@ export default function ContaDetalhes() {
             </TabsContent>
           )}
 
-          {/* Tab: Checklist */}
           <TabsContent value="checklist">
             <Card>
               <CardHeader>
@@ -806,7 +777,6 @@ export default function ContaDetalhes() {
           </TabsContent>
         </Tabs>
 
-        {/* Modal de Edição */}
         {showEditModal && (
           <ClienteFormModal
             isOpen={showEditModal}
