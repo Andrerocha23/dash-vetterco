@@ -169,21 +169,28 @@ Deno.serve(async (req) => {
           let costPerConversion = null;
           
           if (insights?.actions) {
-            const conversionAction = insights.actions.find((action: any) => 
-              action.action_type === 'offsite_conversion.fb_pixel_lead' ||
+            // Sum all lead-related actions
+            const leadActions = insights.actions.filter((action: any) => 
               action.action_type === 'lead' ||
+              action.action_type === 'offsite_conversion.fb_pixel_lead' ||
+              action.action_type === 'onsite_conversion.lead' ||
+              action.action_type === 'onsite_conversion.messaging_conversation_started_7d' ||
               action.action_type === 'onsite_conversion.post_save'
             );
-            conversions = conversionAction ? parseInt(conversionAction.value) : 0;
+            conversions = leadActions.reduce((sum, action) => sum + parseInt(action.value || '0'), 0);
           }
 
           if (insights?.cost_per_action_type && conversions > 0) {
-            const costAction = insights.cost_per_action_type.find((action: any) => 
-              action.action_type === 'offsite_conversion.fb_pixel_lead' ||
+            // Find the most relevant cost per action
+            const costActions = insights.cost_per_action_type.filter((action: any) => 
               action.action_type === 'lead' ||
-              action.action_type === 'onsite_conversion.post_save'
+              action.action_type === 'offsite_conversion.fb_pixel_lead' ||
+              action.action_type === 'onsite_conversion.lead'
             );
-            costPerConversion = costAction ? parseFloat(costAction.value) : null;
+            if (costActions.length > 0) {
+              // Use the first lead cost action found
+              costPerConversion = parseFloat(costActions[0].value);
+            }
           }
 
           return {
@@ -220,12 +227,15 @@ Deno.serve(async (req) => {
     if (accountInsights) {
       let conversions = 0;
       if (accountInsights.actions) {
-        const conversionAction = accountInsights.actions.find((action: any) => 
-          action.action_type === 'offsite_conversion.fb_pixel_lead' ||
+        // Sum all lead-related actions for account level
+        const leadActions = accountInsights.actions.filter((action: any) => 
           action.action_type === 'lead' ||
+          action.action_type === 'offsite_conversion.fb_pixel_lead' ||
+          action.action_type === 'onsite_conversion.lead' ||
+          action.action_type === 'onsite_conversion.messaging_conversation_started_7d' ||
           action.action_type === 'onsite_conversion.post_save'
         );
-        conversions = conversionAction ? parseInt(conversionAction.value) : 0;
+        conversions = leadActions.reduce((sum, action) => sum + parseInt(action.value || '0'), 0);
       }
 
       accountMetrics = {

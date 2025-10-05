@@ -90,14 +90,14 @@ export function MetaCampaignTable({ campaigns, loading }: MetaCampaignTableProps
           <TableRow className="bg-muted/50">
             <TableHead>Campanha</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Objetivo</TableHead>
             <TableHead className="text-right">Orçamento</TableHead>
             <TableHead className="text-right">Gasto</TableHead>
             <TableHead className="text-right">Impressões</TableHead>
             <TableHead className="text-right">Cliques</TableHead>
             <TableHead className="text-right">CTR</TableHead>
             <TableHead className="text-right">CPC</TableHead>
-            <TableHead className="text-right">Conversões</TableHead>
+            <TableHead className="text-right">Hookrate</TableHead>
+            <TableHead className="text-right">Leads</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -109,9 +109,6 @@ export function MetaCampaignTable({ campaigns, loading }: MetaCampaignTableProps
               </TableCell>
               <TableCell>
                 <MetaStatusBadge status={campaign.status} />
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {campaign.objective}
               </TableCell>
               <TableCell className="text-right text-sm">
                 {campaign.daily_budget 
@@ -138,6 +135,11 @@ export function MetaCampaignTable({ campaigns, loading }: MetaCampaignTableProps
               </TableCell>
               <TableCell className="text-right">
                 {campaign.insights ? formatCurrency(campaign.insights.cpc) : '-'}
+              </TableCell>
+              <TableCell className="text-right">
+                {campaign.insights && campaign.insights.impressions > 0
+                  ? `${((campaign.insights.clicks / campaign.insights.impressions) * 100).toFixed(2)}%`
+                  : '-'}
               </TableCell>
               <TableCell className="text-right font-semibold">
                 {campaign.insights ? formatNumber(campaign.insights.conversions) : '-'}
