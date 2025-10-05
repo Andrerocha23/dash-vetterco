@@ -141,7 +141,7 @@ export default function ContaDetalhes() {
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [lastMetaFetch, setLastMetaFetch] = useState<Date | null>(null);
-  const [metaPeriod, setMetaPeriod] = useState<MetaPeriod>('30');
+  const [metaPeriod, setMetaPeriod] = useState<MetaPeriod>('last_7d');
 
   useEffect(() => {
     if (id) {
@@ -163,7 +163,7 @@ export default function ContaDetalhes() {
     setMetaError(null);
 
     try {
-      const data = await metaAdsService.fetchMetaCampaigns(client.meta_account_id, parseInt(metaPeriod));
+      const data = await metaAdsService.fetchMetaCampaigns(client.meta_account_id, metaPeriod);
       setMetaData(data);
       setLastMetaFetch(new Date());
     } catch (error: any) {
@@ -1232,7 +1232,7 @@ export default function ContaDetalhes() {
                         {/* Account Metrics */}
                         <div>
                           <h4 className="text-sm font-semibold text-foreground mb-3">
-                            Métricas da Conta (Últimos {metaPeriod} dias)
+                            Métricas da Conta
                           </h4>
                           <MetaMetricsGrid 
                             metrics={metaData?.account_metrics || null} 

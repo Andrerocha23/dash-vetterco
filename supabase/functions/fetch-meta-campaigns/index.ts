@@ -36,9 +36,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { meta_account_id, days = 30 } = await req.json();
+    const { meta_account_id, period = 'last_7d' } = await req.json();
     
-    console.log('Fetching Meta campaigns for account:', meta_account_id, 'Days:', days);
+    console.log('Fetching Meta campaigns for account:', meta_account_id, 'Period:', period);
 
     if (!meta_account_id) {
       throw new Error('meta_account_id is required');
@@ -56,22 +56,60 @@ Deno.serve(async (req) => {
 
     console.log('Formatted account ID:', formattedAccountId);
 
-    // Calculate date range based on days parameter
-    const today = new Date();
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - days);
-    
+    // Calculate date range based on period parameter
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
+
+    const now = new Date();
+    let since: string;
+    let until: string;
+
+    switch (period) {
+      case 'today':
+        since = formatDate(now);
+        until = formatDate(now);
+        break;
+      case 'yesterday':
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        since = formatDate(yesterday);
+        until = formatDate(yesterday);
+        break;
+      case 'last_7d':
+        const last7 = new Date(now);
+        last7.setDate(last7.getDate() - 7);
+        since = formatDate(last7);
+        until = formatDate(now);
+        break;
+      case 'last_15d':
+        const last15 = new Date(now);
+        last15.setDate(last15.getDate() - 15);
+        since = formatDate(last15);
+        until = formatDate(now);
+        break;
+      case 'this_month':
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        since = formatDate(thisMonthStart);
+        until = formatDate(now);
+        break;
+      case 'last_month':
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+        since = formatDate(lastMonthStart);
+        until = formatDate(lastMonthEnd);
+        break;
+      default:
+        const defaultStart = new Date(now);
+        defaultStart.setDate(defaultStart.getDate() - 7);
+        since = formatDate(defaultStart);
+        until = formatDate(now);
+    }
     
-    const since = formatDate(startDate);
-    const until = formatDate(today);
-    
-    console.log('Date range:', { since, until, days });
+    console.log('Date range:', { since, until, period });
 
     // Fetch campaigns
     const campaignsUrl = `${META_BASE_URL}/${formattedAccountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget&access_token=${accessToken}`;

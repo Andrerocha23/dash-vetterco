@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "lucide-react";
 
-export type MetaPeriod = '7' | '15' | '30' | '60' | '90';
+export type MetaPeriod = 'today' | 'yesterday' | 'last_7d' | 'last_15d' | 'this_month' | 'last_month';
 
 interface MetaPeriodFilterProps {
   value: MetaPeriod;
@@ -17,11 +17,12 @@ export function MetaPeriodFilter({ value, onChange }: MetaPeriodFilterProps) {
           <SelectValue placeholder="Selecione o período" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="7">Últimos 7 dias</SelectItem>
-          <SelectItem value="15">Últimos 15 dias</SelectItem>
-          <SelectItem value="30">Últimos 30 dias</SelectItem>
-          <SelectItem value="60">Últimos 60 dias</SelectItem>
-          <SelectItem value="90">Últimos 90 dias</SelectItem>
+          <SelectItem value="today">Hoje</SelectItem>
+          <SelectItem value="yesterday">Ontem</SelectItem>
+          <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
+          <SelectItem value="last_15d">Últimos 15 dias</SelectItem>
+          <SelectItem value="this_month">Este mês</SelectItem>
+          <SelectItem value="last_month">Mês passado</SelectItem>
         </SelectContent>
       </Select>
     </div>
