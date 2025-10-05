@@ -52,15 +52,7 @@ export default function ClientDetailPage() {
   async function loadAccountBasics(accountId: string) {
     const { data, error } = await supabase
       .from("accounts")
-      .select(`
-        *,
-        managers:gestor_id (
-          name,
-          email,
-          phone,
-          department
-        )
-      `)
+      .select("*")
       .eq("id", accountId)
       .single();
 
@@ -70,9 +62,22 @@ export default function ClientDetailPage() {
       return;
     }
 
+    // Buscar gestor separadamente se existir
+    if (data?.gestor_id) {
+      const { data: managerData } = await supabase
+        .from("managers")
+        .select("name, email, phone, department")
+        .eq("id", data.gestor_id)
+        .single();
+      
+      if (managerData) {
+        (data as any).managers = managerData;
+      }
+    }
+
     setAccountData(data);
-    setMetaAccountId((data as any)?.meta_account_id || null);
-    setClientDriveUrl((data as any)?.link_drive || null);
+    setMetaAccountId(data?.meta_account_id || null);
+    setClientDriveUrl(data?.link_drive || null);
   }
 
   // Busca Meta
