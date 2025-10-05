@@ -1,11 +1,4 @@
-// src/pages/ClientDetail.tsx — Conta (Detalhes) — versão final ajustada
-// - Campanhas como aba principal
-// - Filtros de período: Hoje, Ontem, 7/15d, Este mês, Mês passado
-// - KPIs a partir de insights (sem duplicidade)
-// - Realce em vermelho para Ontem com 0 leads
-// - Drive via accounts.link_drive
-// - Service: metaAdsService.fetchMetaCampaigns(id, period)
-
+// src/pages/ClientDetail.tsx — Conta (Detalhes) — versão corrigida
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -24,100 +17,61 @@ import { metaAdsService } from "@/services/metaAdsService";
 import type { MetaAdsResponse, MetaCampaign, MetaAccountMetrics } from "@/types/meta";
 import { ArrowLeft, ExternalLink, RefreshCw, FolderOpen } from "lucide-react";
 
-// ===== Utils de período =====
-function getDateRange(period: MetaPeriod): { since: string; until: string } {
-  const now = new Date();
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
-
-  let since: Date;
-  let until: Date;
-
-  switch (period) {
-    case "today":
-      since = startOfDay(now); until = endOfDay(now); break;
-    case "yesterday": {
-      const y = new Date(now); y.setDate(y.getDate() - 1);
-      since = startOfDay(y); until = endOfDay(y); break;
-    }
-    case "last_7d": {
-      until = endOfDay(now);
-      since = new Date(now); since.setDate(since.getDate() - 6);
-      since = startOfDay(since);
-      break;
-    }
-    case "last_15d": {
-      until = endOfDay(now);
-      since = new Date(now); since.setDate(since.getDate() - 14);
-      since = startOfDay(since);
-      break;
-    }
-    case "this_month": {
-      since = new Date(now.getFullYear(), now.getMonth(), 1);
-      until = endOfDay(now);
-      break;
-    }
-    case "last_month": {
-      const firstThis = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastPrev = new Date(firstThis.getTime() - 1);
-      since = new Date(lastPrev.getFullYear(), lastPrev.getMonth(), 1);
-      until = endOfDay(lastPrev);
-      break;
-    }
-    default:
-      since = startOfDay(now); until = endOfDay(now);
-  }
-  return { since: since.toISOString(), until: until.toISOString() };
-}
-
 // ===== Helpers =====
 const safe = (n: number | null | undefined, fallback = 0) =>
   typeof n === "number" && !Number.isNaN(n) ? n : fallback;
 
-// Leads a partir do insights.conversions
-function getLeads(c: MetaCampaign): number {
+const currency = (v: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
+
+const getLeads = (c: MetaCampaign) => {
   const conv = (c as any)?.insights?.conversions;
   return typeof conv === "number" && !Number.isNaN(conv) ? conv : 0;
-}
+};
 
 export default function ClientDetailPage() {
-  const { id } = useParams(); // account_id
+  const { id } = useParams(); // account_id (UUID do seu sistema)
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [period, setPeriod] = useState<MetaPeriod>("today");
   const [loading, setLoading] = useState(true);
+
   const [resp, setResp] = useState<MetaAdsResponse | null>(null);
   const [metrics, setMetrics] = useState<MetaAccountMetrics | null>(null);
   const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
+
   const [clientDriveUrl, setClientDriveUrl] = useState<string | null>(null);
+  const [metaAccountId, setMetaAccountId] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<MetaCampaign | null>(null);
 
-  // ===== Drive (accounts.link_drive) =====
-  async function loadClientDriveLink(accountId: string) {
-    const { data: acc, error: accErr } = await supabase
+  // Carrega meta_account_id e link_drive da accounts
+  async function loadAccountBasics(accountId: string) {
+    const { data, error } = await supabase
       .from("accounts")
-      .select("id, link_drive")
+      .select("meta_account_id, link_drive")
       .eq("id", accountId)
       .single();
 
-    if (accErr) {
-      console.warn("accounts.link_drive not found", accErr);
+    if (error) {
+      console.error("Erro buscando accounts:", error);
+      toast({ title: "Erro", description: "Conta não encontrada.", variant: "destructive" });
+      return;
     }
-    if ((acc as any)?.link_drive) {
-      setClientDriveUrl((acc as any).link_drive);
-    }
+
+    setMetaAccountId((data as any)?.meta_account_id || null);
+    setClientDriveUrl((data as any)?.link_drive || null);
   }
 
-  // ===== Meta fetch =====
+  // Busca Meta
   async function fetchMeta() {
-    if (!id) return;
+    if (!metaAccountId) return;
     setLoading(true);
     try {
-      // assinatura real do service usa apenas (id, period)
-      const data = await metaAdsService.fetchMetaCampaigns(id, period);
+      // O service espera metaAccountId e period (não precisa since/until)
+      const data = await metaAdsService.fetchMetaCampaigns(metaAccountId, period);
       if (!data?.success) throw new Error(data?.error || "Falha ao buscar Meta Ads");
       setResp(data);
       setMetrics(data.account_metrics || null);
@@ -135,14 +89,16 @@ export default function ClientDetailPage() {
   }
 
   useEffect(() => {
-    if (id) {
-      loadClientDriveLink(id);
-      fetchMeta();
-    }
+    if (id) loadAccountBasics(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, period]);
+  }, [id]);
 
-  // Ordenação: ACTIVE > PAUSED > demais; dentro do grupo por maior gasto
+  useEffect(() => {
+    if (metaAccountId) fetchMeta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metaAccountId, period]);
+
+  // Ordena: ACTIVE > PAUSED > demais; dentro do grupo por maior gasto
   const orderedCampaigns = useMemo(() => {
     const orderMap: Record<string, number> = { ACTIVE: 0, PAUSED: 1 };
     const copy = [...campaigns];
@@ -176,9 +132,6 @@ export default function ClientDetailPage() {
     };
   }, [orderedCampaigns]);
 
-  const currency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
-
   const onOpenCampaign = (c: MetaCampaign) => {
     setSelectedCampaign(c);
     setDialogOpen(true);
@@ -201,7 +154,7 @@ export default function ClientDetailPage() {
                 <FolderOpen className="h-4 w-4 mr-2" /> Abrir Drive
               </Button>
             )}
-            <Button variant="secondary" onClick={fetchMeta}>
+            <Button variant="secondary" onClick={fetchMeta} disabled={!metaAccountId}>
               <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
             </Button>
           </div>
@@ -262,11 +215,8 @@ export default function ClientDetailPage() {
                           const ctr = impr > 0 ? (clicks / impr) * 100 : 0;
                           const leads = getLeads(c);
                           const cpl = leads > 0 ? spend / leads : 0;
-
-                          // Realce quando período = Ontem e não teve lead
                           const highlightZeroYesterday = period === "yesterday" && leads === 0;
 
-                          // Orçamento diário
                           const dailyBudget =
                             typeof c.daily_budget === "number" && c.daily_budget > 0 ? c.daily_budget : 0;
 
@@ -275,14 +225,8 @@ export default function ClientDetailPage() {
                               key={c.id}
                               className={highlightZeroYesterday ? "bg-red-500/5 hover:bg-red-500/10" : ""}
                             >
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                  <span>{c.name}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <MetaStatusBadge status={c.status as any} />
-                              </TableCell>
+                              <TableCell className="font-medium">{c.name}</TableCell>
+                              <TableCell><MetaStatusBadge status={c.status as any} /></TableCell>
                               <TableCell className="text-right">
                                 {dailyBudget ? currency(dailyBudget) : <span className="text-muted-foreground">—</span>}
                               </TableCell>
@@ -296,7 +240,7 @@ export default function ClientDetailPage() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="icon" onClick={() => onOpenCampaign(c)}>
+                                  <Button variant="ghost" size="icon" onClick={() => { setSelectedCampaign(c); setDialogOpen(true); }}>
                                     <ExternalLink className="h-4 w-4" />
                                   </Button>
                                 </div>
