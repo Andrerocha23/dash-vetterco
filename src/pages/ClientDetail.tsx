@@ -5,28 +5,15 @@ import {
   ArrowLeft,
   Edit,
   RefreshCw,
-  ExternalLink,
   DollarSign,
   Target,
   TrendingUp,
-  Users,
-  Settings,
-  Activity,
   CheckCircle,
   AlertTriangle,
   Phone,
   Mail,
   FolderOpen,
-  Clock,
-  Zap,
-  Shield,
-  Link as LinkIcon,
-  MessageSquare,
-  FileText,
-  TrendingDown,
   Calendar,
-  Copy,
-  Chrome,
   Facebook,
 } from 'lucide-react';
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -45,11 +32,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ClienteFormModal } from '@/components/forms/ClienteFormModal';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ClienteFormData } from '@/types/client';
 import { useClientManagers } from '@/hooks/useClientManagers';
 import { MetaMetricsGrid } from '@/components/meta/MetaMetricsGrid';
 import { MetaCampaignTable } from '@/components/meta/MetaCampaignTable';
@@ -142,8 +127,6 @@ export default function ContaDetalhes() {
   const [stats, setStats] = useState<ClientStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [metaData, setMetaData] = useState<MetaAdsResponse | null>(null);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -154,6 +137,7 @@ export default function ContaDetalhes() {
     if (id) {
       loadClientData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadMetaData = async (forceRefresh = false) => {
@@ -186,13 +170,14 @@ export default function ContaDetalhes() {
     if (client?.meta_account_id && metaData) {
       loadMetaData(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metaPeriod]);
 
   // Callback quando sync for concluído
   const handleSyncComplete = () => {
     // Recarregar dados do banco
     loadClientData();
-    
+
     // Se tiver Meta configurado, recarregar também
     if (client?.meta_account_id) {
       loadMetaData(true);
@@ -269,9 +254,9 @@ export default function ContaDetalhes() {
 
       // Se tiver Meta configurado, carregar dados da API também
       if (clientData.usa_meta_ads && clientData.meta_account_id) {
-        loadMetaData();
+        setMetaData(null); // evita flash de dado antigo
+        await loadMetaData();
       }
-
     } catch (error) {
       console.error('Erro ao carregar cliente:', error);
       toast({
@@ -474,13 +459,14 @@ export default function ContaDetalhes() {
           <div className="flex items-center gap-2">
             {/* Botão de Sincronização Meta */}
             {client.usa_meta_ads && client.meta_account_id && (
-              <MetaSyncButton 
-                accountId={client.id}
+              <MetaSyncButton
+                accountId={client.meta_account_id}
                 onSyncComplete={handleSyncComplete}
                 showLastSync={true}
+                lastSync={undefined /* opcional, se o componente aceitar */}
               />
             )}
-            
+
             <Button variant="outline" onClick={() => setShowEditModal(true)}>
               <Edit className="h-4 w-4 mr-2" />
               Editar
@@ -570,9 +556,9 @@ export default function ContaDetalhes() {
                   {client.link_drive && (
                     <div className="flex items-center gap-3">
                       <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                      <a 
-                        href={client.link_drive} 
-                        target="_blank" 
+                      <a
+                        href={client.link_drive}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-500 hover:underline"
                       >
@@ -583,7 +569,7 @@ export default function ContaDetalhes() {
                   <div className="pt-4 border-t">
                     <p className="text-sm font-medium mb-2">Canais Ativos</p>
                     <div className="flex flex-wrap gap-2">
-                      {client.canais.map(canal => (
+                      {client.canais.map((canal) => (
                         <Badge key={canal} variant="outline">{canal}</Badge>
                       ))}
                     </div>
@@ -729,9 +715,10 @@ export default function ContaDetalhes() {
                 </Card>
               ) : metaData ? (
                 <>
-                  <MetaMetricsGrid 
+                  <MetaMetricsGrid
                     account={metaData.account}
                     campaigns={metaData.campaigns}
+                    lastUpdatedAt={lastMetaFetch || undefined}
                   />
                   <MetaCampaignTable campaigns={metaData.campaigns} />
                 </>
@@ -783,3 +770,58 @@ export default function ContaDetalhes() {
                             {item.completed ? (
                               <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                             ) : (
+                              <AlertTriangle
+                                className={`h-5 w-5 mt-0.5 ${
+                                  item.priority === 'high'
+                                    ? 'text-red-500'
+                                    : item.priority === 'medium'
+                                    ? 'text-yellow-500'
+                                    : 'text-gray-500'
+                                }`}
+                              />
+                            )}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{item.title}</p>
+                                {item.required && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Obrigatório
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {item.description}
+                              </p>
+                              {item.value && (
+                                <p className="text-xs text-muted-foreground mt-2 font-mono">
+                                  {item.value}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Modal de Edição */}
+        {showEditModal && (
+          <ClienteFormModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            onSuccess={() => {
+              setShowEditModal(false);
+              loadClientData();
+            }}
+            initialData={client as any}
+          />
+        )}
+      </div>
+    </AppLayout>
+  );
+}
