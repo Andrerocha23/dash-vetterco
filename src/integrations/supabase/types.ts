@@ -791,121 +791,187 @@ export type Database = {
       }
       public_client_registrations: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          archived: boolean | null
+          bairros_regioes: string[] | null
           budget_mensal: number | null
           campanhas_ativas: boolean | null
-          campanhas_detalhes: string | null
           cidade_regiao: string
+          cidades: string[] | null
           client_id: string | null
-          cnpj_creci: string | null
+          cnpj_cpf: string | null
+          contato_preferido: string | null
           created_at: string
+          crm_url: string | null
           crm_utilizado: string | null
-          diferenciais: string | null
+          distribuicao_sugerida: Json | null
           email: string
-          forma_receber_relatorios: string | null
+          estado: string | null
+          estrutura_setores: Json | null
+          gestor_comercial_email: string | null
+          gestor_comercial_nome: string | null
+          gestor_comercial_whatsapp: string | null
+          gestor_marketing_email: string | null
+          gestor_marketing_nome: string | null
+          gestor_marketing_whatsapp: string | null
+          google_ads_cid: string | null
+          horarios_contato: string | null
           id: string
           instagram: string | null
-          meta_mensal_vendas: number | null
-          nome_completo: string
-          nome_gestor_marketing: string | null
-          nome_imobiliaria: string
+          instagram_handle: string | null
+          lgpd_consent: boolean | null
+          meta_bm_id: string | null
+          nichos: string[] | null
+          nome_fantasia: string | null
           num_corretores: number | null
           num_funcionarios: number | null
-          num_imoveis_ativos: number | null
           num_sdr: number | null
-          objetivos_marketing: string | null
           observacoes_adicionais: string | null
           pixel_analytics_configurado: boolean | null
           processed_at: string | null
-          publico_alvo: string
+          qtd_corretores: number | null
+          qtd_funcionarios: number | null
+          qtd_sdr_total: number | null
+          razao_social: string | null
           redes_sociais_adicionais: string[] | null
+          rejection_reason: string | null
+          responsavel_cargo: string | null
           responsavel_email: string | null
           responsavel_nome: string | null
+          segmentos: string[] | null
           site_institucional: string | null
+          site_url: string | null
           status: string | null
           telefone: string
           telefone_leads: string | null
-          ticket_medio: number | null
-          tipo_imoveis: string
+          tem_corretor_funcionario: boolean | null
+          tem_gestor_comercial: boolean | null
+          tem_gestor_marketing: boolean | null
+          tem_sdr: boolean | null
           updated_at: string
-          valor_mensal_anuncios: number | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived?: boolean | null
+          bairros_regioes?: string[] | null
           budget_mensal?: number | null
           campanhas_ativas?: boolean | null
-          campanhas_detalhes?: string | null
           cidade_regiao: string
+          cidades?: string[] | null
           client_id?: string | null
-          cnpj_creci?: string | null
+          cnpj_cpf?: string | null
+          contato_preferido?: string | null
           created_at?: string
+          crm_url?: string | null
           crm_utilizado?: string | null
-          diferenciais?: string | null
+          distribuicao_sugerida?: Json | null
           email: string
-          forma_receber_relatorios?: string | null
+          estado?: string | null
+          estrutura_setores?: Json | null
+          gestor_comercial_email?: string | null
+          gestor_comercial_nome?: string | null
+          gestor_comercial_whatsapp?: string | null
+          gestor_marketing_email?: string | null
+          gestor_marketing_nome?: string | null
+          gestor_marketing_whatsapp?: string | null
+          google_ads_cid?: string | null
+          horarios_contato?: string | null
           id?: string
           instagram?: string | null
-          meta_mensal_vendas?: number | null
-          nome_completo: string
-          nome_gestor_marketing?: string | null
-          nome_imobiliaria: string
+          instagram_handle?: string | null
+          lgpd_consent?: boolean | null
+          meta_bm_id?: string | null
+          nichos?: string[] | null
+          nome_fantasia?: string | null
           num_corretores?: number | null
           num_funcionarios?: number | null
-          num_imoveis_ativos?: number | null
           num_sdr?: number | null
-          objetivos_marketing?: string | null
           observacoes_adicionais?: string | null
           pixel_analytics_configurado?: boolean | null
           processed_at?: string | null
-          publico_alvo: string
+          qtd_corretores?: number | null
+          qtd_funcionarios?: number | null
+          qtd_sdr_total?: number | null
+          razao_social?: string | null
           redes_sociais_adicionais?: string[] | null
+          rejection_reason?: string | null
+          responsavel_cargo?: string | null
           responsavel_email?: string | null
           responsavel_nome?: string | null
+          segmentos?: string[] | null
           site_institucional?: string | null
+          site_url?: string | null
           status?: string | null
           telefone: string
           telefone_leads?: string | null
-          ticket_medio?: number | null
-          tipo_imoveis: string
+          tem_corretor_funcionario?: boolean | null
+          tem_gestor_comercial?: boolean | null
+          tem_gestor_marketing?: boolean | null
+          tem_sdr?: boolean | null
           updated_at?: string
-          valor_mensal_anuncios?: number | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived?: boolean | null
+          bairros_regioes?: string[] | null
           budget_mensal?: number | null
           campanhas_ativas?: boolean | null
-          campanhas_detalhes?: string | null
           cidade_regiao?: string
+          cidades?: string[] | null
           client_id?: string | null
-          cnpj_creci?: string | null
+          cnpj_cpf?: string | null
+          contato_preferido?: string | null
           created_at?: string
+          crm_url?: string | null
           crm_utilizado?: string | null
-          diferenciais?: string | null
+          distribuicao_sugerida?: Json | null
           email?: string
-          forma_receber_relatorios?: string | null
+          estado?: string | null
+          estrutura_setores?: Json | null
+          gestor_comercial_email?: string | null
+          gestor_comercial_nome?: string | null
+          gestor_comercial_whatsapp?: string | null
+          gestor_marketing_email?: string | null
+          gestor_marketing_nome?: string | null
+          gestor_marketing_whatsapp?: string | null
+          google_ads_cid?: string | null
+          horarios_contato?: string | null
           id?: string
           instagram?: string | null
-          meta_mensal_vendas?: number | null
-          nome_completo?: string
-          nome_gestor_marketing?: string | null
-          nome_imobiliaria?: string
+          instagram_handle?: string | null
+          lgpd_consent?: boolean | null
+          meta_bm_id?: string | null
+          nichos?: string[] | null
+          nome_fantasia?: string | null
           num_corretores?: number | null
           num_funcionarios?: number | null
-          num_imoveis_ativos?: number | null
           num_sdr?: number | null
-          objetivos_marketing?: string | null
           observacoes_adicionais?: string | null
           pixel_analytics_configurado?: boolean | null
           processed_at?: string | null
-          publico_alvo?: string
+          qtd_corretores?: number | null
+          qtd_funcionarios?: number | null
+          qtd_sdr_total?: number | null
+          razao_social?: string | null
           redes_sociais_adicionais?: string[] | null
+          rejection_reason?: string | null
+          responsavel_cargo?: string | null
           responsavel_email?: string | null
           responsavel_nome?: string | null
+          segmentos?: string[] | null
           site_institucional?: string | null
+          site_url?: string | null
           status?: string | null
           telefone?: string
           telefone_leads?: string | null
-          ticket_medio?: number | null
-          tipo_imoveis?: string
+          tem_corretor_funcionario?: boolean | null
+          tem_gestor_comercial?: boolean | null
+          tem_gestor_marketing?: boolean | null
+          tem_sdr?: boolean | null
           updated_at?: string
-          valor_mensal_anuncios?: number | null
         }
         Relationships: [
           {

@@ -1,735 +1,229 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
-import { 
-  Building2, 
-  User, 
-  Mail, 
-  Phone, 
-  Instagram, 
-  Globe,
-  MapPin,
-  Target,
-  DollarSign,
-  BarChart3,
-  Users,
-  MessageSquare,
-  CheckCircle
-} from "lucide-react";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 
-const registrationSchema = z.object({
-  // Dados principais
-  nome_completo: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  telefone: z.string().min(10, "Telefone é obrigatório"),
-  email: z.string().email("Email inválido"),
-  instagram: z.string().optional(),
-  nome_imobiliaria: z.string().min(2, "Nome da imobiliária é obrigatório"),
-  cnpj_creci: z.string().optional(),
-  site_institucional: z.string().url("URL inválida").optional().or(z.literal("")),
-  
-  // Atuação e mercado
-  cidade_regiao: z.string().min(2, "Cidade/região é obrigatória"),
-  tipo_imoveis: z.string().min(2, "Tipo de imóveis é obrigatório"),
-  publico_alvo: z.string().min(2, "Público-alvo é obrigatório"),
-  num_imoveis_ativos: z.number().min(0, "Número deve ser positivo").optional(),
-  diferenciais: z.string().optional(),
-  
-  // Investimento e objetivos
-  valor_mensal_anuncios: z.number().min(0, "Valor deve ser positivo").optional(),
-  objetivos_marketing: z.string().optional(),
-  ticket_medio: z.number().min(0, "Valor deve ser positivo").optional(),
-  meta_mensal_vendas: z.number().min(0, "Meta deve ser positiva").optional(),
-  
-  // Presença digital
-  redes_sociais_adicionais: z.array(z.string()).optional(),
-  campanhas_ativas: z.boolean(),
-  campanhas_detalhes: z.string().optional(),
-  pixel_analytics_configurado: z.boolean(),
-  crm_utilizado: z.string().optional(),
-  
-  // Gestão e relacionamento
-  nome_gestor_marketing: z.string().optional(),
-  forma_receber_relatorios: z.string().optional(),
-  observacoes_adicionais: z.string().optional(),
+// Import step components
+import { StepIdentificacao } from "@/components/onboarding/StepIdentificacao";
+import { StepContato } from "@/components/onboarding/StepContato";
+import { StepGestores } from "@/components/onboarding/StepGestores";
+import { StepNichoRegiao } from "@/components/onboarding/StepNichoRegiao";
+import { StepEquipe } from "@/components/onboarding/StepEquipe";
+import { StepOrcamento } from "@/components/onboarding/StepOrcamento";
+import { StepRevisao } from "@/components/onboarding/StepRevisao";
+
+const formSchema = z.object({
+  razao_social: z.string().min(1, "Razão social é obrigatória"),
+  nome_fantasia: z.string().optional(),
+  cnpj_cpf: z.string().optional(),
+  site_url: z.string().url("URL inválida").optional().or(z.literal("")),
+  instagram_handle: z.string().optional(),
+  responsavel_nome: z.string().min(1, "Nome do responsável é obrigatório"),
+  responsavel_email: z.string().email("Email inválido"),
+  responsavel_whatsapp: z.string().min(13, "WhatsApp deve ter DDD + número").max(15),
+  responsavel_cargo: z.string().optional(),
+  tem_gestor_marketing: z.boolean().default(false),
+  gestor_marketing_nome: z.string().optional(),
+  gestor_marketing_email: z.string().email("Email inválido").optional().or(z.literal("")),
+  gestor_marketing_whatsapp: z.string().optional(),
+  tem_gestor_comercial: z.boolean().default(false),
+  gestor_comercial_nome: z.string().optional(),
+  gestor_comercial_email: z.string().email("Email inválido").optional().or(z.literal("")),
+  gestor_comercial_whatsapp: z.string().optional(),
+  nichos: z.array(z.string()).min(1, "Selecione pelo menos um nicho"),
+  segmentos: z.array(z.string()).min(1, "Selecione pelo menos um segmento"),
+  cidades: z.array(z.string()).min(1, "Adicione pelo menos uma cidade"),
+  bairros_regioes: z.array(z.string()).default([]),
+  estado: z.string().optional(),
+  tem_corretor_funcionario: z.boolean().default(false),
+  qtd_corretores: z.number().int().min(0).default(0),
+  qtd_funcionarios: z.number().int().min(0).default(0),
+  estrutura_setores: z.any().optional(),
+  tem_sdr: z.boolean().default(false),
+  qtd_sdr_total: z.number().int().min(0).default(0),
+  budget_mensal: z.number().min(500, "Orçamento mínimo de R$ 500"),
+  distribuicao_sugerida: z.any().optional(),
+  crm_url: z.string().url("URL inválida").optional().or(z.literal("")),
+  meta_bm_id: z.string().optional(),
+  google_ads_cid: z.string().optional(),
+  contato_preferido: z.string().optional(),
+  horarios_contato: z.string().optional(),
+  lgpd_consent: z.boolean().refine((val) => val === true, {
+    message: "Você deve aceitar os termos",
+  }),
 });
 
-const socialNetworks = [
-  "Facebook",
-  "Instagram",
-  "LinkedIn",
-  "TikTok",
-  "YouTube",
-  "WhatsApp Business",
-];
+type FormValues = z.infer<typeof formSchema>;
 
-const propertyTypes = [
-  "Residencial",
-  "Comercial",
-  "Industrial",
-  "Rural",
-  "Lançamentos",
-  "Usado",
-  "Luxo",
-  "Popular",
-];
-
-const marketingObjectives = [
-  "Aumentar leads qualificados",
-  "Melhorar conversão de vendas",
-  "Fortalecer marca",
-  "Expandir área de atuação",
-  "Aumentar engajamento",
-  "Educar o mercado",
+const steps = [
+  { title: "Identificação", component: StepIdentificacao },
+  { title: "Contato", component: StepContato },
+  { title: "Gestores", component: StepGestores },
+  { title: "Nicho & Região", component: StepNichoRegiao },
+  { title: "Equipe", component: StepEquipe },
+  { title: "Orçamento", component: StepOrcamento },
+  { title: "Revisão", component: StepRevisao },
 ];
 
 export default function PublicClientRegistration() {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof registrationSchema>>({
-    resolver: zodResolver(registrationSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      nome_completo: "",
-      telefone: "",
-      email: "",
-      instagram: "",
-      nome_imobiliaria: "",
-      cnpj_creci: "",
-      site_institucional: "",
-      cidade_regiao: "",
-      tipo_imoveis: "",
-      publico_alvo: "",
-      num_imoveis_ativos: 0,
-      diferenciais: "",
-      valor_mensal_anuncios: 0,
-      objetivos_marketing: "",
-      ticket_medio: 0,
-      meta_mensal_vendas: 0,
-      redes_sociais_adicionais: [],
-      campanhas_ativas: false,
-      campanhas_detalhes: "",
-      pixel_analytics_configurado: false,
-      crm_utilizado: "",
-      nome_gestor_marketing: "",
-      forma_receber_relatorios: "WhatsApp",
-      observacoes_adicionais: "",
+      razao_social: "",
+      nome_fantasia: "",
+      cnpj_cpf: "",
+      site_url: "",
+      instagram_handle: "",
+      responsavel_nome: "",
+      responsavel_email: "",
+      responsavel_whatsapp: "",
+      responsavel_cargo: "",
+      tem_gestor_marketing: false,
+      tem_gestor_comercial: false,
+      nichos: [],
+      segmentos: [],
+      cidades: [],
+      bairros_regioes: [],
+      tem_corretor_funcionario: false,
+      qtd_corretores: 0,
+      qtd_funcionarios: 0,
+      tem_sdr: false,
+      qtd_sdr_total: 0,
+      budget_mensal: 1000,
+      lgpd_consent: false,
     },
   });
 
-  const handleSubmit = async (data: z.infer<typeof registrationSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
-      setIsSubmitting(true);
-      
-      const { error } = await supabase
-        .from('public_client_registrations')
-        .insert({
-          nome_completo: data.nome_completo,
-          telefone: data.telefone,
-          email: data.email,
-          instagram: data.instagram,
-          nome_imobiliaria: data.nome_imobiliaria,
-          cnpj_creci: data.cnpj_creci,
-          site_institucional: data.site_institucional,
-          cidade_regiao: data.cidade_regiao,
-          tipo_imoveis: data.tipo_imoveis,
-          publico_alvo: data.publico_alvo,
-          num_imoveis_ativos: data.num_imoveis_ativos,
-          diferenciais: data.diferenciais,
-          valor_mensal_anuncios: data.valor_mensal_anuncios,
-          objetivos_marketing: data.objetivos_marketing,
-          ticket_medio: data.ticket_medio,
-          meta_mensal_vendas: data.meta_mensal_vendas,
-          redes_sociais_adicionais: data.redes_sociais_adicionais,
-          campanhas_ativas: data.campanhas_ativas,
-          campanhas_detalhes: data.campanhas_detalhes,
-          pixel_analytics_configurado: data.pixel_analytics_configurado,
-          crm_utilizado: data.crm_utilizado,
-          nome_gestor_marketing: data.nome_gestor_marketing,
-          forma_receber_relatorios: data.forma_receber_relatorios,
-          observacoes_adicionais: data.observacoes_adicionais,
-          status: 'Pendente',
-        });
+      const { error } = await supabase.from("public_client_registrations").insert({
+        razao_social: values.razao_social,
+        nome_fantasia: values.nome_fantasia,
+        cnpj_cpf: values.cnpj_cpf,
+        site_url: values.site_url,
+        instagram_handle: values.instagram_handle,
+        responsavel_nome: values.responsavel_nome,
+        responsavel_email: values.responsavel_email,
+        telefone: values.responsavel_whatsapp,
+        responsavel_cargo: values.responsavel_cargo,
+        tem_gestor_marketing: values.tem_gestor_marketing,
+        gestor_marketing_nome: values.gestor_marketing_nome,
+        gestor_marketing_email: values.gestor_marketing_email,
+        gestor_marketing_whatsapp: values.gestor_marketing_whatsapp,
+        tem_gestor_comercial: values.tem_gestor_comercial,
+        gestor_comercial_nome: values.gestor_comercial_nome,
+        gestor_comercial_email: values.gestor_comercial_email,
+        gestor_comercial_whatsapp: values.gestor_comercial_whatsapp,
+        nichos: values.nichos,
+        segmentos: values.segmentos,
+        cidades: values.cidades,
+        bairros_regioes: values.bairros_regioes,
+        estado: values.estado,
+        tem_corretor_funcionario: values.tem_corretor_funcionario,
+        qtd_corretores: values.qtd_corretores,
+        qtd_funcionarios: values.qtd_funcionarios,
+        estrutura_setores: values.estrutura_setores || {},
+        tem_sdr: values.tem_sdr,
+        qtd_sdr_total: values.qtd_sdr_total,
+        budget_mensal: values.budget_mensal,
+        distribuicao_sugerida: values.distribuicao_sugerida || {},
+        crm_url: values.crm_url,
+        meta_bm_id: values.meta_bm_id,
+        google_ads_cid: values.google_ads_cid,
+        contato_preferido: values.contato_preferido,
+        horarios_contato: values.horarios_contato,
+        lgpd_consent: values.lgpd_consent,
+        status: "Pendente",
+      });
 
       if (error) throw error;
-
       setIsSubmitted(true);
-      toast({
-        title: "Cadastro enviado!",
-        description: "Seus dados foram enviados com sucesso. Entraremos em contato em breve.",
-      });
-      
-    } catch (error) {
-      console.error('Error submitting registration:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível enviar o cadastro. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      toast({ title: "Cadastro enviado!", description: "Entraremos em contato em breve." });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
   };
 
+  const nextStep = async () => {
+    const fieldsToValidate = getFieldsForStep(currentStep);
+    const isValid = await form.trigger(fieldsToValidate);
+    if (isValid && currentStep < steps.length - 1) setCurrentStep(currentStep + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) setCurrentStep(currentStep - 1);
+  };
+
+  const getFieldsForStep = (step: number): any[] => {
+    switch (step) {
+      case 0: return ["razao_social"];
+      case 1: return ["responsavel_nome", "responsavel_email", "responsavel_whatsapp"];
+      case 3: return ["nichos", "segmentos", "cidades"];
+      case 5: return ["budget_mensal"];
+      case 6: return ["lgpd_consent"];
+      default: return [];
+    }
+  };
+
+  const progress = ((currentStep + 1) / steps.length) * 100;
+  const CurrentStepComponent = steps[currentStep].component;
+
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-6">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold mb-2">Cadastro Enviado!</h1>
-            <p className="text-muted-foreground mb-4">
-              Recebemos suas informações e entraremos em contato em breve para dar início ao seu projeto de marketing digital.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Fique atento ao seu WhatsApp e e-mail.
-            </p>
-          </CardContent>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/10 to-background p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-10 h-10 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Cadastro Recebido!</CardTitle>
+            <CardDescription className="text-base">
+              Recebemos seus dados. Entraremos em contato via WhatsApp ou e-mail em breve.
+            </CardDescription>
+          </CardHeader>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="container mx-auto py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4">
-              Cadastro de <span className="text-primary">Cliente</span>
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Preencha as informações abaixo para começarmos a trabalhar juntos
-            </p>
-          </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-              
-              {/* Dados Principais */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" />
-                    Dados Principais
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="nome_completo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome Completo *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Seu nome completo" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="telefone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telefone/WhatsApp *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="(99) 99999-9999" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>E-mail *</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="seu@email.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="instagram"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>@ do Instagram</FormLabel>
-                          <FormControl>
-                            <Input placeholder="@seuinstagram" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="nome_imobiliaria"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome da Imobiliária/Corretor *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nome da sua empresa" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="cnpj_creci"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CNPJ/CRECI</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Seu CNPJ ou número do CRECI" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="site_institucional"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Site Institucional</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://www.seusite.com.br" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Atuação e Mercado */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    Atuação e Mercado
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="cidade_regiao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade/Região de Atuação *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: São Paulo - SP" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="tipo_imoveis"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Imóveis Trabalhados *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Residencial, Comercial, Lançamentos" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="publico_alvo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Público-alvo Principal *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Jovens casais, Investidores" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="num_imoveis_ativos"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nº de Imóveis Ativos na Carteira</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Ex: 50" 
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="diferenciais"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Diferenciais da sua Atuação</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="O que te diferencia no mercado? Ex: especialista em lançamentos, atendimento personalizado..."
-                            rows={3}
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Investimento e Objetivos */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-primary" />
-                    Investimento e Objetivos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="valor_mensal_anuncios"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor Mensal para Anúncios (R$)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Ex: 5000" 
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="ticket_medio"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ticket Médio dos Imóveis (R$)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Ex: 300000" 
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="meta_mensal_vendas"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Meta Mensal de Vendas/Aluguéis</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Ex: 10" 
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="objetivos_marketing"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Principais Objetivos de Marketing</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Ex: Aumentar leads qualificados, fortalecer marca, expandir área de atuação..."
-                            rows={3}
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Presença Digital */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    Presença Digital
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="redes_sociais_adicionais"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Redes Sociais Adicionais</FormLabel>
-                        <FormDescription>
-                          Selecione as redes sociais que você utiliza além do Instagram
-                        </FormDescription>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {socialNetworks.map((network) => (
-                            <div key={network} className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={field.value?.includes(network)}
-                                onCheckedChange={(checked) => {
-                                  const current = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...current, network]);
-                                  } else {
-                                    field.onChange(current.filter(item => item !== network));
-                                  }
-                                }}
-                              />
-                              <label className="text-sm">{network}</label>
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="campanhas_ativas"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Tem campanhas ativas atualmente?
-                            </FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="pixel_analytics_configurado"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Pixel/Analytics configurado?
-                            </FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {form.watch("campanhas_ativas") && (
-                    <FormField
-                      control={form.control}
-                      name="campanhas_detalhes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Detalhes das Campanhas Ativas</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Conte-nos sobre suas campanhas atuais..."
-                              rows={3}
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                  
-                  <FormField
-                    control={form.control}
-                    name="crm_utilizado"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CRM Utilizado</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Pipedrive, HubSpot, Vista Software..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Gestão e Relacionamento */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                    Gestão e Relacionamento
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="nome_gestor_marketing"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome do Gestor de Marketing</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nome do responsável" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="forma_receber_relatorios"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Forma Preferida para Receber Relatórios</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                              <SelectItem value="Email">E-mail</SelectItem>
-                              <SelectItem value="Ambos">Ambos</SelectItem>
-                              <SelectItem value="Reuniao">Reunião presencial/online</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="observacoes_adicionais"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Observações Adicionais</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Informações adicionais que considera importante compartilhar..."
-                            rows={4}
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Submit */}
-              <div className="flex justify-center">
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  disabled={isSubmitting}
-                  className="w-full md:w-auto"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                      Enviando...
-                    </>
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/10 to-background py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Cadastro de Cliente</CardTitle>
+            <CardDescription>Etapa {currentStep + 1} de {steps.length}: {steps[currentStep].title}</CardDescription>
+            <Progress value={progress} className="mt-4" />
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <CurrentStepComponent form={form} />
+                <div className="flex justify-between pt-6 border-t">
+                  <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 0}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />Anterior
+                  </Button>
+                  {currentStep < steps.length - 1 ? (
+                    <Button type="button" onClick={nextStep}>Próximo<ArrowRight className="ml-2 h-4 w-4" /></Button>
                   ) : (
-                    <>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Enviar Cadastro
-                    </>
+                    <Button type="submit">Enviar Cadastro<CheckCircle2 className="ml-2 h-4 w-4" /></Button>
                   )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </div>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
