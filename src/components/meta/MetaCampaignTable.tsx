@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { MetaStatusBadge } from "./MetaStatusBadge";
 import { MetaCampaignCard } from "./MetaCampaignCard";
+import { MetaCampaignDetailDialog } from "./MetaCampaignDetailDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { MetaCampaign } from "@/types/meta";
 
@@ -14,6 +16,13 @@ interface MetaCampaignTableProps {
 
 export function MetaCampaignTable({ campaigns, loading }: MetaCampaignTableProps) {
   const isMobile = useIsMobile();
+  const [selectedCampaign, setSelectedCampaign] = useState<MetaCampaign | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleCampaignClick = (campaign: MetaCampaign) => {
+    setSelectedCampaign(campaign);
+    setDialogOpen(true);
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -74,89 +83,112 @@ export function MetaCampaignTable({ campaigns, loading }: MetaCampaignTableProps
   // Mobile view - cards
   if (isMobile) {
     return (
-      <div className="space-y-3">
-        {campaigns.map((campaign) => (
-          <MetaCampaignCard key={campaign.id} campaign={campaign} />
-        ))}
-      </div>
+      <>
+        <div className="space-y-3">
+          {campaigns.map((campaign) => (
+            <div key={campaign.id} onClick={() => handleCampaignClick(campaign)} className="cursor-pointer">
+              <MetaCampaignCard campaign={campaign} />
+            </div>
+          ))}
+        </div>
+        <MetaCampaignDetailDialog 
+          campaign={selectedCampaign}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+        />
+      </>
     );
   }
 
   // Desktop view - table
   return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead>Campanha</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Orçamento</TableHead>
-            <TableHead className="text-right">Gasto</TableHead>
-            <TableHead className="text-right">Impressões</TableHead>
-            <TableHead className="text-right">Cliques</TableHead>
-            <TableHead className="text-right">CTR</TableHead>
-            <TableHead className="text-right">CPC</TableHead>
-            <TableHead className="text-right">Hookrate</TableHead>
-            <TableHead className="text-right">Leads</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {campaigns.map((campaign) => (
-            <TableRow key={campaign.id} className="hover:bg-muted/30">
-              <TableCell className="font-medium max-w-xs truncate">
-                {campaign.name}
-              </TableCell>
-              <TableCell>
-                <MetaStatusBadge status={campaign.status} />
-              </TableCell>
-              <TableCell className="text-right text-sm">
-                {campaign.daily_budget 
-                  ? `${formatCurrency(campaign.daily_budget)}/dia`
-                  : campaign.lifetime_budget 
-                    ? formatCurrency(campaign.lifetime_budget)
-                    : '-'
-                }
-              </TableCell>
-              <TableCell className="text-right font-semibold">
-                {campaign.insights ? formatCurrency(campaign.insights.spend) : '-'}
-              </TableCell>
-              <TableCell className="text-right">
-                {campaign.insights ? formatNumber(campaign.insights.impressions) : '-'}
-              </TableCell>
-              <TableCell className="text-right">
-                {campaign.insights ? formatNumber(campaign.insights.clicks) : '-'}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  {campaign.insights && getPerformanceIndicator(campaign.insights.ctr)}
-                  <span>{campaign.insights ? `${campaign.insights.ctr.toFixed(2)}%` : '-'}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                {campaign.insights ? formatCurrency(campaign.insights.cpc) : '-'}
-              </TableCell>
-              <TableCell className="text-right">
-                {campaign.insights && campaign.insights.impressions > 0
-                  ? `${((campaign.insights.clicks / campaign.insights.impressions) * 100).toFixed(2)}%`
-                  : '-'}
-              </TableCell>
-              <TableCell className="text-right font-semibold">
-                {campaign.insights ? formatNumber(campaign.insights.conversions) : '-'}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openInMetaAdsManager(campaign.id)}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </TableCell>
+    <>
+      <div className="rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Campanha</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Orçamento</TableHead>
+              <TableHead className="text-right">Gasto</TableHead>
+              <TableHead className="text-right">Impressões</TableHead>
+              <TableHead className="text-right">Cliques</TableHead>
+              <TableHead className="text-right">CTR</TableHead>
+              <TableHead className="text-right">CPC</TableHead>
+              <TableHead className="text-right">Hookrate</TableHead>
+              <TableHead className="text-right">Leads</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {campaigns.map((campaign) => (
+              <TableRow 
+                key={campaign.id} 
+                className="hover:bg-muted/30 cursor-pointer"
+                onClick={() => handleCampaignClick(campaign)}
+              >
+                <TableCell className="font-medium max-w-xs truncate">
+                  {campaign.name}
+                </TableCell>
+                <TableCell>
+                  <MetaStatusBadge status={campaign.status} />
+                </TableCell>
+                <TableCell className="text-right text-sm">
+                  {campaign.daily_budget 
+                    ? `${formatCurrency(campaign.daily_budget)}/dia`
+                    : campaign.lifetime_budget 
+                      ? formatCurrency(campaign.lifetime_budget)
+                      : '-'
+                  }
+                </TableCell>
+                <TableCell className="text-right font-semibold">
+                  {campaign.insights ? formatCurrency(campaign.insights.spend) : '-'}
+                </TableCell>
+                <TableCell className="text-right">
+                  {campaign.insights ? formatNumber(campaign.insights.impressions) : '-'}
+                </TableCell>
+                <TableCell className="text-right">
+                  {campaign.insights ? formatNumber(campaign.insights.clicks) : '-'}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    {campaign.insights && getPerformanceIndicator(campaign.insights.ctr)}
+                    <span>{campaign.insights ? `${campaign.insights.ctr.toFixed(2)}%` : '-'}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  {campaign.insights ? formatCurrency(campaign.insights.cpc) : '-'}
+                </TableCell>
+                <TableCell className="text-right">
+                  {campaign.insights && campaign.insights.impressions > 0
+                    ? `${((campaign.insights.clicks / campaign.insights.impressions) * 100).toFixed(2)}%`
+                    : '-'}
+                </TableCell>
+                <TableCell className="text-right font-semibold">
+                  {campaign.insights ? formatNumber(campaign.insights.conversions) : '-'}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openInMetaAdsManager(campaign.id);
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <MetaCampaignDetailDialog 
+        campaign={selectedCampaign}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
+    </>
   );
 }
