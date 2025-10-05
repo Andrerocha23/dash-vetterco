@@ -43,15 +43,24 @@ export default function ClientDetailPage() {
 
   const [clientDriveUrl, setClientDriveUrl] = useState<string | null>(null);
   const [metaAccountId, setMetaAccountId] = useState<string | null>(null);
+  const [accountData, setAccountData] = useState<any>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<MetaCampaign | null>(null);
 
-  // Carrega meta_account_id e link_drive da accounts
+  // Carrega dados completos da conta
   async function loadAccountBasics(accountId: string) {
     const { data, error } = await supabase
       .from("accounts")
-      .select("meta_account_id, link_drive")
+      .select(`
+        *,
+        managers:gestor_id (
+          name,
+          email,
+          phone,
+          department
+        )
+      `)
       .eq("id", accountId)
       .single();
 
@@ -61,6 +70,7 @@ export default function ClientDetailPage() {
       return;
     }
 
+    setAccountData(data);
     setMetaAccountId((data as any)?.meta_account_id || null);
     setClientDriveUrl((data as any)?.link_drive || null);
   }
@@ -263,9 +273,237 @@ export default function ClientDetailPage() {
 
           {/* VISÃO GERAL */}
           <TabsContent value="visao" className="mt-4 space-y-4">
+            {/* Informações da Conta */}
             <Card>
               <CardHeader>
-                <CardTitle>KPIs da conta (período)</CardTitle>
+                <CardTitle>Informações da Conta</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Nome do Cliente</p>
+                      <p className="text-base font-semibold">{accountData?.nome_cliente || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Empresa</p>
+                      <p className="text-base font-semibold">{accountData?.nome_empresa || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Email</p>
+                      <p className="text-base">{accountData?.email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Telefone</p>
+                      <p className="text-base">{accountData?.telefone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Status</p>
+                      <p className="text-base">
+                        <span className={`inline-flex px-2 py-1 rounded text-sm font-medium ${
+                          accountData?.status === 'Ativo' 
+                            ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                            : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                        }`}>
+                          {accountData?.status || '-'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Gestor Responsável</p>
+                      <p className="text-base font-semibold">{accountData?.managers?.name || '-'}</p>
+                      {accountData?.managers?.email && (
+                        <p className="text-sm text-muted-foreground">{accountData.managers.email}</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Link Drive</p>
+                      {clientDriveUrl ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => window.open(clientDriveUrl, "_blank")}
+                        >
+                          <FolderOpen className="h-4 w-4 mr-2" /> Abrir Drive
+                        </Button>
+                      ) : (
+                        <p className="text-base text-muted-foreground">Não configurado</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">ID do Grupo</p>
+                      <p className="text-base font-mono text-sm">{accountData?.id_grupo || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Observações</p>
+                      <p className="text-sm">{accountData?.observacoes || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Configurações Meta Ads */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuração Meta Ads</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Meta Account ID</p>
+                      <p className="text-base font-mono text-sm">{accountData?.meta_account_id || 'Não configurado'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Meta Business ID</p>
+                      <p className="text-base font-mono text-sm">{accountData?.meta_business_id || 'Não configurado'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Meta Page ID</p>
+                      <p className="text-base font-mono text-sm">{accountData?.meta_page_id || 'Não configurado'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Pixel Meta</p>
+                      <p className="text-base font-mono text-sm">{accountData?.pixel_meta || 'Não configurado'}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Budget Mensal Meta</p>
+                      <p className="text-base font-semibold">
+                        {accountData?.budget_mensal_meta ? currency(accountData.budget_mensal_meta) : 'Não definido'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Saldo Meta</p>
+                      <p className="text-base font-semibold">
+                        {accountData?.saldo_meta ? currency(accountData.saldo_meta) : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Link Meta Ads Manager</p>
+                      {accountData?.link_meta ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => window.open(accountData.link_meta, "_blank")}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" /> Abrir
+                        </Button>
+                      ) : (
+                        <p className="text-base text-muted-foreground">Não configurado</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Webhook Meta</p>
+                      <p className="text-xs font-mono break-all">{accountData?.webhook_meta || 'Não configurado'}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Configurações Google Ads */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuração Google Ads</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Google Ads ID</p>
+                      <p className="text-base font-mono text-sm">{accountData?.google_ads_id || 'Não configurado'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">GA4 Stream ID</p>
+                      <p className="text-base font-mono text-sm">{accountData?.ga4_stream_id || 'Não configurado'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">GTM ID</p>
+                      <p className="text-base font-mono text-sm">{accountData?.gtm_id || 'Não configurado'}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Budget Mensal Google</p>
+                      <p className="text-base font-semibold">
+                        {accountData?.budget_mensal_google ? currency(accountData.budget_mensal_google) : 'Não definido'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Link Google Ads</p>
+                      {accountData?.link_google ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => window.open(accountData.link_google, "_blank")}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" /> Abrir
+                        </Button>
+                      ) : (
+                        <p className="text-base text-muted-foreground">Não configurado</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Webhook Google</p>
+                      <p className="text-xs font-mono break-all">{accountData?.webhook_google || 'Não configurado'}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Configurações Gerais */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações e Preferências</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">Canais Ativos</p>
+                    <div className="flex flex-wrap gap-1">
+                      {accountData?.canais?.map((canal: string) => (
+                        <span key={canal} className="inline-flex px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                          {canal}
+                        </span>
+                      )) || <span className="text-sm">Nenhum</span>}
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">Notificações</p>
+                    <div className="space-y-1 text-sm">
+                      <p>Leads Diários: {accountData?.notificacao_leads_diarios ? '✅' : '❌'}</p>
+                      <p>Saldo Baixo: {accountData?.notificacao_saldo_baixo ? '✅' : '❌'}</p>
+                      <p>Erro Sync: {accountData?.notificacao_erro_sync ? '✅' : '❌'}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">Integrações</p>
+                    <div className="space-y-1 text-sm">
+                      <p>Meta Ads: {accountData?.usa_meta_ads ? '✅' : '❌'}</p>
+                      <p>Google Ads: {accountData?.usa_google_ads ? '✅' : '❌'}</p>
+                      <p>CRM Externo: {accountData?.usa_crm_externo ? '✅' : '❌'}</p>
+                      <p>Typebot: {accountData?.typebot_ativo ? '✅' : '❌'}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* KPIs do Período */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Métricas do Período Selecionado</CardTitle>
               </CardHeader>
               <CardContent>
                 <MetaMetricsGrid metrics={metrics ?? kpis} loading={loading} />

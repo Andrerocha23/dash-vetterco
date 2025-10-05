@@ -61,7 +61,13 @@ export function MetaCampaignDetailDialog({
     : 0;
   const costPerLead = insights && insights.conversions > 0
     ? insights.spend / insights.conversions
-    : null;
+    : 0;
+  const conversionRate = insights && insights.clicks > 0
+    ? (insights.conversions / insights.clicks) * 100
+    : 0;
+  const frequency = insights && insights.reach > 0
+    ? insights.impressions / insights.reach
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,22 +171,30 @@ export function MetaCampaignDetailDialog({
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="text-sm font-semibold text-muted-foreground mb-4">CONVERSÕES E LEADS</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-muted/30 rounded-lg">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-1">Total de Leads</p>
-                      <p className="text-2xl font-bold text-blue-600">{formatNumber(insights.conversions)}</p>
-                    </div>
-                    <div className="p-4 bg-muted/30 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Custo por Lead</p>
-                      <p className="text-2xl font-bold">
-                        {costPerLead ? formatCurrency(costPerLead) : '-'}
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {formatNumber(insights.conversions)}
                       </p>
                     </div>
-                    <div className="p-4 bg-muted/30 rounded-lg">
+                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">Custo por Lead</p>
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {costPerLead > 0 ? formatCurrency(costPerLead) : '-'}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-1">Taxa de Conversão</p>
-                      <p className="text-2xl font-bold">
-                        {insights.impressions > 0 
-                          ? formatPercentage((insights.conversions / insights.impressions) * 100)
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {formatPercentage(conversionRate)}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">Cliques p/ Lead</p>
+                      <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                        {insights.conversions > 0 
+                          ? (insights.clicks / insights.conversions).toFixed(1)
                           : '-'
                         }
                       </p>
@@ -189,25 +203,22 @@ export function MetaCampaignDetailDialog({
                 </CardContent>
               </Card>
 
-              {/* Análise de Frequência */}
+              {/* Análise de Frequência e Engajamento */}
               <Card>
                 <CardContent className="pt-6">
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">ANÁLISE DE ALCANCE</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">ALCANCE E ENGAJAMENTO</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="p-4 bg-muted/30 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-1">Frequência</p>
                       <p className="text-xl font-bold">
-                        {insights.reach > 0 
-                          ? (insights.impressions / insights.reach).toFixed(2)
-                          : '-'
-                        }
+                        {frequency > 0 ? frequency.toFixed(2) : '-'}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Média de vezes que cada pessoa viu o anúncio
+                        Vezes que cada pessoa viu
                       </p>
                     </div>
                     <div className="p-4 bg-muted/30 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Alcance vs Impressões</p>
+                      <p className="text-sm text-muted-foreground mb-1">Alcance Único</p>
                       <p className="text-xl font-bold">
                         {insights.impressions > 0 
                           ? formatPercentage((insights.reach / insights.impressions) * 100)
@@ -215,8 +226,46 @@ export function MetaCampaignDetailDialog({
                         }
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Percentual de alcance único
+                        % de pessoas únicas
                       </p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">Custo por Mil (CPM)</p>
+                      <p className="text-xl font-bold">
+                        {formatCurrency(insights.cpm)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Custo a cada 1000 impressões
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Métricas Adicionais */}
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">EFICIÊNCIA E ROI</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">CPC Médio</p>
+                      <p className="text-xl font-bold">{formatCurrency(insights.cpc)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Custo por clique</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">CTR</p>
+                      <p className="text-xl font-bold">{formatPercentage(insights.ctr)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Taxa de cliques</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">Hookrate</p>
+                      <p className="text-xl font-bold">{formatPercentage(hookrate)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Taxa de engajamento</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">Gasto Total</p>
+                      <p className="text-xl font-bold">{formatCurrency(insights.spend)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Investimento no período</p>
                     </div>
                   </div>
                 </CardContent>
