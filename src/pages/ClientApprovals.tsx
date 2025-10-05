@@ -50,18 +50,21 @@ export default function ClientApprovals() {
     try {
       const { data: session } = await supabase.auth.getSession();
       
-      // Criar cliente em accounts
-      const { error: accountError } = await supabase.from("accounts").insert({
-        nome_cliente: registration.responsavel_nome,
-        nome_empresa: registration.razao_social || registration.nome_fantasia,
-        email: registration.responsavel_email,
-        telefone: registration.telefone,
-        status: "Ativo",
-        observacoes: `Cadastro aprovado via onboarding em ${new Date().toLocaleDateString()}`,
-        budget_mensal_meta: registration.budget_mensal,
-      });
+      // Create client in clientes table first
+      const { data: clienteData, error: clienteError } = await supabase
+        .from("clientes")
+        .insert({
+          nome: registration.razao_social || registration.nome_fantasia || "Sem nome",
+          cnpj: registration.cnpj_cpf,
+          email: registration.responsavel_email,
+          telefone: registration.responsavel_whatsapp || registration.telefone || "",
+          instagram_handle: registration.instagram_handle,
+          site: registration.site_url,
+        })
+        .select()
+        .single();
 
-      if (accountError) throw accountError;
+      if (clienteError) throw clienteError;
 
       // Atualizar status da submissão
       const { error: updateError } = await supabase

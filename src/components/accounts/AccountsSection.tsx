@@ -60,13 +60,24 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('client_accounts')
-        .select('*')
-        .eq('client_id', clientId)
+        .from('accounts')
+        .select('id, canais, nome_empresa, status, observacoes, created_at')
+        .eq('cliente_id', clientId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAccounts(data || []);
+      
+      // Transform accounts data to match Account interface
+      const transformedAccounts: Account[] = (data || []).map(acc => ({
+        id: acc.id,
+        tipo: acc.canais?.[0] || 'Meta Ads',
+        account_id: acc.nome_empresa || '',
+        status: acc.status || 'Ativo',
+        observacoes: acc.observacoes,
+        created_at: acc.created_at
+      }));
+      
+      setAccounts(transformedAccounts);
     } catch (error) {
       console.error('Error loading accounts:', error);
       toast({
@@ -90,10 +101,10 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
       if (editingAccount) {
         // Update existing account
         const { error } = await supabase
-          .from('client_accounts')
+          .from('accounts')
           .update({
-            tipo: data.tipo,
-            account_id: data.account_id,
+            canais: [data.tipo],
+            nome_empresa: data.account_id,
             status: data.status,
             observacoes: data.observacoes || null,
           })
@@ -106,23 +117,13 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
           description: "Conta atualizada com sucesso",
         });
       } else {
-        // Create new account
-        const { error } = await supabase
-          .from('client_accounts')
-          .insert({
-            client_id: clientId,
-            tipo: data.tipo,
-            account_id: data.account_id,
-            status: data.status,
-            observacoes: data.observacoes || null,
-          });
-
-        if (error) throw error;
-
+        // Not supported - accounts should be created from client approvals
         toast({
-          title: "Sucesso!",
-          description: "Conta criada com sucesso",
+          title: "Não suportado",
+          description: "Contas devem ser criadas ao aprovar cadastros de clientes",
+          variant: "destructive",
         });
+        return;
       }
 
       setShowModal(false);
@@ -154,7 +155,7 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
 
     try {
       const { error } = await supabase
-        .from('client_accounts')
+        .from('accounts')
         .delete()
         .eq('id', deleteId);
 

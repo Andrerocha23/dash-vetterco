@@ -41,17 +41,18 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ClientRegistration {
   id: string;
-  nome_completo: string;
+  razao_social?: string;
+  nome_fantasia?: string;
+  responsavel_nome?: string;
+  responsavel_email: string;
   telefone: string;
-  email: string;
-  nome_imobiliaria: string;
   cidade_regiao: string;
-  valor_mensal_anuncios: number | null;
+  budget_mensal: number | null;
   status: string;
   created_at: string;
-  objetivos_marketing: string | null;
-  tipo_imoveis: string;
-  publico_alvo: string;
+  cidades?: string[];
+  nichos?: string[];
+  segmentos?: string[];
 }
 
 export default function ClientRegistrations() {
@@ -284,21 +285,21 @@ export default function ClientRegistrations() {
                       <TableRow key={registration.id}>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{registration.nome_completo}</div>
+                            <div className="font-medium">{registration.responsavel_nome || 'Sem nome'}</div>
                             <div className="text-sm text-muted-foreground">
-                              {registration.email}
+                              {registration.responsavel_email}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium">{registration.nome_imobiliaria}</div>
+                          <div className="font-medium">{registration.razao_social || registration.nome_fantasia || 'Sem nome'}</div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">{registration.cidade_regiao}</div>
                         </TableCell>
                         <TableCell>
                           <div className="font-medium">
-                            {formatCurrency(registration.valor_mensal_anuncios)}
+                            {formatCurrency(registration.budget_mensal)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -370,19 +371,19 @@ export default function ClientRegistrations() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Nome</label>
-                        <p className="font-medium">{selectedRegistration.nome_completo}</p>
+                        <p className="font-medium">{selectedRegistration.responsavel_nome || 'Sem nome'}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Email</label>
-                        <p className="font-medium">{selectedRegistration.email}</p>
+                        <p className="font-medium">{selectedRegistration.responsavel_email}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Telefone</label>
                         <p className="font-medium">{selectedRegistration.telefone}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Imobiliária</label>
-                        <p className="font-medium">{selectedRegistration.nome_imobiliaria}</p>
+                        <label className="text-sm font-medium text-muted-foreground">Empresa</label>
+                        <p className="font-medium">{selectedRegistration.razao_social || selectedRegistration.nome_fantasia || 'Sem nome'}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -398,33 +399,31 @@ export default function ClientRegistrations() {
                       <label className="text-sm font-medium text-muted-foreground">Cidade/Região</label>
                       <p className="font-medium">{selectedRegistration.cidade_regiao}</p>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Tipo de Imóveis</label>
-                      <p className="font-medium">{selectedRegistration.tipo_imoveis}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Público-alvo</label>
-                      <p className="font-medium">{selectedRegistration.publico_alvo}</p>
-                    </div>
+                    {selectedRegistration.nichos && selectedRegistration.nichos.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Nichos</label>
+                        <p className="font-medium">{selectedRegistration.nichos.join(', ')}</p>
+                      </div>
+                    )}
+                    {selectedRegistration.segmentos && selectedRegistration.segmentos.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Segmentos</label>
+                        <p className="font-medium">{selectedRegistration.segmentos.join(', ')}</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
                 {/* Investimento */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Investimento e Objetivos</CardTitle>
+                    <CardTitle className="text-lg">Investimento</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Valor Mensal</label>
-                      <p className="font-medium">{formatCurrency(selectedRegistration.valor_mensal_anuncios)}</p>
+                      <p className="font-medium">{formatCurrency(selectedRegistration.budget_mensal)}</p>
                     </div>
-                    {selectedRegistration.objetivos_marketing && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Objetivos</label>
-                        <p className="font-medium">{selectedRegistration.objetivos_marketing}</p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
