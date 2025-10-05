@@ -170,7 +170,7 @@ export default function ClientDetailPage() {
   return (
     <AppLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">{/* Largura dinâmica sem max-width fixo */}
           {/* Header moderno */}
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
