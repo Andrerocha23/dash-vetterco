@@ -108,6 +108,9 @@ export default function PublicClientRegistration() {
   const onSubmit = async (values: FormValues) => {
     try {
       const { error } = await supabase.from("public_client_registrations").insert({
+        cidade_regiao: values.cidades[0] || "Não especificado",
+        email: values.responsavel_email,
+        telefone: values.responsavel_whatsapp,
         razao_social: values.razao_social,
         nome_fantasia: values.nome_fantasia,
         cnpj_cpf: values.cnpj_cpf,
@@ -115,7 +118,6 @@ export default function PublicClientRegistration() {
         instagram_handle: values.instagram_handle,
         responsavel_nome: values.responsavel_nome,
         responsavel_email: values.responsavel_email,
-        telefone: values.responsavel_whatsapp,
         responsavel_cargo: values.responsavel_cargo,
         tem_gestor_marketing: values.tem_gestor_marketing,
         gestor_marketing_nome: values.gestor_marketing_nome,
