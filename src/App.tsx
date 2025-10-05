@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound";
 import MetaConfigPage from './pages/MetaConfigPage';
 import PublicClientRegistration from './pages/PublicClientRegistration';
 import ClientRegistrations from './pages/ClientRegistrations';
+import CadastroCliente from './pages/CadastroCliente';
 
 const queryClient = new QueryClient();
 
@@ -137,7 +138,8 @@ const App = () => (
                 <RelatorioN8n />
               </ProtectedRoute>
             } />
-            <Route path="/cadastro-cliente" element={<PublicClientRegistration />} />
+            <Route path="/cadastro-publico" element={<PublicClientRegistration />} />
+            <Route path="/cadastro-cliente" element={<CadastroCliente />} />
             <Route path="/cadastros" element={
               <ProtectedRoute>
                 <ClientRegistrations />

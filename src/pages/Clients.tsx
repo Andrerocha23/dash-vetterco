@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { 
   Search, 
   Plus, 
@@ -99,13 +100,15 @@ export default function Clients() {
     status: 'Ativo'
   });
   const { toast } = useToast();
+  const { isAdmin, isGestor, userId, loading: roleLoading } = useUserRole();
 
   // Carregar clientes e gestores do banco
   const loadClientsData = async () => {
     try {
       setLoading(true);
 
-      // Buscar clientes
+      // As políticas RLS já filtram automaticamente os dados conforme a role do usuário
+      // Admins veem tudo, gestores veem apenas suas contas, usuários veem apenas suas próprias
       const { data: clientsData, error: clientsError } = await supabase
         .from('accounts')
         .select('*')
@@ -239,7 +242,7 @@ export default function Clients() {
 
   // Navegar para detalhes do cliente
   const handleViewClient = (clientId: string) => {
-    navigate(`/clientes/${clientId}`);
+    navigate(`/contas/${clientId}`);
   };
 
   useEffect(() => {

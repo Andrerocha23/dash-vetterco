@@ -202,115 +202,103 @@ export type Database = {
           },
         ]
       }
-      campaign_leads_daily: {
+      campaign_creatives: {
         Row: {
+          ad_id: string
+          avg_cpl: number | null
+          avg_ctr: number | null
+          avg_hold_rate: number | null
+          avg_hook_rate: number | null
           campaign_id: string
-          campaign_name: string
-          clicks: number | null
           client_id: string
-          client_notes: string | null
-          converted_leads: number | null
-          cpc: number | null
-          cpm: number | null
-          created_at: string
-          ctr: number | null
-          date: string
-          disqualified_leads: number | null
-          feedback_status: string | null
+          created_at: string | null
+          creative_id: string
+          creative_name: string | null
+          creative_type: string | null
+          days_active: number | null
+          first_seen_date: string | null
           id: string
-          impressions: number | null
-          kanban_status: string | null
-          leads_count: number
-          no_response_leads: number | null
-          platform: string
-          qualified_leads: number | null
-          quality_score: number | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          scheduled_leads: number | null
-          spend: number | null
-          updated_at: string
+          last_active_date: string | null
+          thumbnail_url: string | null
+          total_clicks: number | null
+          total_impressions: number | null
+          total_leads: number | null
+          total_spend: number | null
+          updated_at: string | null
+          video_url: string | null
         }
         Insert: {
+          ad_id: string
+          avg_cpl?: number | null
+          avg_ctr?: number | null
+          avg_hold_rate?: number | null
+          avg_hook_rate?: number | null
           campaign_id: string
-          campaign_name: string
-          clicks?: number | null
           client_id: string
-          client_notes?: string | null
-          converted_leads?: number | null
-          cpc?: number | null
-          cpm?: number | null
-          created_at?: string
-          ctr?: number | null
-          date: string
-          disqualified_leads?: number | null
-          feedback_status?: string | null
+          created_at?: string | null
+          creative_id: string
+          creative_name?: string | null
+          creative_type?: string | null
+          days_active?: number | null
+          first_seen_date?: string | null
           id?: string
-          impressions?: number | null
-          kanban_status?: string | null
-          leads_count?: number
-          no_response_leads?: number | null
-          platform: string
-          qualified_leads?: number | null
-          quality_score?: number | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          scheduled_leads?: number | null
-          spend?: number | null
-          updated_at?: string
+          last_active_date?: string | null
+          thumbnail_url?: string | null
+          total_clicks?: number | null
+          total_impressions?: number | null
+          total_leads?: number | null
+          total_spend?: number | null
+          updated_at?: string | null
+          video_url?: string | null
         }
         Update: {
+          ad_id?: string
+          avg_cpl?: number | null
+          avg_ctr?: number | null
+          avg_hold_rate?: number | null
+          avg_hook_rate?: number | null
           campaign_id?: string
-          campaign_name?: string
-          clicks?: number | null
           client_id?: string
-          client_notes?: string | null
-          converted_leads?: number | null
-          cpc?: number | null
-          cpm?: number | null
-          created_at?: string
-          ctr?: number | null
-          date?: string
-          disqualified_leads?: number | null
-          feedback_status?: string | null
+          created_at?: string | null
+          creative_id?: string
+          creative_name?: string | null
+          creative_type?: string | null
+          days_active?: number | null
+          first_seen_date?: string | null
           id?: string
-          impressions?: number | null
-          kanban_status?: string | null
-          leads_count?: number
-          no_response_leads?: number | null
-          platform?: string
-          qualified_leads?: number | null
-          quality_score?: number | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          scheduled_leads?: number | null
-          spend?: number | null
-          updated_at?: string
+          last_active_date?: string | null
+          thumbnail_url?: string | null
+          total_clicks?: number | null
+          total_impressions?: number | null
+          total_leads?: number | null
+          total_spend?: number | null
+          updated_at?: string | null
+          video_url?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            foreignKeyName: "campaign_creatives_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            foreignKeyName: "campaign_creatives_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "campaign_performance_stats"
             referencedColumns: ["client_id"]
           },
           {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            foreignKeyName: "campaign_creatives_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
           {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
+            foreignKeyName: "campaign_creatives_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "relatorio_n8n_consolidated"
@@ -318,61 +306,184 @@ export type Database = {
           },
         ]
       }
-      client_accounts: {
+      campaign_leads_daily: {
         Row: {
-          account_id: string
+          ad_set_name: string | null
+          amount_spent: number | null
+          campaign_id: string
+          campaign_name: string
+          clicks: number | null
           client_id: string
+          client_notes: string | null
+          converted_leads: number | null
+          cost_per_result: number | null
+          cpc: number | null
+          cpm: number | null
           created_at: string
+          creative_id: string | null
+          creative_name: string | null
+          creative_thumbnail_url: string | null
+          creative_type: string | null
+          ctr: number | null
+          date: string
+          delivery_status: string | null
+          disqualified_leads: number | null
+          feedback_status: string | null
+          frequency: number | null
+          hold_rate: number | null
+          hook_rate: number | null
           id: string
-          observacoes: string | null
-          status: string
-          tipo: string
+          impressions: number | null
+          kanban_status: string | null
+          landing_page_views: number | null
+          leads_count: number
+          link_clicks: number | null
+          no_response_leads: number | null
+          objective: string | null
+          optimization_goal: string | null
+          platform: string
+          qualified_leads: number | null
+          quality_score: number | null
+          reach: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scheduled_leads: number | null
+          spend: number | null
+          three_second_video_views: number | null
+          thru_plays: number | null
           updated_at: string
+          video_avg_watch_time: number | null
+          video_p100_watched: number | null
+          video_p25_watched: number | null
+          video_p50_watched: number | null
+          video_p75_watched: number | null
         }
         Insert: {
-          account_id: string
+          ad_set_name?: string | null
+          amount_spent?: number | null
+          campaign_id: string
+          campaign_name: string
+          clicks?: number | null
           client_id: string
+          client_notes?: string | null
+          converted_leads?: number | null
+          cost_per_result?: number | null
+          cpc?: number | null
+          cpm?: number | null
           created_at?: string
+          creative_id?: string | null
+          creative_name?: string | null
+          creative_thumbnail_url?: string | null
+          creative_type?: string | null
+          ctr?: number | null
+          date: string
+          delivery_status?: string | null
+          disqualified_leads?: number | null
+          feedback_status?: string | null
+          frequency?: number | null
+          hold_rate?: number | null
+          hook_rate?: number | null
           id?: string
-          observacoes?: string | null
-          status?: string
-          tipo: string
+          impressions?: number | null
+          kanban_status?: string | null
+          landing_page_views?: number | null
+          leads_count?: number
+          link_clicks?: number | null
+          no_response_leads?: number | null
+          objective?: string | null
+          optimization_goal?: string | null
+          platform: string
+          qualified_leads?: number | null
+          quality_score?: number | null
+          reach?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_leads?: number | null
+          spend?: number | null
+          three_second_video_views?: number | null
+          thru_plays?: number | null
           updated_at?: string
+          video_avg_watch_time?: number | null
+          video_p100_watched?: number | null
+          video_p25_watched?: number | null
+          video_p50_watched?: number | null
+          video_p75_watched?: number | null
         }
         Update: {
-          account_id?: string
+          ad_set_name?: string | null
+          amount_spent?: number | null
+          campaign_id?: string
+          campaign_name?: string
+          clicks?: number | null
           client_id?: string
+          client_notes?: string | null
+          converted_leads?: number | null
+          cost_per_result?: number | null
+          cpc?: number | null
+          cpm?: number | null
           created_at?: string
+          creative_id?: string | null
+          creative_name?: string | null
+          creative_thumbnail_url?: string | null
+          creative_type?: string | null
+          ctr?: number | null
+          date?: string
+          delivery_status?: string | null
+          disqualified_leads?: number | null
+          feedback_status?: string | null
+          frequency?: number | null
+          hold_rate?: number | null
+          hook_rate?: number | null
           id?: string
-          observacoes?: string | null
-          status?: string
-          tipo?: string
+          impressions?: number | null
+          kanban_status?: string | null
+          landing_page_views?: number | null
+          leads_count?: number
+          link_clicks?: number | null
+          no_response_leads?: number | null
+          objective?: string | null
+          optimization_goal?: string | null
+          platform?: string
+          qualified_leads?: number | null
+          quality_score?: number | null
+          reach?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_leads?: number | null
+          spend?: number | null
+          three_second_video_views?: number | null
+          thru_plays?: number | null
           updated_at?: string
+          video_avg_watch_time?: number | null
+          video_p100_watched?: number | null
+          video_p25_watched?: number | null
+          video_p50_watched?: number | null
+          video_p75_watched?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "client_accounts_client_id_fkey"
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "client_accounts_client_id_fkey"
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "campaign_performance_stats"
             referencedColumns: ["client_id"]
           },
           {
-            foreignKeyName: "client_accounts_client_id_fkey"
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
           {
-            foreignKeyName: "client_accounts_client_id_fkey"
+            foreignKeyName: "campaign_leads_daily_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "relatorio_n8n_consolidated"
@@ -583,6 +694,74 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_sync_logs: {
+        Row: {
+          account_id: string | null
+          campaigns_synced: number | null
+          completed_at: string
+          duration_seconds: number | null
+          error_message: string | null
+          id: string
+          started_at: string
+          status: string
+          sync_type: string
+          triggered_by: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          campaigns_synced?: number | null
+          completed_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          started_at: string
+          status: string
+          sync_type: string
+          triggered_by?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          campaigns_synced?: number | null
+          completed_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          sync_type?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_sync_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_sync_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_performance_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meta_sync_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "leads_stats"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meta_sync_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "relatorio_n8n_consolidated"
+            referencedColumns: ["conta_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -612,6 +791,7 @@ export type Database = {
       }
       public_client_registrations: {
         Row: {
+          budget_mensal: number | null
           campanhas_ativas: boolean | null
           campanhas_detalhes: string | null
           cidade_regiao: string
@@ -628,22 +808,29 @@ export type Database = {
           nome_completo: string
           nome_gestor_marketing: string | null
           nome_imobiliaria: string
+          num_corretores: number | null
+          num_funcionarios: number | null
           num_imoveis_ativos: number | null
+          num_sdr: number | null
           objetivos_marketing: string | null
           observacoes_adicionais: string | null
           pixel_analytics_configurado: boolean | null
           processed_at: string | null
           publico_alvo: string
           redes_sociais_adicionais: string[] | null
+          responsavel_email: string | null
+          responsavel_nome: string | null
           site_institucional: string | null
           status: string | null
           telefone: string
+          telefone_leads: string | null
           ticket_medio: number | null
           tipo_imoveis: string
           updated_at: string
           valor_mensal_anuncios: number | null
         }
         Insert: {
+          budget_mensal?: number | null
           campanhas_ativas?: boolean | null
           campanhas_detalhes?: string | null
           cidade_regiao: string
@@ -660,22 +847,29 @@ export type Database = {
           nome_completo: string
           nome_gestor_marketing?: string | null
           nome_imobiliaria: string
+          num_corretores?: number | null
+          num_funcionarios?: number | null
           num_imoveis_ativos?: number | null
+          num_sdr?: number | null
           objetivos_marketing?: string | null
           observacoes_adicionais?: string | null
           pixel_analytics_configurado?: boolean | null
           processed_at?: string | null
           publico_alvo: string
           redes_sociais_adicionais?: string[] | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
           site_institucional?: string | null
           status?: string | null
           telefone: string
+          telefone_leads?: string | null
           ticket_medio?: number | null
           tipo_imoveis: string
           updated_at?: string
           valor_mensal_anuncios?: number | null
         }
         Update: {
+          budget_mensal?: number | null
           campanhas_ativas?: boolean | null
           campanhas_detalhes?: string | null
           cidade_regiao?: string
@@ -692,16 +886,22 @@ export type Database = {
           nome_completo?: string
           nome_gestor_marketing?: string | null
           nome_imobiliaria?: string
+          num_corretores?: number | null
+          num_funcionarios?: number | null
           num_imoveis_ativos?: number | null
+          num_sdr?: number | null
           objetivos_marketing?: string | null
           observacoes_adicionais?: string | null
           pixel_analytics_configurado?: boolean | null
           processed_at?: string | null
           publico_alvo?: string
           redes_sociais_adicionais?: string[] | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
           site_institucional?: string | null
           status?: string | null
           telefone?: string
+          telefone_leads?: string | null
           ticket_medio?: number | null
           tipo_imoveis?: string
           updated_at?: string
@@ -865,6 +1065,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       campaign_performance_stats: {
@@ -965,9 +1186,24 @@ export type Database = {
           webhook_meta: string
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      is_gestor: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "gestor" | "usuario"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1094,6 +1330,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "gestor", "usuario"],
+    },
   },
 } as const
