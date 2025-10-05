@@ -127,10 +127,10 @@ export default function ContaDetalhes() {
   const [stats, setStats] = useState<ClientStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [metaData, setMetaData] = useState<MetaAdsResponse | null>(null);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
-  const [lastMetaFetch, setLastMetaFetch] = useState<Date | null>(null);
   const [metaPeriod, setMetaPeriod] = useState<MetaPeriod>('last_7d');
 
   useEffect(() => {
@@ -156,7 +156,6 @@ export default function ContaDetalhes() {
     try {
       const data = await metaAdsService.fetchMetaCampaigns(client.meta_account_id, metaPeriod);
       setMetaData(data);
-      setLastMetaFetch(new Date());
     } catch (error: any) {
       console.error('Error loading Meta data:', error);
       setMetaError(error.message || 'Erro ao carregar dados do Meta');
@@ -177,7 +176,7 @@ export default function ContaDetalhes() {
   const handleSyncComplete = () => {
     // Recarregar dados do banco
     loadClientData();
-
+    
     // Se tiver Meta configurado, recarregar também
     if (client?.meta_account_id) {
       loadMetaData(true);
@@ -254,9 +253,9 @@ export default function ContaDetalhes() {
 
       // Se tiver Meta configurado, carregar dados da API também
       if (clientData.usa_meta_ads && clientData.meta_account_id) {
-        setMetaData(null); // evita flash de dado antigo
-        await loadMetaData();
+        loadMetaData();
       }
+
     } catch (error) {
       console.error('Erro ao carregar cliente:', error);
       toast({
@@ -457,16 +456,15 @@ export default function ContaDetalhes() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Botão de Sincronização Meta */}
+            {/* Botão de Sincronização Meta - CORRIGIDO ✅ */}
             {client.usa_meta_ads && client.meta_account_id && (
-              <MetaSyncButton
-                accountId={client.meta_account_id}
+              <MetaSyncButton 
+                accountId={client.id}  {/* ✅ CORRETO - usa client.id, não meta_account_id */}
                 onSyncComplete={handleSyncComplete}
                 showLastSync={true}
-                lastSync={undefined /* opcional, se o componente aceitar */}
               />
             )}
-
+            
             <Button variant="outline" onClick={() => setShowEditModal(true)}>
               <Edit className="h-4 w-4 mr-2" />
               Editar
@@ -556,9 +554,9 @@ export default function ContaDetalhes() {
                   {client.link_drive && (
                     <div className="flex items-center gap-3">
                       <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                      <a
-                        href={client.link_drive}
-                        target="_blank"
+                      <a 
+                        href={client.link_drive} 
+                        target="_blank" 
                         rel="noopener noreferrer"
                         className="text-sm text-blue-500 hover:underline"
                       >
@@ -569,7 +567,7 @@ export default function ContaDetalhes() {
                   <div className="pt-4 border-t">
                     <p className="text-sm font-medium mb-2">Canais Ativos</p>
                     <div className="flex flex-wrap gap-2">
-                      {client.canais.map((canal) => (
+                      {client.canais.map(canal => (
                         <Badge key={canal} variant="outline">{canal}</Badge>
                       ))}
                     </div>
@@ -715,10 +713,9 @@ export default function ContaDetalhes() {
                 </Card>
               ) : metaData ? (
                 <>
-                  <MetaMetricsGrid
+                  <MetaMetricsGrid 
                     account={metaData.account}
                     campaigns={metaData.campaigns}
-                    lastUpdatedAt={lastMetaFetch || undefined}
                   />
                   <MetaCampaignTable campaigns={metaData.campaigns} />
                 </>
@@ -770,14 +767,14 @@ export default function ContaDetalhes() {
                             {item.completed ? (
                               <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                             ) : (
-                              <AlertTriangle
+                              <AlertTriangle 
                                 className={`h-5 w-5 mt-0.5 ${
-                                  item.priority === 'high'
-                                    ? 'text-red-500'
+                                  item.priority === 'high' 
+                                    ? 'text-red-500' 
                                     : item.priority === 'medium'
                                     ? 'text-yellow-500'
                                     : 'text-gray-500'
-                                }`}
+                                }`} 
                               />
                             )}
                             <div className="flex-1">
