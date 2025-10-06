@@ -612,6 +612,78 @@ export default function Users() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Novo Usuário</DialogTitle>
+              <DialogDescription>
+                Preencha os dados do novo usuário. Se a senha ficar em branco, será gerada automaticamente.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="create-name">Nome *</Label>
+                <Input
+                  id="create-name"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  placeholder="Nome completo"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="create-email">Email *</Label>
+                <Input
+                  id="create-email"
+                  type="email"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="create-password">Senha (opcional)</Label>
+                <Input
+                  id="create-password"
+                  type="password"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  placeholder="Deixe em branco para gerar automaticamente"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="create-role">Cargo *</Label>
+                <Select value={createForm.role} onValueChange={(v) => setCreateForm({ ...createForm, role: v })}>
+                  <SelectTrigger id="create-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                    <SelectItem value="usuario">Usuário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setCreateForm({ name: '', email: '', password: '', role: 'usuario' });
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleCreateUser}
+                disabled={!createForm.email || !createForm.name}
+              >
+                Criar Usuário
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
