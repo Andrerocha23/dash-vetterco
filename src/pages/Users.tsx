@@ -74,32 +74,47 @@ export default function Users() {
   });
   const { toast } = useToast();
 
-  // Carregar todos os usuários da tabela profiles
+  // Carregar TODOS os usuários de auth.users combinando com profiles e roles
   const loadUsersData = async () => {
     try {
       setLoading(true);
       
-      // Buscar TODOS os profiles
+      // 1. Buscar TODOS os usuários autenticados de auth.users
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+
+      if (authError) throw authError;
+
+      const authUsers = authData?.users || [];
+
+      // 2. Buscar profiles existentes
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
 
       if (profilesError) throw profilesError;
 
-      // Buscar roles separadamente
+      // 3. Buscar roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Combinar TODOS os profiles com suas roles (se tiverem)
-      const usersWithRoles = (profilesData || []).map(profile => {
-        const userRole = rolesData?.find(r => r.user_id === profile.id);
+      // 4. Combinar auth.users com profiles e roles
+      const usersWithRoles: UserProfile[] = authUsers.map(authUser => {
+        const profile = profilesData?.find(p => p.id === authUser.id);
+        const userRole = rolesData?.find(r => r.user_id === authUser.id);
+        
         return {
-          ...profile,
-          role: userRole?.role || null
+          id: authUser.id,
+          email: authUser.email || null,
+          name: profile?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || null,
+          telefone: profile?.telefone || null,
+          cargo: profile?.cargo || null,
+          departamento: profile?.departamento || null,
+          role: userRole?.role || null,
+          created_at: authUser.created_at,
+          updated_at: profile?.updated_at || authUser.updated_at || null,
         };
       });
 
@@ -109,7 +124,7 @@ export default function Users() {
       console.error('Erro ao carregar usuários:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar usuários",
+        description: "Não foi possível carregar usuários. Verifique se você tem permissões de admin.",
         variant: "destructive",
       });
     } finally {
