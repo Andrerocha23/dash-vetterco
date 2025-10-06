@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
   Plus,
-  Users,
+  Users as UsersIcon,
   Shield,
   UserCheck,
   User,
@@ -135,47 +135,76 @@ export default function Users() {
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .single() as any;
+
+      // Buscar role do usuário
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single() as any;
 
       setCurrentUser(profile);
-      setIsAdmin(profile?.role === "admin");
+      setIsAdmin(userRole?.role === "admin");
     }
   };
 
   const loadUsuarios = async () => {
     try {
       setLoading(true);
-      const { data: usuariosData, error } = await supabase
-        .from("users_view")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      
+      // Buscar todos os usuários autenticados
+      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+      if (authError) throw authError;
 
-      const { data: gestorClientesData } = await supabase
+      // Buscar profiles sem tipagem
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("*") as any;
+
+      // Buscar roles sem tipagem
+      const { data: rolesData } = await (supabase as any)
+        .from("user_roles")
+        .select("*");
+
+      const { data: gestorClientesData } = await (supabase as any)
         .from("gestor_clientes")
-        .select("gestor_id, cliente_id");
+        .select("*");
 
-      const { data: usuarioClientesData } = await supabase
+      const { data: usuarioClientesData } = await (supabase as any)
         .from("usuario_clientes")
-        .select("usuario_id, cliente_id, nivel_acesso");
+        .select("*");
 
-      const processedUsuarios =
-        usuariosData?.map((user) => {
-          const clientesGestor =
-            gestorClientesData?.filter((gc) => gc.gestor_id === user.id) || [];
-          const clientesUsuario =
-            usuarioClientesData?.filter((uc) => uc.usuario_id === user.id) || [];
+      const processedUsuarios = authUsers?.map((authUser) => {
+        const profile = profilesData?.find((p: any) => p.id === authUser.id);
+        const userRole = rolesData?.find((r: any) => r.user_id === authUser.id);
+        const role = userRole?.role || "usuario";
+        
+        const clientesGestor =
+          gestorClientesData?.filter((gc: any) => gc.gestor_id === authUser.id) || [];
+        const clientesUsuario =
+          usuarioClientesData?.filter((uc: any) => uc.usuario_id === authUser.id) || [];
 
-          return {
-            ...user,
-            total_clientes:
-              user.role === "admin"
-                ? 999
-                : user.role === "gestor"
-                ? clientesGestor.length
-                : clientesUsuario.length,
-          };
-        }) || [];
+        return {
+          id: authUser.id,
+          email: authUser.email || "",
+          name: profile?.name || null,
+          role: role as "admin" | "gestor" | "usuario",
+          ativo: profile?.ativo ?? true,
+          ultimo_acesso: profile?.ultimo_acesso || null,
+          last_sign_in_at: authUser.last_sign_in_at || null,
+          created_at: authUser.created_at,
+          telefone: profile?.telefone || null,
+          departamento: profile?.departamento || null,
+          updated_at: profile?.updated_at || authUser.updated_at,
+          total_clientes:
+            role === "admin"
+              ? 999
+              : role === "gestor"
+              ? clientesGestor.length
+              : clientesUsuario.length,
+        };
+      }) || [];
 
       setUsuarios(processedUsuarios);
     } catch (error) {
@@ -213,11 +242,19 @@ export default function Users() {
       return;
     }
     try {
+      // Deletar role antiga
+      await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId) as any;
+
+      // Inserir nova role
       const { error } = await supabase
-        .from("profiles")
-        .update({ role: newRole })
-        .eq("id", userId);
+        .from("user_roles")
+        .insert({ user_id: userId, role: newRole } as any) as any;
+      
       if (error) throw error;
+      
       toast({
         title: "Cargo atualizado",
         description: "O cargo do usuário foi atualizado com sucesso",
@@ -245,8 +282,8 @@ export default function Users() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ ativo })
-        .eq("id", userId);
+        .update({ ativo } as any)
+        .eq("id", userId) as any;
       if (error) throw error;
       toast({
         title: "Status atualizado",
@@ -290,8 +327,8 @@ export default function Users() {
             telefone: editFormData.telefone,
             departamento: editFormData.departamento,
             updated_at: new Date().toISOString(),
-          })
-          .eq("id", selectedUser.id);
+          } as any)
+          .eq("id", selectedUser.id) as any;
         if (error) throw error;
       } else {
         const { error } = await supabase.from("profiles").insert({
@@ -299,10 +336,9 @@ export default function Users() {
           name: editFormData.name,
           telefone: editFormData.telefone,
           departamento: editFormData.departamento,
-          role: "usuario",
           ativo: true,
           updated_at: new Date().toISOString(),
-        });
+        } as any) as any;
         if (error) throw error;
       }
 
@@ -333,8 +369,8 @@ export default function Users() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ ativo: false })
-        .eq("id", selectedUser.id);
+        .update({ ativo: false } as any)
+        .eq("id", selectedUser.id) as any;
       if (error) throw error;
       toast({
         title: "Usuário desativado",
