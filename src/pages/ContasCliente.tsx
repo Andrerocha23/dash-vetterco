@@ -31,14 +31,14 @@ import {
   Filter,
   User,
   Pause,
-  Play
+  Play,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -104,7 +104,7 @@ export default function ContasCliente() {
     arquivados: 0,
     metaAds: 0,
     googleAds: 0,
-    saldoTotal: 0
+    saldoTotal: 0,
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,53 +119,63 @@ export default function ContasCliente() {
     loadAccountsData();
   }, []);
 
-  // === CARREGAMENTO (inalterado) ===
+  // === CARREGAMENTO ===
   const loadAccountsData = async () => {
     try {
       setLoading(true);
 
+      // ✅ Query CORRETA com join do gestor
       const { data: accountsData, error: accountsError } = await supabase
-        .from('accounts')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("accounts")
+        .select(
+          `
+        *,
+        gestor:profiles!gestor_id(
+          id,
+          name
+        )
+      `,
+        )
+        .order("created_at", { ascending: false });
+
       if (accountsError) throw accountsError;
 
-      const { data: clientesData, error: clientesError} = await supabase
-        .from('clientes')
-        .select('*')
-        .order('nome', { ascending: true });
-      if (clientesError) console.warn('Clientes não encontrados:', clientesError);
+      const { data: clientesData, error: clientesError } = await supabase
+        .from("clientes")
+        .select("*")
+        .order("nome", { ascending: true });
 
-      const processedAccounts: AccountData[] = (accountsData || []).map(account => {
-        const cliente = clientesData?.find(c => c.id === account.cliente_id);
+      if (clientesError) console.warn("Clientes não encontrados:", clientesError);
+
+      // Processar dados
+      const processedAccounts: AccountData[] = (accountsData || []).map((account) => {
+        const cliente = clientesData?.find((c) => c.id === account.cliente_id);
 
         return {
           ...account,
-          gestor_name: 'N/A', // Campo removido
-          cliente_nome: cliente?.nome || 'Cliente não vinculado',
+          gestor_name: account.gestor?.name || "Sem gestor",
+          cliente_nome: cliente?.nome || "Cliente não vinculado",
           total_budget: (account.budget_mensal_meta || 0) + (account.budget_mensal_google || 0),
           leads_mes: Math.floor(Math.random() * 150) + 20,
           conversoes_mes: Math.floor(Math.random() * 30) + 5,
         };
       });
 
-      const calculatedStats: StatsData = {
+      const calculateStats: StatsData = {
         total: processedAccounts.length,
-        ativos: processedAccounts.filter(a => a.status === 'Ativo').length,
-        pausados: processedAccounts.filter(a => a.status === 'Pausado').length,
-        arquivados: processedAccounts.filter(a => a.status === 'Arquivado').length,
-        metaAds: processedAccounts.filter(a => a.usa_meta_ads).length,
-        googleAds: processedAccounts.filter(a => a.usa_google_ads).length,
+        ativos: processedAccounts.filter((a) => a.status === "Ativo").length,
+        pausados: processedAccounts.filter((a) => a.status === "Pausado").length,
+        arquivados: processedAccounts.filter((a) => a.status === "Arquivado").length,
+        metaAds: processedAccounts.filter((a) => a.usa_meta_ads).length,
+        googleAds: processedAccounts.filter((a) => a.usa_google_ads).length,
         saldoTotal: processedAccounts.reduce((sum, a) => sum + (a.saldo_meta || 0), 0),
       };
 
       setAccounts(processedAccounts);
-      setManagers([]); // Removido managers
       setClientes(clientesData || []);
-      setStats(calculatedStats);
-
+      setStats(calculateStats);
     } catch (error: any) {
-      console.error('Erro ao carregar contas:', error);
+      console.error("Erro ao carregar contas:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as contas",
@@ -175,16 +185,10 @@ export default function ContasCliente() {
       setLoading(false);
     }
   };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadAccountsData();
-    setRefreshing(false);
-  };
-
   // === FILTROS (inalterado) ===
-  const filteredAccounts = accounts.filter(account => {
-    const matchesSearch = !searchTerm || 
+  const filteredAccounts = accounts.filter((account) => {
+    const matchesSearch =
+      !searchTerm ||
       account.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.telefone.includes(searchTerm) ||
@@ -234,17 +238,17 @@ export default function ContasCliente() {
         budget_mensal_google: data.budget_mensal_google || 0,
         // Outros
         link_drive: data.link_drive || null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       if (editingAccount) {
-        const { error } = await supabase.from('accounts').update(accountData).eq('id', editingAccount.id);
+        const { error } = await supabase.from("accounts").update(accountData).eq("id", editingAccount.id);
         if (error) throw error;
         toast({ title: "Sucesso", description: "Conta atualizada com sucesso" });
       } else {
-        const { error } = await supabase.from('accounts').insert({
+        const { error } = await supabase.from("accounts").insert({
           ...accountData,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         });
         if (error) throw error;
         toast({ title: "Sucesso", description: "Conta criada com sucesso" });
@@ -253,9 +257,8 @@ export default function ContasCliente() {
       await loadAccountsData();
       setShowModernForm(false);
       setEditingAccount(null);
-
     } catch (error: any) {
-      console.error('Erro ao salvar conta:', error);
+      console.error("Erro ao salvar conta:", error);
       toast({
         title: "Erro",
         description: `Não foi possível salvar a conta: ${error.message}`,
@@ -266,24 +269,24 @@ export default function ContasCliente() {
 
   const handleToggleStatus = async (account: AccountData, e: React.MouseEvent) => {
     e.stopPropagation();
-    const newStatus = account.status === 'Ativo' ? 'Pausado' : 'Ativo';
-    
+    const newStatus = account.status === "Ativo" ? "Pausado" : "Ativo";
+
     try {
       const { error } = await supabase
-        .from('accounts')
+        .from("accounts")
         .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', account.id);
+        .eq("id", account.id);
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: `Conta ${newStatus === 'Ativo' ? 'ativada' : 'pausada'} com sucesso`,
+        description: `Conta ${newStatus === "Ativo" ? "ativada" : "pausada"} com sucesso`,
       });
 
       await loadAccountsData();
     } catch (error: any) {
-      console.error('Erro ao alterar status:', error);
+      console.error("Erro ao alterar status:", error);
       toast({
         title: "Erro",
         description: "Não foi possível alterar o status da conta",
@@ -294,11 +297,16 @@ export default function ContasCliente() {
 
   // === Helpers (inalterados) ===
   const getInitials = (name: string) => {
-    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
   // ====== UI Components (apenas layout) ======
@@ -307,7 +315,7 @@ export default function ContasCliente() {
     title,
     value,
     iconWrapClass,
-    iconClass
+    iconClass,
   }: {
     icon: React.ReactNode;
     title: string;
@@ -364,7 +372,7 @@ export default function ContasCliente() {
                   disabled={refreshing}
                   aria-label="Atualizar"
                 >
-                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                   Atualizar
                 </Button>
                 <Button onClick={handleCreateAccount} className="gap-2" aria-label="Nova Conta">
@@ -464,9 +472,11 @@ export default function ContasCliente() {
             <div className="space-y-3">
               {filteredAccounts.map((account) => {
                 const statusColor =
-                  account.status === 'Ativo' ? 'from-success/70 to-success/10' :
-                  account.status === 'Pausado' ? 'from-yellow-500/70 to-yellow-500/10' :
-                  'from-text-muted/70 to-text-muted/10';
+                  account.status === "Ativo"
+                    ? "from-success/70 to-success/10"
+                    : account.status === "Pausado"
+                      ? "from-yellow-500/70 to-yellow-500/10"
+                      : "from-text-muted/70 to-text-muted/10";
 
                 // Dinâmica de configuração por ID
                 const metaConfigured = !!(account.meta_account_id && account.meta_account_id.trim().length > 0);
@@ -493,14 +503,14 @@ export default function ContasCliente() {
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-foreground text-lg truncate">
-                                {account.nome_cliente}
-                              </h3>
+                              <h3 className="font-semibold text-foreground text-lg truncate">{account.nome_cliente}</h3>
                               <Badge
                                 className={
-                                  account.status === 'Ativo' ? 'bg-success text-white' :
-                                  account.status === 'Pausado' ? 'bg-yellow-500 text-black dark:text-white' :
-                                  'bg-text-muted text-white'
+                                  account.status === "Ativo"
+                                    ? "bg-success text-white"
+                                    : account.status === "Pausado"
+                                      ? "bg-yellow-500 text-black dark:text-white"
+                                      : "bg-text-muted text-white"
                                 }
                               >
                                 {account.status}
@@ -511,7 +521,9 @@ export default function ContasCliente() {
                               <div className="flex items-center gap-1">
                                 <Building2 className="h-3.5 w-3.5" />
                                 <span className="truncate">
-                                  {account.cliente_nome !== 'Cliente não vinculado' ? account.cliente_nome : 'Cliente não vinculado'}
+                                  {account.cliente_nome !== "Cliente não vinculado"
+                                    ? account.cliente_nome
+                                    : "Cliente não vinculado"}
                                 </span>
                               </div>
                               {/* Gestor responsável (no lugar do telefone) */}
@@ -535,7 +547,7 @@ export default function ContasCliente() {
                                       "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
                                       metaConfigured
                                         ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
-                                        : "border-border/40 bg-transparent text-text-muted"
+                                        : "border-border/40 bg-transparent text-text-muted",
                                     ].join(" ")}
                                   >
                                     <Facebook className="h-3.5 w-3.5" />
@@ -543,7 +555,9 @@ export default function ContasCliente() {
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  {metaConfigured ? "Meta Ads configurado" : "Meta Ads não configurado (adicione o ID da conta)."}
+                                  {metaConfigured
+                                    ? "Meta Ads configurado"
+                                    : "Meta Ads não configurado (adicione o ID da conta)."}
                                 </TooltipContent>
                               </Tooltip>
                             )}
@@ -556,7 +570,7 @@ export default function ContasCliente() {
                                       "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
                                       googleConfigured
                                         ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                                        : "border-border/40 bg-transparent text-text-muted"
+                                        : "border-border/40 bg-transparent text-text-muted",
                                     ].join(" ")}
                                   >
                                     <Chrome className="h-3.5 w-3.5" />
@@ -564,7 +578,9 @@ export default function ContasCliente() {
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  {googleConfigured ? "Google Ads configurado" : "Google Ads não configurado (adicione o ID da conta)."}
+                                  {googleConfigured
+                                    ? "Google Ads configurado"
+                                    : "Google Ads não configurado (adicione o ID da conta)."}
                                 </TooltipContent>
                               </Tooltip>
                             )}
@@ -578,9 +594,7 @@ export default function ContasCliente() {
                         {/* ATUALIZADO */}
                         <div className="text-left md:text-right">
                           <div className="text-xs text-text-tertiary font-medium mb-1">Atualizado</div>
-                          <div className="text-sm text-foreground font-medium">
-                            {formatDate(account.updated_at)}
-                          </div>
+                          <div className="text-sm text-foreground font-medium">{formatDate(account.updated_at)}</div>
                         </div>
 
                         {/* AÇÕES */}
@@ -607,12 +621,12 @@ export default function ContasCliente() {
                                 Editar conta
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              {account.status === 'Ativo' ? (
+                              {account.status === "Ativo" ? (
                                 <DropdownMenuItem onClick={(e) => handleToggleStatus(account, e)}>
                                   <Pause className="h-4 w-4 mr-2" />
                                   Pausar conta
                                 </DropdownMenuItem>
-                              ) : account.status === 'Pausado' ? (
+                              ) : account.status === "Pausado" ? (
                                 <DropdownMenuItem onClick={(e) => handleToggleStatus(account, e)}>
                                   <Play className="h-4 w-4 mr-2" />
                                   Despausar conta
@@ -652,25 +666,29 @@ export default function ContasCliente() {
               open={showModernForm}
               onOpenChange={setShowModernForm}
               onSubmit={handleAccountSubmit}
-              initialData={editingAccount ? {
-                cliente_id: editingAccount.cliente_id,
-                nome_cliente: editingAccount.nome_cliente,
-                nome_empresa: editingAccount.nome_empresa,
-                telefone: editingAccount.telefone,
-                email: editingAccount.email || "",
-                status: editingAccount.status as "Ativo" | "Pausado" | "Arquivado",
-                observacoes: editingAccount.observacoes || "",
-                canais: editingAccount.canais || [],
-                canal_relatorio: (editingAccount.canal_relatorio as "WhatsApp" | "Email" | "Ambos") || "WhatsApp",
-                horario_relatorio: editingAccount.horario_relatorio || "09:00",
-                usa_meta_ads: editingAccount.usa_meta_ads || false,
-                meta_account_id: editingAccount.meta_account_id || "",
-                saldo_meta: editingAccount.saldo_meta || 0,
-                usa_google_ads: editingAccount.usa_google_ads || false,
-                google_ads_id: editingAccount.google_ads_id || "",
-                budget_mensal_meta: editingAccount.budget_mensal_meta || 0,
-                budget_mensal_google: editingAccount.budget_mensal_google || 0,
-              } : undefined}
+              initialData={
+                editingAccount
+                  ? {
+                      cliente_id: editingAccount.cliente_id,
+                      nome_cliente: editingAccount.nome_cliente,
+                      nome_empresa: editingAccount.nome_empresa,
+                      telefone: editingAccount.telefone,
+                      email: editingAccount.email || "",
+                      status: editingAccount.status as "Ativo" | "Pausado" | "Arquivado",
+                      observacoes: editingAccount.observacoes || "",
+                      canais: editingAccount.canais || [],
+                      canal_relatorio: (editingAccount.canal_relatorio as "WhatsApp" | "Email" | "Ambos") || "WhatsApp",
+                      horario_relatorio: editingAccount.horario_relatorio || "09:00",
+                      usa_meta_ads: editingAccount.usa_meta_ads || false,
+                      meta_account_id: editingAccount.meta_account_id || "",
+                      saldo_meta: editingAccount.saldo_meta || 0,
+                      usa_google_ads: editingAccount.usa_google_ads || false,
+                      google_ads_id: editingAccount.google_ads_id || "",
+                      budget_mensal_meta: editingAccount.budget_mensal_meta || 0,
+                      budget_mensal_google: editingAccount.budget_mensal_google || 0,
+                    }
+                  : undefined
+              }
               isEdit={!!editingAccount}
             />
           </div>
@@ -684,14 +702,14 @@ export default function ContasCliente() {
 function CheckCircleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
-      <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14-4-4 1.414-1.414L11 12.172l4.586-4.586L17 9l-6 7Z"/>
+      <path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm-1 14-4-4 1.414-1.414L11 12.172l4.586-4.586L17 9l-6 7Z" />
     </svg>
   );
 }
 function TargetIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
-      <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2Zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6Zm1 5h7v2h-7v-2Z"/>
+      <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2Zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6Zm1 5h7v2h-7v-2Z" />
     </svg>
   );
 }
