@@ -107,6 +107,23 @@ export default function PublicClientRegistration() {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      // Primeiro, criar o cliente na tabela clientes
+      const { data: clienteData, error: clienteError } = await supabase
+        .from("clientes")
+        .insert({
+          nome: values.razao_social || values.nome_fantasia || "Sem nome",
+          cnpj: values.cnpj_cpf,
+          email: values.responsavel_email,
+          telefone: values.responsavel_whatsapp || "",
+          instagram_handle: values.instagram_handle,
+          site: values.site_url,
+        })
+        .select()
+        .single();
+
+      if (clienteError) throw clienteError;
+
+      // Depois, salvar na tabela de registros com referência ao cliente criado
       const { error } = await supabase.from("public_client_registrations").insert({
         cidade_regiao: values.cidades[0] || "Não especificado",
         email: values.responsavel_email,
@@ -147,6 +164,7 @@ export default function PublicClientRegistration() {
         horarios_contato: values.horarios_contato,
         lgpd_consent: values.lgpd_consent,
         status: "Pendente",
+        client_id: clienteData.id,
       });
 
       if (error) throw error;

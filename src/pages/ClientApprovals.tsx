@@ -50,23 +50,7 @@ export default function ClientApprovals() {
     try {
       const { data: session } = await supabase.auth.getSession();
       
-      // Create client in clientes table first
-      const { data: clienteData, error: clienteError } = await supabase
-        .from("clientes")
-        .insert({
-          nome: registration.razao_social || registration.nome_fantasia || "Sem nome",
-          cnpj: registration.cnpj_cpf,
-          email: registration.responsavel_email,
-          telefone: registration.responsavel_whatsapp || registration.telefone || "",
-          instagram_handle: registration.instagram_handle,
-          site: registration.site_url,
-        })
-        .select()
-        .single();
-
-      if (clienteError) throw clienteError;
-
-      // Atualizar status da submissão
+      // Atualizar status da submissão (cliente já foi criado no formulário)
       const { error: updateError } = await supabase
         .from("public_client_registrations")
         .update({
@@ -80,7 +64,7 @@ export default function ClientApprovals() {
 
       toast({
         title: "Cliente aprovado!",
-        description: "O cadastro foi aprovado e o cliente foi criado com sucesso.",
+        description: "O cadastro foi aprovado com sucesso.",
       });
 
       fetchRegistrations();
