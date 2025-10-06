@@ -295,6 +295,12 @@ export default function ContasCliente() {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadAccountsData();
+    setRefreshing(false);
+  };
+
   // === Helpers (inalterados) ===
   const getInitials = (name: string) => {
     return name

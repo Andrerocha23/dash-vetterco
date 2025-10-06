@@ -32,6 +32,7 @@ export type Database = {
           email: string | null
           forma_pagamento: string | null
           ga4_stream_id: string | null
+          gestor_id: string | null
           google_ads_id: string | null
           gtm_id: string | null
           horario_relatorio: string | null
@@ -90,6 +91,7 @@ export type Database = {
           email?: string | null
           forma_pagamento?: string | null
           ga4_stream_id?: string | null
+          gestor_id?: string | null
           google_ads_id?: string | null
           gtm_id?: string | null
           horario_relatorio?: string | null
@@ -148,6 +150,7 @@ export type Database = {
           email?: string | null
           forma_pagamento?: string | null
           ga4_stream_id?: string | null
+          gestor_id?: string | null
           google_ads_id?: string | null
           gtm_id?: string | null
           horario_relatorio?: string | null
@@ -195,6 +198,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_gestor_id_fkey"
+            columns: ["gestor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -291,203 +301,11 @@ export type Database = {
             foreignKeyName: "campaign_creatives_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "campaign_creatives_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "campaign_creatives_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "relatorio_n8n_consolidated"
-            referencedColumns: ["conta_id"]
-          },
-        ]
-      }
-      campaign_leads_daily: {
-        Row: {
-          ad_set_name: string | null
-          amount_spent: number | null
-          campaign_id: string
-          campaign_name: string
-          clicks: number | null
-          client_id: string
-          client_notes: string | null
-          converted_leads: number | null
-          cost_per_result: number | null
-          cpc: number | null
-          cpm: number | null
-          created_at: string
-          creative_id: string | null
-          creative_name: string | null
-          creative_thumbnail_url: string | null
-          creative_type: string | null
-          ctr: number | null
-          date: string
-          delivery_status: string | null
-          disqualified_leads: number | null
-          feedback_status: string | null
-          frequency: number | null
-          hold_rate: number | null
-          hook_rate: number | null
-          id: string
-          impressions: number | null
-          kanban_status: string | null
-          landing_page_views: number | null
-          leads_count: number
-          link_clicks: number | null
-          no_response_leads: number | null
-          objective: string | null
-          optimization_goal: string | null
-          platform: string
-          qualified_leads: number | null
-          quality_score: number | null
-          reach: number | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          scheduled_leads: number | null
-          spend: number | null
-          three_second_video_views: number | null
-          thru_plays: number | null
-          updated_at: string
-          video_avg_watch_time: number | null
-          video_p100_watched: number | null
-          video_p25_watched: number | null
-          video_p50_watched: number | null
-          video_p75_watched: number | null
-        }
-        Insert: {
-          ad_set_name?: string | null
-          amount_spent?: number | null
-          campaign_id: string
-          campaign_name: string
-          clicks?: number | null
-          client_id: string
-          client_notes?: string | null
-          converted_leads?: number | null
-          cost_per_result?: number | null
-          cpc?: number | null
-          cpm?: number | null
-          created_at?: string
-          creative_id?: string | null
-          creative_name?: string | null
-          creative_thumbnail_url?: string | null
-          creative_type?: string | null
-          ctr?: number | null
-          date: string
-          delivery_status?: string | null
-          disqualified_leads?: number | null
-          feedback_status?: string | null
-          frequency?: number | null
-          hold_rate?: number | null
-          hook_rate?: number | null
-          id?: string
-          impressions?: number | null
-          kanban_status?: string | null
-          landing_page_views?: number | null
-          leads_count?: number
-          link_clicks?: number | null
-          no_response_leads?: number | null
-          objective?: string | null
-          optimization_goal?: string | null
-          platform: string
-          qualified_leads?: number | null
-          quality_score?: number | null
-          reach?: number | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          scheduled_leads?: number | null
-          spend?: number | null
-          three_second_video_views?: number | null
-          thru_plays?: number | null
-          updated_at?: string
-          video_avg_watch_time?: number | null
-          video_p100_watched?: number | null
-          video_p25_watched?: number | null
-          video_p50_watched?: number | null
-          video_p75_watched?: number | null
-        }
-        Update: {
-          ad_set_name?: string | null
-          amount_spent?: number | null
-          campaign_id?: string
-          campaign_name?: string
-          clicks?: number | null
-          client_id?: string
-          client_notes?: string | null
-          converted_leads?: number | null
-          cost_per_result?: number | null
-          cpc?: number | null
-          cpm?: number | null
-          created_at?: string
-          creative_id?: string | null
-          creative_name?: string | null
-          creative_thumbnail_url?: string | null
-          creative_type?: string | null
-          ctr?: number | null
-          date?: string
-          delivery_status?: string | null
-          disqualified_leads?: number | null
-          feedback_status?: string | null
-          frequency?: number | null
-          hold_rate?: number | null
-          hook_rate?: number | null
-          id?: string
-          impressions?: number | null
-          kanban_status?: string | null
-          landing_page_views?: number | null
-          leads_count?: number
-          link_clicks?: number | null
-          no_response_leads?: number | null
-          objective?: string | null
-          optimization_goal?: string | null
-          platform?: string
-          qualified_leads?: number | null
-          quality_score?: number | null
-          reach?: number | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          scheduled_leads?: number | null
-          spend?: number | null
-          three_second_video_views?: number | null
-          thru_plays?: number | null
-          updated_at?: string
-          video_avg_watch_time?: number | null
-          video_p100_watched?: number | null
-          video_p25_watched?: number | null
-          video_p50_watched?: number | null
-          video_p75_watched?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "leads_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "campaign_leads_daily_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "relatorio_n8n_consolidated"
@@ -687,52 +505,6 @@ export type Database = {
           },
         ]
       }
-      gestor_clientes: {
-        Row: {
-          atribuido_em: string | null
-          atribuido_por: string | null
-          cliente_id: string | null
-          gestor_id: string | null
-          id: string
-        }
-        Insert: {
-          atribuido_em?: string | null
-          atribuido_por?: string | null
-          cliente_id?: string | null
-          gestor_id?: string | null
-          id?: string
-        }
-        Update: {
-          atribuido_em?: string | null
-          atribuido_por?: string | null
-          cliente_id?: string | null
-          gestor_id?: string | null
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "gestor_clientes_atribuido_por_fkey"
-            columns: ["atribuido_por"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "gestor_clientes_cliente_id_fkey"
-            columns: ["cliente_id"]
-            isOneToOne: false
-            referencedRelation: "clientes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "gestor_clientes_gestor_id_fkey"
-            columns: ["gestor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       leads: {
         Row: {
           campanha: string | null
@@ -845,13 +617,6 @@ export type Database = {
             foreignKeyName: "leads_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "leads_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
@@ -913,13 +678,6 @@ export type Database = {
             foreignKeyName: "meta_sync_logs_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "meta_sync_logs_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
@@ -945,6 +703,7 @@ export type Database = {
           avatar_url: string | null
           cargo: string | null
           departamento: string | null
+          email: string | null
           id: string
           name: string | null
           role: Database["public"]["Enums"]["app_role"] | null
@@ -957,6 +716,7 @@ export type Database = {
           avatar_url?: string | null
           cargo?: string | null
           departamento?: string | null
+          email?: string | null
           id: string
           name?: string | null
           role?: Database["public"]["Enums"]["app_role"] | null
@@ -969,6 +729,7 @@ export type Database = {
           avatar_url?: string | null
           cargo?: string | null
           departamento?: string | null
+          email?: string | null
           id?: string
           name?: string | null
           role?: Database["public"]["Enums"]["app_role"] | null
@@ -1024,13 +785,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "accounts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "relatorio_config_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: true
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "relatorio_config_client_id_fkey"
@@ -1094,13 +848,6 @@ export type Database = {
             foreignKeyName: "relatorio_disparos_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "relatorio_disparos_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "leads_stats"
             referencedColumns: ["client_id"]
           },
@@ -1144,23 +891,6 @@ export type Database = {
       }
     }
     Views: {
-      campaign_performance_stats: {
-        Row: {
-          avg_quality_score: number | null
-          client_id: string | null
-          conversion_rate: number | null
-          nome_cliente: string | null
-          pending_feedback: number | null
-          qualification_rate: number | null
-          total_campaign_days: number | null
-          total_converted: number | null
-          total_disqualified: number | null
-          total_leads: number | null
-          total_qualified: number | null
-          total_spend: number | null
-        }
-        Relationships: []
-      }
       leads_stats: {
         Row: {
           client_id: string | null
