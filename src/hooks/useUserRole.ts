@@ -12,28 +12,17 @@ export function useUserRole() {
     const loadUserRole = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          setRole(null);
-          setLoading(false);
-          return;
-        }
-
+        if (!user) { setRole(null); setLoading(false); return; }
         setUserId(user.id);
 
-        // Buscar role do usuário
-        const { data: roleData, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
+        // Usar funções SECURITY DEFINER para evitar problemas de RLS/recursão
+        const { data: isAdminRes } = await supabase.rpc('is_admin', { _user_id: user.id });
+        if (isAdminRes === true) { setRole('admin'); return; }
 
-        if (error) {
-          console.warn('Usuário sem role definida:', error);
-          setRole('usuario'); // Default para usuário comum
-        } else {
-          setRole(roleData.role as UserRole);
-        }
+        const { data: isGestorRes } = await supabase.rpc('is_gestor', { _user_id: user.id });
+        if (isGestorRes === true) { setRole('gestor'); return; }
+
+        setRole('usuario');
       } catch (error) {
         console.error('Erro ao carregar role:', error);
         setRole('usuario');
