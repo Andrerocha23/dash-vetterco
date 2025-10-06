@@ -19,7 +19,7 @@ import Templates from "./pages/Templates";
 import Training from "./pages/Training";
 import TrainingDetail from "./pages/TrainingDetail";
 import AddTraining from "./pages/AddTraining";
-import Managers from "./pages/Managers";
+import ClientApprovals from "./pages/ClientApprovals";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import Feedbacks from "./pages/Feedbacks";
@@ -108,9 +108,9 @@ const App = () => (
                 <AddTraining />
               </ProtectedRoute>
             } />
-            <Route path="/gestores" element={
+            <Route path="/aprovacoes-clientes" element={
               <ProtectedRoute>
-                <Managers />
+                <ClientApprovals />
               </ProtectedRoute>
             } />
             <Route path="/usuarios" element={

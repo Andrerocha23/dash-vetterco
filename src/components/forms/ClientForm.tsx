@@ -18,6 +18,7 @@ import {
   Chrome,
 } from "lucide-react";
 import { ClienteFormData } from "@/types/client";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Form,
   FormControl,
@@ -39,7 +40,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { managersService } from "@/services/managersService";
+// managersService removido
 
 const clientSchema = z.object({
   // Informações Básicas
@@ -219,18 +220,27 @@ export function ClientForm({
   const budgetMeta = form.watch("budgetMensalMeta");
   const budgetGoogle = form.watch("budgetMensalGoogle");
 
-  // Load managers
+  // Load users (antigos gestores)
   useEffect(() => {
-    const loadManagers = async () => {
+    const loadUsers = async () => {
       try {
         setLoadingManagers(true);
-        const managers = await managersService.getManagersForSelect();
-        setAvailableManagers(managers);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .order('name');
+        
+        if (error) throw error;
+        
+        setAvailableManagers(data?.map(u => ({
+          id: u.id,
+          nome: u.name || u.email || 'Sem nome'
+        })) || []);
       } catch (error) {
-        console.error('Error loading managers:', error);
+        console.error('Error loading users:', error);
         toast({
           title: "Erro",
-          description: "Não foi possível carregar os gestores",
+          description: "Não foi possível carregar os usuários",
           variant: "destructive",
         });
       } finally {
@@ -238,7 +248,7 @@ export function ClientForm({
       }
     };
 
-    loadManagers();
+    loadUsers();
   }, []);
 
   // Track dirty state

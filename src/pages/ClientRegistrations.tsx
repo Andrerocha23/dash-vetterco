@@ -67,7 +67,7 @@ export default function ClientRegistrations() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('public_client_registrations')
+        .from('clientes')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -92,10 +92,10 @@ export default function ClientRegistrations() {
   const updateStatus = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from('public_client_registrations')
+        .from('clientes')
         .update({ 
           status: newStatus,
-          processed_at: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', id);
 

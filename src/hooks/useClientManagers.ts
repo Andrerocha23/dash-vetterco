@@ -17,13 +17,18 @@ export function useClientManagers() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('managers')
+        .from('profiles')
         .select('*')
-        .eq('status', 'active')
         .order('name');
 
       if (error) throw error;
-      setManagers(data || []);
+      setManagers(data?.map(p => ({
+        id: p.id,
+        name: p.name || p.email || 'Sem nome',
+        email: p.email,
+        avatar_url: undefined,
+        department: undefined
+      })) || []);
     } catch (error) {
       console.error('Error loading managers:', error);
     } finally {

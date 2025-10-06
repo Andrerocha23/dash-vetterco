@@ -53,7 +53,6 @@ interface ClientData {
   nome_empresa: string;
   telefone: string;
   email: string | null;
-  gestor_id: string;
   canais: string[];
   status: string;
   observacoes: string | null;
@@ -95,7 +94,6 @@ export default function Clients() {
     nome_empresa: '',
     telefone: '',
     email: '',
-    gestor_id: '',
     canais: [] as string[],
     status: 'Ativo'
   });
@@ -116,13 +114,12 @@ export default function Clients() {
 
       if (clientsError) throw clientsError;
 
-      // Buscar gestores
-      const { data: managersData, error: managersError } = await supabase
-        .from('managers')
-        .select('id, name')
-        .eq('status', 'active');
+      // Buscar usuários responsáveis
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('id, name, email');
 
-      if (managersError) console.warn('Managers not found:', managersError);
+      if (usersError) console.warn('Users not found:', usersError);
 
       // Buscar stats de leads (se disponível)
       const { data: leadsData, error: leadsError } = await supabase
@@ -133,12 +130,12 @@ export default function Clients() {
 
       // Processar dados combinados
       const processedClients: ClientData[] = (clientsData || []).map(client => {
-        const manager = managersData?.find(m => m.id === client.gestor_id);
+        const user = usersData?.find(u => u.id === (client as any).user_id);
         const stats = leadsData?.find(s => s.client_id === client.id);
 
         return {
           ...client,
-          gestor_name: manager?.name || 'Gestor não encontrado',
+          gestor_name: user?.name || user?.email || 'Sem responsável',
           stats: stats ? {
             total_leads: stats.total_leads || 0,
             conversoes: stats.leads_convertidos || 0,
@@ -148,7 +145,7 @@ export default function Clients() {
       });
 
       setClients(processedClients);
-      setManagers(managersData || []);
+      setManagers(usersData?.map(u => ({ id: u.id, name: u.name || u.email || 'Sem nome' })) || []);
 
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
@@ -190,7 +187,6 @@ export default function Clients() {
         nome_empresa: '',
         telefone: '',
         email: '',
-        gestor_id: '',
         canais: [],
         status: 'Ativo'
       });
@@ -256,7 +252,7 @@ export default function Clients() {
                          client.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === "all" || client.status === filterStatus;
-    const matchesManager = filterManager === "all" || client.gestor_id === filterManager;
+    const matchesManager = filterManager === "all" || true; // Removido gestor_id
     
     return matchesSearch && matchesStatus && matchesManager;
   });
@@ -686,10 +682,10 @@ export default function Clients() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="gestor">Gestor</Label>
+                <Label htmlFor="gestor">Responsável</Label>
                 <Select 
-                  value={newClientData.gestor_id} 
-                  onValueChange={(value) => setNewClientData(prev => ({ ...prev, gestor_id: value }))}
+                  value="" 
+                  onValueChange={(value) => {/* Não há mais gestor_id */}}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um gestor" />

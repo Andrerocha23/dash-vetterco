@@ -32,6 +32,7 @@ export function AppSidebar({
   
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { role } = useUserRole();
   const currentPath = location.pathname;
   const filteredNavItems = filterNavigationByRole(navigationItems, role);
 
@@ -112,7 +113,7 @@ export function AppSidebar({
         <nav className="flex-1 overflow-y-auto scrollbar-thin py-6">
           <div className={`space-y-2 transition-all duration-500 ${isCollapsed ? 'px-2' : 'px-3'}`}>
 
-            {navigationItems.map((item, index) => {
+            {filteredNavItems.map((item, index) => {
               const active = isActive(item.url);
               
               if (isCollapsed) {

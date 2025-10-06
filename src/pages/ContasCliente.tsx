@@ -48,7 +48,6 @@ interface AccountData {
   nome_empresa: string;
   telefone: string;
   email: string | null;
-  gestor_id: string;
   cliente_id: string;
   canais: string[];
   status: string;
@@ -131,25 +130,18 @@ export default function ContasCliente() {
         .order('created_at', { ascending: false });
       if (accountsError) throw accountsError;
 
-      const { data: managersData, error: managersError } = await supabase
-        .from('managers')
-        .select('id, name')
-        .eq('status', 'active');
-      if (managersError) console.warn('Gestores não encontrados:', managersError);
-
-      const { data: clientesData, error: clientesError } = await supabase
+      const { data: clientesData, error: clientesError} = await supabase
         .from('clientes')
         .select('*')
         .order('nome', { ascending: true });
       if (clientesError) console.warn('Clientes não encontrados:', clientesError);
 
       const processedAccounts: AccountData[] = (accountsData || []).map(account => {
-        const manager = managersData?.find(m => m.id === account.gestor_id);
         const cliente = clientesData?.find(c => c.id === account.cliente_id);
 
         return {
           ...account,
-          gestor_name: manager?.name || 'Gestor não encontrado',
+          gestor_name: 'N/A', // Campo removido
           cliente_nome: cliente?.nome || 'Cliente não vinculado',
           total_budget: (account.budget_mensal_meta || 0) + (account.budget_mensal_google || 0),
           leads_mes: Math.floor(Math.random() * 150) + 20,
@@ -168,7 +160,7 @@ export default function ContasCliente() {
       };
 
       setAccounts(processedAccounts);
-      setManagers(managersData || []);
+      setManagers([]); // Removido managers
       setClientes(clientesData || []);
       setStats(calculatedStats);
 
@@ -198,7 +190,7 @@ export default function ContasCliente() {
       account.telefone.includes(searchTerm) ||
       (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === "Todos os Status" || account.status === filterStatus;
-    const matchesGestor = filterGestor === "Todos os Gestores" || account.gestor_id === filterGestor;
+    const matchesGestor = filterGestor === "Todos os Gestores" || true; // Removido gestor_id
     const matchesCliente = filterCliente === "Todos os Clientes" || account.cliente_id === filterCliente;
     return matchesSearch && matchesStatus && matchesGestor && matchesCliente;
   });
@@ -225,7 +217,6 @@ export default function ContasCliente() {
         nome_empresa: data.nome_empresa,
         telefone: data.telefone,
         email: data.email || null,
-        gestor_id: data.gestor_id,
         cliente_id: data.cliente_id,
         status: data.status,
         observacoes: data.observacoes || null,
@@ -667,7 +658,6 @@ export default function ContasCliente() {
                 nome_empresa: editingAccount.nome_empresa,
                 telefone: editingAccount.telefone,
                 email: editingAccount.email || "",
-                gestor_id: editingAccount.gestor_id,
                 status: editingAccount.status as "Ativo" | "Pausado" | "Arquivado",
                 observacoes: editingAccount.observacoes || "",
                 canais: editingAccount.canais || [],

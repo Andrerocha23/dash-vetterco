@@ -80,18 +80,7 @@ export default function ClientDetailPage() {
       return;
     }
 
-    // Buscar gestor separadamente se existir
-    if (data?.gestor_id) {
-      const { data: managerData } = await supabase
-        .from("managers")
-        .select("name, email, phone, department")
-        .eq("id", data.gestor_id)
-        .single();
-      
-      if (managerData) {
-        (data as any).managers = managerData;
-      }
-    }
+    // Não há mais gestor_id - foi substituído por user_id em clientes
 
     setAccountData(data);
     setMetaAccountId(data?.meta_account_id || null);

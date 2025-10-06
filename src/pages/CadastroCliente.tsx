@@ -91,10 +91,12 @@ const CadastroCliente = () => {
         tipo_imoveis: data.tipo_imoveis || '',
         publico_alvo: data.publico_alvo || '',
         cidade_regiao: data.cidade_regiao || '',
+        nome: data.nome_imobiliaria || data.nome_completo || '',
+        status: 'Pendente'
       };
 
       const { error } = await supabase
-        .from('public_client_registrations')
+        .from('clientes')
         .insert([registrationData]);
 
       if (error) throw error;

@@ -8,10 +8,9 @@ export type PapelPadrao = "Usuário padrão" | "Gestor" | "Administrador";
 export interface ClientWithManager {
   id: string;
   name: string;
-  manager: {
+  user: {
     id: string;
     name: string;
-    avatar_url?: string;
     email?: string;
   };
   channels: ('Meta' | 'Google')[];

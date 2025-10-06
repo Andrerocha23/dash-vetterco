@@ -257,14 +257,13 @@ export function ModernAccountForm({
           .select('id, nome')
           .order('nome');
 
-        const { data: gestoresData } = await supabase
-          .from('managers')
-          .select('id, name')
-          .eq('status', 'active')
+        const { data: usersData } = await supabase
+          .from('profiles')
+          .select('id, name, email')
           .order('name');
 
         setClientes(clientesData || []);
-        setGestores(gestoresData || []);
+        setGestores(usersData?.map(u => ({ id: u.id, name: u.name || u.email || 'Sem nome' })) || []);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
       }

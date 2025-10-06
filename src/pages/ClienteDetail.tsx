@@ -49,7 +49,6 @@ interface Account {
   nome_empresa: string;
   status: string;
   canais: string[];
-  gestor_id: string;
   gestor_name?: string;
   created_at: string;
   updated_at: string;
@@ -87,20 +86,11 @@ export default function ClienteDetail() {
 
       if (accountsError) console.warn('Accounts not found:', accountsError);
 
-      // Buscar gestores para as contas
-      const { data: managersData, error: managersError } = await supabase
-        .from('managers')
-        .select('id, name')
-        .eq('status', 'active');
-
-      if (managersError) console.warn('Managers not found:', managersError);
-
-      // Processar contas com nomes dos gestores
+      // Processar contas - não há mais gestor_id
       const processedAccounts: Account[] = (accountsData || []).map(account => {
-        const manager = managersData?.find(m => m.id === account.gestor_id);
         return {
           ...account,
-          gestor_name: manager?.name || 'Gestor não encontrado'
+          gestor_name: 'N/A' // Campo removido
         };
       });
 
