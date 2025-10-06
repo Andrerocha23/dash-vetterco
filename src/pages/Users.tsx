@@ -1,31 +1,46 @@
+// src/pages/Users.tsx
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Search, 
-  Users as UsersIcon, 
+  Plus, 
+  Users, 
+  Shield,
   UserCheck,
-  Crown,
-  Key,
-  Mail,
-  Calendar,
-  RefreshCw,
+  User,
   MoreVertical,
   Edit,
-  UserPlus
+  Eye,
+  Trash2,
+  ChevronRight,
+  Filter,
+  Mail,
+  Phone,
+  Building2,
+  Calendar,
+  Lock,
+  Unlock
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -35,284 +50,409 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-interface UserProfile {
+interface Usuario {
   id: string;
-  email: string | null;
+  email: string;
   name: string | null;
+  role: 'admin' | 'gestor' | 'usuario';
+  ativo: boolean;
+  ultimo_acesso: string | null;
+  created_at: string;
   telefone: string | null;
-  cargo: string | null;
   departamento: string | null;
-  role: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  
+  // Relacionamentos
+  clientes_atribuidos?: any[];
+  clientes_acesso?: any[];
+  total_clientes?: number;
 }
 
-const ROLES = [
-  { value: 'admin', label: 'Administrador', color: 'bg-destructive' },
-  { value: 'gestor', label: 'Gestor', color: 'bg-primary' },
-  { value: 'usuario', label: 'Usuário', color: 'bg-success' },
-];
+interface Cliente {
+  id: string;
+  nome: string;
+  email: string | null;
+  telefone: string | null;
+}
+
+interface ClienteAcesso {
+  cliente_id: string;
+  cliente_nome: string;
+  nivel_acesso: 'visualizar' | 'editar' | 'total';
+}
 
 export default function Users() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
+  const [filterRole, setFilterRole] = useState("todos");
+  const [filterStatus, setFilterStatus] = useState("todos");
+  
+  // Modals
+  const [showClientesModal, setShowClientesModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [newUserData, setNewUserData] = useState({
-    email: '',
-    name: '',
-    telefone: '',
-    cargo: '',
-    departamento: '',
-    role: 'usuario',
-    password: ''
-  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
+  
+  // Estados do modal de clientes
+  const [gestorClientes, setGestorClientes] = useState<string[]>([]);
+  const [usuarioAcessos, setUsuarioAcessos] = useState<ClienteAcesso[]>([]);
+  
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Carregar TODOS os usuários de auth.users combinando com profiles e roles
-  const loadUsersData = async () => {
+  // Carregar usuário atual
+  useEffect(() => {
+    loadCurrentUser();
+    loadUsuarios();
+    loadClientes();
+  }, []);
+
+  const loadCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      setCurrentUser(profile);
+      setIsAdmin(profile?.role === 'admin');
+    }
+  };
+
+  const loadUsuarios = async () => {
     try {
       setLoading(true);
       
-      // 1. Buscar TODOS os usuários autenticados de auth.users
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-
-      if (authError) throw authError;
-
-      const authUsers = authData?.users || [];
-
-      // 2. Buscar profiles existentes
-      const { data: profilesData, error: profilesError } = await supabase
+      // Buscar todos os usuários
+      const { data: usuariosData, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (error) throw error;
 
-      // 3. Buscar roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      // Buscar relacionamentos
+      const { data: gestorClientesData } = await supabase
+        .from('gestor_clientes')
+        .select('gestor_id, cliente_id');
 
-      if (rolesError) throw rolesError;
+      const { data: usuarioClientesData } = await supabase
+        .from('usuario_clientes')
+        .select('usuario_id, cliente_id, nivel_acesso');
 
-      // 4. Combinar auth.users com profiles e roles
-      const usersWithRoles: UserProfile[] = authUsers.map(authUser => {
-        const profile = profilesData?.find(p => p.id === authUser.id);
-        const userRole = rolesData?.find(r => r.user_id === authUser.id);
+      // Processar dados
+      const processedUsuarios = usuariosData?.map(user => {
+        const clientesGestor = gestorClientesData?.filter(gc => gc.gestor_id === user.id) || [];
+        const clientesUsuario = usuarioClientesData?.filter(uc => uc.usuario_id === user.id) || [];
         
         return {
-          id: authUser.id,
-          email: authUser.email || null,
-          name: profile?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || null,
-          telefone: profile?.telefone || null,
-          cargo: profile?.cargo || null,
-          departamento: profile?.departamento || null,
-          role: userRole?.role || null,
-          created_at: authUser.created_at,
-          updated_at: profile?.updated_at || authUser.updated_at || null,
+          ...user,
+          total_clientes: user.role === 'admin' 
+            ? 999 // Admin tem acesso a todos
+            : user.role === 'gestor'
+            ? clientesGestor.length
+            : clientesUsuario.length
         };
-      });
+      }) || [];
 
-      setUsers(usersWithRoles);
-
+      setUsuarios(processedUsuarios);
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      console.error('Error loading users:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar usuários. Verifique se você tem permissões de admin.",
-        variant: "destructive",
+        title: "Erro ao carregar usuários",
+        description: "Não foi possível carregar a lista de usuários",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Criar novo usuário
-  const handleCreateUser = async () => {
+  const loadClientes = async () => {
     try {
-      if (!newUserData.email || !newUserData.name || !newUserData.password) {
-        toast({
-          title: "Erro",
-          description: "Preencha nome, email e senha",
-          variant: "destructive",
-        });
-        return;
-      }
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('id, nome, email, telefone')
+        .order('nome');
 
-      // Criar usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUserData.email,
-        password: newUserData.password,
-        options: {
-          data: {
-            name: newUserData.name
-          }
-        }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Usuário não criado');
-
-      // Atualizar profile com informações extras
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          telefone: newUserData.telefone,
-          cargo: newUserData.cargo,
-          departamento: newUserData.departamento
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw profileError;
-
-      // Inserir role no user_roles
-      if (newUserData.role) {
-        await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: newUserData.role as 'admin' | 'gestor' | 'usuario'
-          } as any);
-      }
-
-      await loadUsersData();
-      setShowCreateModal(false);
-      setNewUserData({ email: '', name: '', telefone: '', cargo: '', departamento: '', role: 'usuario', password: '' });
-
-      toast({
-        title: "Sucesso",
-        description: `Usuário ${newUserData.name} criado com sucesso`,
-      });
-
-    } catch (error: any) {
-      console.error('Erro ao criar usuário:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível criar usuário",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Editar usuário
-  const handleEditUser = (user: UserProfile) => {
-    setEditingUser({ ...user });
-    setShowEditModal(true);
-  };
-
-  // Salvar edições
-  const handleSaveEdit = async () => {
-    if (!editingUser) return;
-
-    try {
-      // Atualizar profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          name: editingUser.name,
-          telefone: editingUser.telefone,
-          cargo: editingUser.cargo,
-          departamento: editingUser.departamento
-        })
-        .eq('id', editingUser.id);
-
-      if (profileError) throw profileError;
-
-      // Deletar role antiga e inserir nova
-      if (editingUser.role) {
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', editingUser.id);
-
-        await supabase
-          .from('user_roles')
-          .insert({
-            user_id: editingUser.id,
-            role: editingUser.role as 'admin' | 'gestor' | 'usuario'
-          } as any);
-      }
-
-      await loadUsersData();
-      setShowEditModal(false);
-      setEditingUser(null);
-
-      toast({
-        title: "Sucesso",
-        description: "Usuário atualizado com sucesso",
-      });
-
-    } catch (error: any) {
-      console.error('Erro ao atualizar usuário:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível atualizar usuário",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Reset password
-  const handleResetPassword = async (email: string) => {
-    try {
-      if (!email) {
-        toast({
-          title: "Erro",
-          description: "Email não encontrado",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Funcionalidade em desenvolvimento",
-        description: "Reset de senha será implementado em breve",
-      });
-
+      if (error) throw error;
+      setClientes(data || []);
     } catch (error) {
-      console.error('Erro ao redefinir senha:', error);
+      console.error('Error loading clientes:', error);
     }
   };
 
-  useEffect(() => {
-    loadUsersData();
-  }, []);
+  const updateRole = async (userId: string, newRole: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Sem permissão",
+        description: "Apenas administradores podem alterar cargos",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  // Filtros
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === "all" || user.role === filterRole;
-    return matchesSearch && matchesRole;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cargo atualizado",
+        description: "O cargo do usuário foi atualizado com sucesso",
+      });
+
+      loadUsuarios();
+    } catch (error) {
+      console.error('Error updating role:', error);
+      toast({
+        title: "Erro ao atualizar cargo",
+        description: "Não foi possível atualizar o cargo do usuário",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleStatus = async (userId: string, ativo: boolean) => {
+    if (!isAdmin) {
+      toast({
+        title: "Sem permissão",
+        description: "Apenas administradores podem alterar status",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ativo })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status atualizado",
+        description: `Usuário ${ativo ? 'ativado' : 'desativado'} com sucesso`,
+      });
+
+      loadUsuarios();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Não foi possível atualizar o status do usuário",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openClientesModal = async (user: Usuario) => {
+    setSelectedUser(user);
+    
+    if (user.role === 'gestor') {
+      // Carregar clientes atribuídos ao gestor
+      const { data } = await supabase
+        .from('gestor_clientes')
+        .select('cliente_id')
+        .eq('gestor_id', user.id);
+      
+      setGestorClientes(data?.map(gc => gc.cliente_id) || []);
+    } else if (user.role === 'usuario') {
+      // Carregar acessos do usuário
+      const { data } = await supabase
+        .from('usuario_clientes')
+        .select('cliente_id, nivel_acesso')
+        .eq('usuario_id', user.id);
+      
+      const acessos = await Promise.all(
+        (data || []).map(async (uc) => {
+          const cliente = clientes.find(c => c.id === uc.cliente_id);
+          return {
+            cliente_id: uc.cliente_id,
+            cliente_nome: cliente?.nome || 'Cliente não encontrado',
+            nivel_acesso: uc.nivel_acesso
+          };
+        })
+      );
+      
+      setUsuarioAcessos(acessos);
+    }
+    
+    setShowClientesModal(true);
+  };
+
+  const toggleClienteGestor = (clienteId: string) => {
+    if (gestorClientes.includes(clienteId)) {
+      setGestorClientes(gestorClientes.filter(id => id !== clienteId));
+    } else {
+      setGestorClientes([...gestorClientes, clienteId]);
+    }
+  };
+
+  const saveClientesChanges = async () => {
+    if (!selectedUser) return;
+
+    try {
+      if (selectedUser.role === 'gestor') {
+        // Buscar atribuições atuais
+        const { data: currentAssignments } = await supabase
+          .from('gestor_clientes')
+          .select('cliente_id')
+          .eq('gestor_id', selectedUser.id);
+
+        const currentClienteIds = currentAssignments?.map(gc => gc.cliente_id) || [];
+        
+        // Determinar o que adicionar e remover
+        const toAdd = gestorClientes.filter(id => !currentClienteIds.includes(id));
+        const toRemove = currentClienteIds.filter(id => !gestorClientes.includes(id));
+
+        // Adicionar novos
+        if (toAdd.length > 0) {
+          const { error } = await supabase
+            .from('gestor_clientes')
+            .insert(
+              toAdd.map(cliente_id => ({
+                gestor_id: selectedUser.id,
+                cliente_id,
+                atribuido_por: currentUser.id
+              }))
+            );
+          if (error) throw error;
+        }
+
+        // Remover desvinculados
+        if (toRemove.length > 0) {
+          const { error } = await supabase
+            .from('gestor_clientes')
+            .delete()
+            .eq('gestor_id', selectedUser.id)
+            .in('cliente_id', toRemove);
+          if (error) throw error;
+        }
+      }
+
+      toast({
+        title: "Alterações salvas",
+        description: "Os clientes foram atualizados com sucesso",
+      });
+
+      setShowClientesModal(false);
+      loadUsuarios();
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as alterações",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteUser = async (user: Usuario) => {
+    setSelectedUser(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Usuário removido",
+        description: "O usuário foi removido com sucesso",
+      });
+
+      setShowDeleteModal(false);
+      setSelectedUser(null);
+      loadUsuarios();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Erro ao remover",
+        description: "Não foi possível remover o usuário",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Filtrar usuários
+  const filteredUsuarios = usuarios.filter(user => {
+    const matchSearch = !searchTerm || 
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchRole = filterRole === 'todos' || user.role === filterRole;
+    const matchStatus = filterStatus === 'todos' || 
+      (filterStatus === 'ativo' && user.ativo) ||
+      (filterStatus === 'inativo' && !user.ativo);
+    
+    return matchSearch && matchRole && matchStatus;
   });
 
-  // Stats
-  const totalUsers = users.length;
-  const activeUsers = users.filter(u => u.role !== null).length;
-  const adminUsers = users.filter(u => u.role === 'admin').length;
-  const recentUsers = users.length; // Simplificado
-
-  const getRoleInfo = (role: string | null) => {
-    return ROLES.find(r => r.value === role) || { value: 'usuario', label: 'Usuário', color: 'bg-success' };
+  // Estatísticas
+  const stats = {
+    total: usuarios.length,
+    admins: usuarios.filter(u => u.role === 'admin').length,
+    gestores: usuarios.filter(u => u.role === 'gestor').length,
+    usuarios: usuarios.filter(u => u.role === 'usuario').length,
+    ativos: usuarios.filter(u => u.ativo).length,
+    inativos: usuarios.filter(u => !u.ativo).length,
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Não informado";
-    return new Date(dateString).toLocaleDateString('pt-BR');
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Badge className="bg-purple-500 text-white">Admin</Badge>;
+      case 'gestor':
+        return <Badge className="bg-blue-500 text-white">Gestor</Badge>;
+      default:
+        return <Badge>Usuário</Badge>;
+    }
+  };
+
+  const formatDate = (date: string | null) => {
+    if (!date) return 'Nunca acessou';
+    return format(new Date(date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   };
 
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-text-secondary">Carregando usuários...</p>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Usuários</h1>
+          </div>
+          <div className="text-center py-8">
+            Carregando usuários...
           </div>
         </div>
       </AppLayout>
@@ -325,422 +465,419 @@ export default function Users() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Gerenciamento de Usuários</h1>
-            <p className="text-text-secondary mt-1">
-              Controle de acesso e permissões do sistema
+            <h1 className="text-3xl font-bold">Usuários</h1>
+            <p className="text-muted-foreground mt-1">
+              Gerencie os usuários e suas permissões
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              className="gap-2" 
-              onClick={loadUsersData}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </Button>
-            <Button 
-              className="gap-2"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <UserPlus className="h-4 w-4" />
-              Novo Usuário
-            </Button>
-          </div>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Usuário
+          </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="surface-elevated">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <UsersIcon className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-text-secondary text-sm">Total</p>
-                  <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <UserCheck className="h-5 w-5 text-success" />
-                </div>
-                <div>
-                  <p className="text-text-secondary text-sm">Ativos</p>
-                  <p className="text-2xl font-bold text-foreground">{activeUsers}</p>
-                </div>
-              </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Admins
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">{stats.admins}</div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-destructive/10">
-                  <Crown className="h-5 w-5 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-text-secondary text-sm">Admins</p>
-                  <p className="text-2xl font-bold text-foreground">{adminUsers}</p>
-                </div>
-              </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Gestores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{stats.gestores}</div>
             </CardContent>
           </Card>
 
-          <Card className="surface-elevated">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-accent/10">
-                  <Calendar className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <p className="text-text-secondary text-sm">Cadastrados</p>
-                  <p className="text-2xl font-bold text-foreground">{recentUsers}</p>
-                </div>
-              </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Usuários
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.usuarios}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Ativos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.ativos}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Inativos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{stats.inativos}</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters */}
-        <Card className="surface-elevated">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
-                <Input
-                  placeholder="Buscar por nome ou email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
               
               <Select value={filterRole} onValueChange={setFilterRole}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filtrar por papel" />
+                <SelectTrigger className="w-40">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os Papéis</SelectItem>
-                  {ROLES.map(role => (
-                    <SelectItem key={role.value} value={role.value}>
-                      {role.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="todos">Todos os cargos</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="usuario">Usuário</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os status</SelectItem>
+                  <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="inativo">Inativos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Users List */}
-        <div className="space-y-4">
-          {filteredUsers.map((user) => {
-            const roleInfo = getRoleInfo(user.role);
-            
-            return (
-              <Card key={user.id} className="surface-elevated hover:shadow-lg transition-all duration-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    {/* User Info */}
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-gradient-primary text-white font-bold">
-                          {user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 
-                           user.email?.charAt(0).toUpperCase() || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-foreground text-lg">
-                            {user.name || 'Nome não informado'}
-                          </h3>
-                          <Badge className={`text-xs text-white ${roleInfo.color}`}>
-                            {roleInfo.label}
-                          </Badge>
-                          {user.role === 'admin' && (
-                            <Crown className="h-4 w-4 text-warning" />
+        {/* Users Table */}
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Cargo</TableHead>
+                  <TableHead>Departamento</TableHead>
+                  <TableHead>Clientes</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Último Acesso</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsuarios.map((usuario) => (
+                  <TableRow key={usuario.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback>
+                            {usuario.name ? usuario.name[0].toUpperCase() : usuario.email[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{usuario.name || 'Sem nome'}</p>
+                          <p className="text-sm text-muted-foreground">{usuario.email}</p>
+                          {usuario.telefone && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              <Phone className="h-3 w-3" />
+                              {usuario.telefone}
+                            </p>
                           )}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-text-secondary flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {user.email}
-                          </div>
-                          {user.telefone && (
-                            <div className="flex items-center gap-1">
-                              <span>📞</span>
-                              {user.telefone}
-                            </div>
-                          )}
-                          {user.cargo && (
-                            <div className="flex items-center gap-1">
-                              <span>💼</span>
-                              {user.cargo}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Criado em {formatDate(user.created_at)}
-                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Actions */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
+                    </TableCell>
+                    
+                    <TableCell>
+                      {isAdmin ? (
+                        <Select 
+                          value={usuario.role}
+                          onValueChange={(value) => updateRole(usuario.id, value)}
+                        >
+                          <SelectTrigger className="w-28 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="gestor">Gestor</SelectItem>
+                            <SelectItem value="usuario">Usuário</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        getRoleBadge(usuario.role)
+                      )}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {usuario.departamento || '-'}
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell>
+                      {usuario.role === 'admin' ? (
+                        <Badge variant="outline" className="gap-1">
+                          <Shield className="h-3 w-3" />
+                          Acesso Total
+                        </Badge>
+                      ) : (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => openClientesModal(usuario)}
+                          disabled={!isAdmin}
+                        >
+                          <Building2 className="mr-1 h-3 w-3" />
+                          {usuario.total_clientes || 0} clientes
+                          <ChevronRight className="ml-1 h-3 w-3" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          className="gap-2"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="gap-2"
-                          onClick={() => handleResetPassword(user.email || '')}
-                        >
-                          <Key className="h-4 w-4" />
-                          Redefinir Senha
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                      )}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {isAdmin ? (
+                          <Switch
+                            checked={usuario.ativo}
+                            onCheckedChange={(checked) => toggleStatus(usuario.id, checked)}
+                          />
+                        ) : (
+                          usuario.ativo ? (
+                            <Badge variant="outline" className="text-green-600 gap-1">
+                              <Unlock className="h-3 w-3" />
+                              Ativo
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-600 gap-1">
+                              <Lock className="h-3 w-3" />
+                              Inativo
+                            </Badge>
+                          )
+                        )}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {formatDate(usuario.ultimo_acesso)}
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          {isAdmin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => deleteUser(usuario)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Remover
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                
+                {filteredUsuarios.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Nenhum usuário encontrado
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-        {/* Empty State */}
-        {filteredUsers.length === 0 && !loading && (
-          <Card className="surface-elevated">
-            <CardContent className="p-12 text-center">
-              <div className="mx-auto mb-4 p-3 bg-muted/30 rounded-full w-fit">
-                <UsersIcon className="h-8 w-8 text-text-muted" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Nenhum usuário encontrado</h3>
-              <p className="text-text-secondary">
-                {searchTerm ? "Tente ajustar os filtros de busca" : "Nenhum usuário cadastrado no sistema"}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Modal de Criação */}
-        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="sm:max-w-md">
+        {/* Modal de Clientes */}
+        <Dialog open={showClientesModal} onOpenChange={setShowClientesModal}>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Novo Usuário</DialogTitle>
+              <DialogTitle>
+                Gerenciar Clientes - {selectedUser?.name || selectedUser?.email}
+              </DialogTitle>
               <DialogDescription>
-                Criar uma nova conta de usuário no sistema
+                {selectedUser?.role === 'gestor' 
+                  ? 'Selecione os clientes que este gestor pode gerenciar'
+                  : 'Configure o acesso deste usuário aos clientes'
+                }
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo *</Label>
-                <Input
-                  id="name"
-                  value={newUserData.name}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: João Silva"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUserData.email}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="joao@empresa.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newUserData.password}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  value={newUserData.telefone}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, telefone: e.target.value }))}
-                  placeholder="(11) 99999-9999"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cargo">Cargo</Label>
-                <Input
-                  id="cargo"
-                  value={newUserData.cargo}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, cargo: e.target.value }))}
-                  placeholder="Ex: Gerente de Marketing"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="departamento">Departamento</Label>
-                <Input
-                  id="departamento"
-                  value={newUserData.departamento}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, departamento: e.target.value }))}
-                  placeholder="Ex: Marketing Digital"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Papel *</Label>
-                <Select 
-                  value={newUserData.role} 
-                  onValueChange={(value) => setNewUserData(prev => ({ ...prev, role: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map(role => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {selectedUser?.role === 'gestor' && (
+                <div>
+                  <Label className="mb-3 block">Clientes Atribuídos</Label>
+                  <div className="space-y-2">
+                    {clientes.map(cliente => (
+                      <div key={cliente.id} className="flex items-center space-x-2 p-2 hover:bg-muted rounded">
+                        <Checkbox
+                          checked={gestorClientes.includes(cliente.id)}
+                          onCheckedChange={() => toggleClienteGestor(cliente.id)}
+                        />
+                        <Label className="flex-1 cursor-pointer">
+                          <div>
+                            <p className="font-medium">{cliente.nome}</p>
+                            <p className="text-sm text-muted-foreground">{cliente.email}</p>
+                          </div>
+                        </Label>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </div>
+              )}
+              
+              {selectedUser?.role === 'usuario' && (
+                <div>
+                  <Label className="mb-3 block">Clientes com Acesso</Label>
+                  <div className="space-y-3">
+                    {usuarioAcessos.map(item => (
+                      <div key={item.cliente_id} className="flex items-center justify-between border rounded p-3">
+                        <span className="font-medium">{item.cliente_nome}</span>
+                        <Select
+                          value={item.nivel_acesso}
+                          onValueChange={(value) => {
+                            // Atualizar nivel de acesso
+                            const newAcessos = usuarioAcessos.map(a => 
+                              a.cliente_id === item.cliente_id 
+                                ? { ...a, nivel_acesso: value as any }
+                                : a
+                            );
+                            setUsuarioAcessos(newAcessos);
+                          }}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="visualizar">Visualizar</SelectItem>
+                            <SelectItem value="editar">Editar</SelectItem>
+                            <SelectItem value="total">Total</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-4"
+                    onClick={() => {
+                      // Adicionar novo cliente
+                      toast({
+                        title: "Em desenvolvimento",
+                        description: "Funcionalidade em desenvolvimento",
+                      });
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Cliente
+                  </Button>
+                </div>
+              )}
             </div>
-
-            <DialogFooter className="gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateModal(false)}
-              >
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowClientesModal(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateUser}>
-                Criar Usuário
+              <Button onClick={saveClientesChanges}>
+                Salvar Alterações
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Edição */}
-        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent className="sm:max-w-md">
+        {/* Modal de Confirmação de Exclusão */}
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Usuário</DialogTitle>
+              <DialogTitle>Confirmar Exclusão</DialogTitle>
               <DialogDescription>
-                Alterar informações do usuário
+                Tem certeza que deseja remover o usuário {selectedUser?.name || selectedUser?.email}?
+                Esta ação não pode ser desfeita.
               </DialogDescription>
             </DialogHeader>
-            
-            {editingUser && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Nome Completo</Label>
-                  <Input
-                    id="edit-name"
-                    value={editingUser.name || ''}
-                    onChange={(e) => setEditingUser(prev => prev ? { ...prev, name: e.target.value } : null)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={editingUser.email || ''}
-                    disabled
-                    className="opacity-50"
-                  />
-                  <p className="text-xs text-text-muted">Email não pode ser alterado</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-telefone">Telefone</Label>
-                  <Input
-                    id="edit-telefone"
-                    value={editingUser.telefone || ''}
-                    onChange={(e) => setEditingUser(prev => prev ? { ...prev, telefone: e.target.value } : null)}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-cargo">Cargo</Label>
-                  <Input
-                    id="edit-cargo"
-                    value={editingUser.cargo || ''}
-                    onChange={(e) => setEditingUser(prev => prev ? { ...prev, cargo: e.target.value } : null)}
-                    placeholder="Ex: Gerente de Marketing"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-departamento">Departamento</Label>
-                  <Input
-                    id="edit-departamento"
-                    value={editingUser.departamento || ''}
-                    onChange={(e) => setEditingUser(prev => prev ? { ...prev, departamento: e.target.value } : null)}
-                    placeholder="Ex: Marketing Digital"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-role">Papel</Label>
-                  <Select 
-                    value={editingUser.role || 'usuario'} 
-                    onValueChange={(value) => setEditingUser(prev => prev ? { ...prev, role: value } : null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.map(role => (
-                        <SelectItem key={role.value} value={role.value}>
-                          {role.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter className="gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditModal(false)}
-              >
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveEdit}>
-                Salvar Alterações
+              <Button variant="destructive" onClick={confirmDelete}>
+                Remover Usuário
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Criação (placeholder) */}
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Novo Usuário</DialogTitle>
+              <DialogDescription>
+                Funcionalidade em desenvolvimento
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                Fechar
               </Button>
             </DialogFooter>
           </DialogContent>
