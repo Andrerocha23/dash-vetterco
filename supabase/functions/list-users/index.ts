@@ -26,13 +26,16 @@ serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    // Two clients: one with service role (for admin/list operations) and one with the caller JWT
+    const supabaseService = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const supabaseUser = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
 
     // Identify caller
-    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    const { data: { user }, error: userErr } = await supabaseUser.auth.getUser();
     if (userErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -41,13 +44,13 @@ serve(async (req) => {
     }
 
     // Check admin role securely in DB
-    const { data: roleRow, error: roleErr } = await supabase
+    const { data: roleRow, error: roleErr } = await supabaseService
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (roleErr || roleRow?.role !== "admin") {
+    if ((roleErr && roleErr.message) || roleRow?.role !== "admin") {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -55,15 +58,15 @@ serve(async (req) => {
     }
 
     // List all auth users (service role required)
-    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+    const { data: { users: authUsers }, error: authError } = await supabaseService.auth.admin.listUsers();
     if (authError) throw authError;
 
     // Load complementary data
     const [profilesRes, rolesRes, accountsRes, clientesRes] = await Promise.all([
-      supabase.from("profiles").select("*"),
-      supabase.from("user_roles").select("*"),
-      supabase.from("accounts").select("gestor_id, cliente_id"),
-      supabase.from("clientes").select("id"),
+      supabaseService.from("profiles").select("*"),
+      supabaseService.from("user_roles").select("*"),
+      supabaseService.from("accounts").select("gestor_id, cliente_id"),
+      supabaseService.from("clientes").select("id"),
     ]);
 
     const profiles = profilesRes.data ?? [];
@@ -115,6 +118,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (e) {
+    console.error("list-users error:", e);
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

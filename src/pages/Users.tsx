@@ -122,6 +122,15 @@ export default function Users() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Create user modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "usuario",
+  });
+
   useEffect(() => {
     loadCurrentUser();
     loadUsuarios();
@@ -338,6 +347,35 @@ export default function Users() {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Sem permissão",
+        description: "Apenas administradores podem criar usuários",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: createForm.email,
+          name: createForm.name,
+          role: createForm.role,
+          password: createForm.password || undefined,
+        },
+      });
+      if (error) throw error;
+      toast({ title: 'Usuário criado', description: 'Usuário criado com sucesso' });
+      setShowCreateModal(false);
+      setCreateForm({ name: '', email: '', password: '', role: 'usuario' });
+      loadUsuarios();
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast({ title: 'Erro ao criar usuário', description: error?.message || String(error), variant: 'destructive' });
+    }
+  };
+
   const filteredUsuarios = usuarios.filter((user) => {
     const matchSearch =
       !searchTerm ||
@@ -401,15 +439,7 @@ export default function Users() {
             <Button variant="outline" onClick={loadUsuarios}>
               <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
             </Button>
-            <Button
-              onClick={() =>
-                toast({
-                  title: "Em desenvolvimento",
-                  description:
-                    "Use o Supabase Dashboard para criar novos usuários por enquanto",
-                })
-              }
-            >
+            <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="mr-2 h-4 w-4" /> Novo Usuário
             </Button>
           </div>
