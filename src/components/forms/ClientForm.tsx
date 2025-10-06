@@ -19,15 +19,7 @@ import {
 } from "lucide-react";
 import { ClienteFormData } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -119,20 +111,19 @@ interface ClientFormProps {
   isSubmitting?: boolean;
 }
 
-
 const mockTemplates = [
   { id: "tpl1", nome: "Relatório Diário", categoria: "Relatórios" },
   { id: "tpl2", nome: "Alerta de Saldo", categoria: "Alertas" },
   { id: "tpl3", nome: "Follow-up Lead", categoria: "Lead" },
 ];
 
-export function ClientForm({ 
-  client, 
-  onSubmit, 
-  onCancel, 
-  isEdit = false, 
+export function ClientForm({
+  client,
+  onSubmit,
+  onCancel,
+  isEdit = false,
   onDirtyChange,
-  isSubmitting = false 
+  isSubmitting = false,
 }: ClientFormProps) {
   const { toast } = useToast();
   const [showPasswordFields, setShowPasswordFields] = useState<Record<string, boolean>>({});
@@ -226,18 +217,21 @@ export function ClientForm({
       try {
         setLoadingManagers(true);
         const { data, error } = await supabase
-          .from('profiles')
-          .select('id, name, email')
-          .order('name');
-        
+          .from("profiles")
+          .select("id, name, email, role")
+          .eq("role", "gestor")
+          .order("name");
+
         if (error) throw error;
-        
-        setAvailableManagers(data?.map(u => ({
-          id: u.id,
-          nome: u.name || u.email || 'Sem nome'
-        })) || []);
+
+        setAvailableManagers(
+          data?.map((u) => ({
+            id: u.id,
+            nome: u.name || u.email || "Sem nome",
+          })) || [],
+        );
       } catch (error) {
-        console.error('Error loading users:', error);
+        console.error("Error loading users:", error);
         toast({
           title: "Erro",
           description: "Não foi possível carregar os usuários",
@@ -253,7 +247,7 @@ export function ClientForm({
 
   // Track dirty state
   const { isDirty } = form.formState;
-  
+
   useEffect(() => {
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
@@ -267,9 +261,9 @@ export function ClientForm({
   }
 
   const togglePasswordVisibility = (field: string) => {
-    setShowPasswordFields(prev => ({
+    setShowPasswordFields((prev) => ({
       ...prev,
-      [field]: !prev[field]
+      [field]: !prev[field],
     }));
   };
 
@@ -285,13 +279,19 @@ export function ClientForm({
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value / 100);
   };
 
-  const SectionHeader = ({ icon: Icon, title, isOpen, onToggle, disabled = false }: {
+  const SectionHeader = ({
+    icon: Icon,
+    title,
+    isOpen,
+    onToggle,
+    disabled = false,
+  }: {
     icon: any;
     title: string;
     isOpen: boolean;
@@ -299,15 +299,15 @@ export function ClientForm({
     disabled?: boolean;
   }) => (
     <CollapsibleTrigger asChild>
-      <div 
-        className={`flex items-center justify-between p-4 cursor-pointer hover:bg-secondary/30 transition-colors rounded-2xl border border-border ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      <div
+        className={`flex items-center justify-between p-4 cursor-pointer hover:bg-secondary/30 transition-colors rounded-2xl border border-border ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         onClick={disabled ? undefined : onToggle}
       >
         <div className="flex items-center gap-3">
           <Icon className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">{title}</h3>
         </div>
-        <ChevronDown className={`h-5 w-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-5 w-5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </div>
     </CollapsibleTrigger>
   );
@@ -317,18 +317,17 @@ export function ClientForm({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2 grid-cols-1">
-            
             {/* 1. Informações Básicas */}
             <div className="lg:col-span-2">
               <Collapsible
                 open={sectionStates.basico}
-                onOpenChange={() => setSectionStates(prev => ({ ...prev, basico: !prev.basico }))}
+                onOpenChange={() => setSectionStates((prev) => ({ ...prev, basico: !prev.basico }))}
               >
                 <SectionHeader
                   icon={Building2}
                   title="Informações Básicas"
                   isOpen={sectionStates.basico}
-                  onToggle={() => setSectionStates(prev => ({ ...prev, basico: !prev.basico }))}
+                  onToggle={() => setSectionStates((prev) => ({ ...prev, basico: !prev.basico }))}
                 />
                 <CollapsibleContent>
                   <Card className="surface-elevated mt-4">
@@ -347,7 +346,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="nomeEmpresa"
@@ -361,7 +360,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="telefone"
@@ -375,7 +374,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="email"
@@ -389,7 +388,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="gestorId"
@@ -399,7 +398,9 @@ export function ClientForm({
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={loadingManagers ? "Carregando..." : "Selecione um gestor"} />
+                                    <SelectValue
+                                      placeholder={loadingManagers ? "Carregando..." : "Selecione um gestor"}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -418,7 +419,7 @@ export function ClientForm({
                                           )}
                                           {manager.clientsCount !== undefined && (
                                             <span className="text-xs text-muted-foreground ml-1">
-                                              - {manager.clientsCount} cliente{manager.clientsCount !== 1 ? 's' : ''}
+                                              - {manager.clientsCount} cliente{manager.clientsCount !== 1 ? "s" : ""}
                                             </span>
                                           )}
                                         </div>
@@ -436,7 +437,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="linkDrive"
@@ -450,7 +451,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="canais"
@@ -468,7 +469,7 @@ export function ClientForm({
                                         if (checked) {
                                           field.onChange([...current, canal]);
                                         } else {
-                                          field.onChange(current.filter(c => c !== canal));
+                                          field.onChange(current.filter((c) => c !== canal));
                                         }
                                       }}
                                     />
@@ -482,7 +483,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="status"
@@ -506,7 +507,7 @@ export function ClientForm({
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={form.control}
                         name="observacoes"
@@ -520,7 +521,7 @@ export function ClientForm({
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="grid gap-4 lg:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -545,7 +546,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="usaCrmExterno"
@@ -553,20 +554,15 @@ export function ClientForm({
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                               <div className="space-y-0.5">
                                 <FormLabel className="text-base">BIM/CRM Externo</FormLabel>
-                                <FormDescription>
-                                  Integração com CRM externo
-                                </FormDescription>
+                                <FormDescription>Integração com CRM externo</FormDescription>
                               </div>
                               <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
+                                <Switch checked={field.value} onCheckedChange={field.onChange} />
                               </FormControl>
                             </FormItem>
                           )}
                         />
-                        
+
                         {usaCrmExterno && (
                           <FormField
                             control={form.control}
@@ -593,7 +589,7 @@ export function ClientForm({
             <div>
               <Collapsible
                 open={sectionStates.meta && usaMetaAds}
-                onOpenChange={() => setSectionStates(prev => ({ ...prev, meta: !prev.meta }))}
+                onOpenChange={() => setSectionStates((prev) => ({ ...prev, meta: !prev.meta }))}
               >
                 <div className="flex items-center justify-between p-4 rounded-2xl border border-border bg-card">
                   <div className="flex items-center gap-3">
@@ -609,7 +605,7 @@ export function ClientForm({
                               checked={field.value}
                               onCheckedChange={(checked) => {
                                 field.onChange(checked);
-                                setSectionStates(prev => ({ ...prev, meta: checked }));
+                                setSectionStates((prev) => ({ ...prev, meta: checked }));
                               }}
                             />
                           </FormControl>
@@ -618,10 +614,10 @@ export function ClientForm({
                     />
                   </div>
                   {usaMetaAds && (
-                    <ChevronDown className={`h-5 w-5 transition-transform ${sectionStates.meta ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-5 w-5 transition-transform ${sectionStates.meta ? "rotate-180" : ""}`} />
                   )}
                 </div>
-                
+
                 {usaMetaAds && (
                   <CollapsibleContent>
                     <Card className="surface-elevated mt-4">
@@ -641,7 +637,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <div className="grid gap-4 lg:grid-cols-2">
                           <FormField
                             control={form.control}
@@ -657,7 +653,7 @@ export function ClientForm({
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="metaBusinessId"
@@ -671,7 +667,7 @@ export function ClientForm({
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="metaPageId"
@@ -685,7 +681,7 @@ export function ClientForm({
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="modoSaldoMeta"
@@ -709,7 +705,7 @@ export function ClientForm({
                             )}
                           />
                         </div>
-                        
+
                         <FormField
                           control={form.control}
                           name="monitorarSaldoMeta"
@@ -725,7 +721,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         {monitorarSaldoMeta && (
                           <div className="grid gap-4 lg:grid-cols-2">
                             <FormField
@@ -741,14 +737,14 @@ export function ClientForm({
                                       placeholder="0,00"
                                       {...field}
                                       onChange={(e) => field.onChange(parseFloat(e.target.value) * 100)}
-                                      value={field.value ? field.value / 100 : ''}
+                                      value={field.value ? field.value / 100 : ""}
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
                             />
-                            
+
                             <FormField
                               control={form.control}
                               name="alertaSaldoBaixo"
@@ -762,7 +758,7 @@ export function ClientForm({
                                       placeholder="0,00"
                                       {...field}
                                       onChange={(e) => field.onChange(parseFloat(e.target.value) * 100)}
-                                      value={field.value ? field.value / 100 : ''}
+                                      value={field.value ? field.value / 100 : ""}
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -771,7 +767,7 @@ export function ClientForm({
                             />
                           </div>
                         )}
-                        
+
                         <div className="grid gap-4 lg:grid-cols-2">
                           <FormField
                             control={form.control}
@@ -786,14 +782,14 @@ export function ClientForm({
                                     placeholder="0,00"
                                     {...field}
                                     onChange={(e) => field.onChange(parseFloat(e.target.value) * 100)}
-                                    value={field.value ? field.value / 100 : ''}
+                                    value={field.value ? field.value / 100 : ""}
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="linkMeta"
@@ -808,7 +804,7 @@ export function ClientForm({
                             )}
                           />
                         </div>
-                        
+
                         <FormField
                           control={form.control}
                           name="utmPadrao"
@@ -816,7 +812,7 @@ export function ClientForm({
                             <FormItem>
                               <FormLabel>Política de UTM padrão</FormLabel>
                               <FormControl>
-                                <Input 
+                                <Input
                                   placeholder="utm_source=meta&utm_medium=cpc&utm_campaign={{campanha}}"
                                   {...field}
                                 />
@@ -825,7 +821,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="webhookMeta"
@@ -860,7 +856,7 @@ export function ClientForm({
             <div>
               <Collapsible
                 open={sectionStates.google && usaGoogleAds}
-                onOpenChange={() => setSectionStates(prev => ({ ...prev, google: !prev.google }))}
+                onOpenChange={() => setSectionStates((prev) => ({ ...prev, google: !prev.google }))}
               >
                 <div className="flex items-center justify-between p-4 rounded-2xl border border-border bg-card">
                   <div className="flex items-center gap-3">
@@ -876,7 +872,7 @@ export function ClientForm({
                               checked={field.value}
                               onCheckedChange={(checked) => {
                                 field.onChange(checked);
-                                setSectionStates(prev => ({ ...prev, google: checked }));
+                                setSectionStates((prev) => ({ ...prev, google: checked }));
                               }}
                             />
                           </FormControl>
@@ -885,10 +881,12 @@ export function ClientForm({
                     />
                   </div>
                   {usaGoogleAds && (
-                    <ChevronDown className={`h-5 w-5 transition-transform ${sectionStates.google ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`h-5 w-5 transition-transform ${sectionStates.google ? "rotate-180" : ""}`}
+                    />
                   )}
                 </div>
-                
+
                 {usaGoogleAds && (
                   <CollapsibleContent>
                     <Card className="surface-elevated mt-4">
@@ -907,7 +905,7 @@ export function ClientForm({
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="budgetMensalGoogle"
@@ -921,14 +919,14 @@ export function ClientForm({
                                     placeholder="0,00"
                                     {...field}
                                     onChange={(e) => field.onChange(parseFloat(e.target.value) * 100)}
-                                    value={field.value ? field.value / 100 : ''}
+                                    value={field.value ? field.value / 100 : ""}
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="linkGoogle"
@@ -943,7 +941,7 @@ export function ClientForm({
                             )}
                           />
                         </div>
-                        
+
                         <FormField
                           control={form.control}
                           name="conversoes"
@@ -961,7 +959,7 @@ export function ClientForm({
                                         if (checked) {
                                           field.onChange([...current, conversao]);
                                         } else {
-                                          field.onChange(current.filter(c => c !== conversao));
+                                          field.onChange(current.filter((c) => c !== conversao));
                                         }
                                       }}
                                     />
@@ -975,7 +973,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="webhookGoogle"
@@ -1010,13 +1008,13 @@ export function ClientForm({
             <div className="lg:col-span-2">
               <Collapsible
                 open={sectionStates.comunicacao}
-                onOpenChange={() => setSectionStates(prev => ({ ...prev, comunicacao: !prev.comunicacao }))}
+                onOpenChange={() => setSectionStates((prev) => ({ ...prev, comunicacao: !prev.comunicacao }))}
               >
                 <SectionHeader
                   icon={MessageSquare}
                   title="Comunicação & Automação"
                   isOpen={sectionStates.comunicacao}
-                  onToggle={() => setSectionStates(prev => ({ ...prev, comunicacao: !prev.comunicacao }))}
+                  onToggle={() => setSectionStates((prev) => ({ ...prev, comunicacao: !prev.comunicacao }))}
                 />
                 <CollapsibleContent>
                   <Card className="surface-elevated mt-4">
@@ -1044,7 +1042,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="horarioRelatorio"
@@ -1059,7 +1057,7 @@ export function ClientForm({
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={form.control}
                         name="templatesPadrao"
@@ -1077,7 +1075,7 @@ export function ClientForm({
                                       if (checked) {
                                         field.onChange([...current, template.id]);
                                       } else {
-                                        field.onChange(current.filter(id => id !== template.id));
+                                        field.onChange(current.filter((id) => id !== template.id));
                                       }
                                     }}
                                   />
@@ -1091,7 +1089,7 @@ export function ClientForm({
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="space-y-4">
                         <h4 className="text-md font-semibold">Notificações</h4>
                         <div className="grid gap-4 lg:grid-cols-3">
@@ -1109,7 +1107,7 @@ export function ClientForm({
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="notificacaoErroSync"
@@ -1124,7 +1122,7 @@ export function ClientForm({
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="notificacaoLeadsDiarios"
@@ -1151,13 +1149,13 @@ export function ClientForm({
             <div>
               <Collapsible
                 open={sectionStates.rastreamento}
-                onOpenChange={() => setSectionStates(prev => ({ ...prev, rastreamento: !prev.rastreamento }))}
+                onOpenChange={() => setSectionStates((prev) => ({ ...prev, rastreamento: !prev.rastreamento }))}
               >
                 <SectionHeader
                   icon={BarChart3}
                   title="Rastreamento & Analytics"
                   isOpen={sectionStates.rastreamento}
-                  onToggle={() => setSectionStates(prev => ({ ...prev, rastreamento: !prev.rastreamento }))}
+                  onToggle={() => setSectionStates((prev) => ({ ...prev, rastreamento: !prev.rastreamento }))}
                 />
                 <CollapsibleContent>
                   <Card className="surface-elevated mt-4">
@@ -1177,7 +1175,7 @@ export function ClientForm({
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="grid gap-4 lg:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -1192,7 +1190,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="ga4StreamId"
@@ -1206,7 +1204,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="gtmId"
@@ -1221,7 +1219,7 @@ export function ClientForm({
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={form.control}
                         name="typebotAtivo"
@@ -1237,7 +1235,7 @@ export function ClientForm({
                           </FormItem>
                         )}
                       />
-                      
+
                       {typebotAtivo && (
                         <FormField
                           control={form.control}
@@ -1253,7 +1251,7 @@ export function ClientForm({
                           )}
                         />
                       )}
-                      
+
                       <div className="p-4 bg-secondary/20 rounded-lg">
                         <h4 className="text-md font-semibold mb-3">Checklist de Implementação</h4>
                         <div className="flex gap-2 flex-wrap">
@@ -1283,13 +1281,13 @@ export function ClientForm({
             <div>
               <Collapsible
                 open={sectionStates.financeiro}
-                onOpenChange={() => setSectionStates(prev => ({ ...prev, financeiro: !prev.financeiro }))}
+                onOpenChange={() => setSectionStates((prev) => ({ ...prev, financeiro: !prev.financeiro }))}
               >
                 <SectionHeader
                   icon={CreditCard}
                   title="Financeiro & Orçamento"
                   isOpen={sectionStates.financeiro}
-                  onToggle={() => setSectionStates(prev => ({ ...prev, financeiro: !prev.financeiro }))}
+                  onToggle={() => setSectionStates((prev) => ({ ...prev, financeiro: !prev.financeiro }))}
                 />
                 <CollapsibleContent>
                   <Card className="surface-elevated mt-4">
@@ -1308,7 +1306,7 @@ export function ClientForm({
                                   placeholder="0,00"
                                   {...field}
                                   onChange={(e) => field.onChange(parseFloat(e.target.value) * 100)}
-                                  value={field.value ? field.value / 100 : ''}
+                                  value={field.value ? field.value / 100 : ""}
                                 />
                               </FormControl>
                               <FormDescription>
@@ -1318,7 +1316,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="formaPagamento"
@@ -1342,7 +1340,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="contratoInicio"
@@ -1356,7 +1354,7 @@ export function ClientForm({
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="contratoRenovacao"
@@ -1371,7 +1369,7 @@ export function ClientForm({
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={form.control}
                         name="centroCusto"
@@ -1395,13 +1393,13 @@ export function ClientForm({
             <div className="lg:col-span-2">
               <Collapsible
                 open={sectionStates.permissoes}
-                onOpenChange={() => setSectionStates(prev => ({ ...prev, permissoes: !prev.permissoes }))}
+                onOpenChange={() => setSectionStates((prev) => ({ ...prev, permissoes: !prev.permissoes }))}
               >
                 <SectionHeader
                   icon={Shield}
                   title="Permissões & Atribuições"
                   isOpen={sectionStates.permissoes}
-                  onToggle={() => setSectionStates(prev => ({ ...prev, permissoes: !prev.permissoes }))}
+                  onToggle={() => setSectionStates((prev) => ({ ...prev, permissoes: !prev.permissoes }))}
                 />
                 <CollapsibleContent>
                   <Card className="surface-elevated mt-4">
@@ -1430,7 +1428,7 @@ export function ClientForm({
                           )}
                         />
                       </div>
-                      
+
                       <div className="space-y-4">
                         <h4 className="text-md font-semibold">Visibilidade</h4>
                         <div className="grid gap-4 lg:grid-cols-2">
@@ -1448,7 +1446,7 @@ export function ClientForm({
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name="somarMetricas"
@@ -1477,12 +1475,8 @@ export function ClientForm({
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               Cancelar
             </Button>
-            
-            <Button 
-              type="submit" 
-              className="gradient-primary" 
-              disabled={isSubmitting}
-            >
+
+            <Button type="submit" className="gradient-primary" disabled={isSubmitting}>
               {isSubmitting ? "Salvando..." : "Salvar"}
             </Button>
           </div>
