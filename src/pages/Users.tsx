@@ -124,6 +124,7 @@ export default function Users() {
 
   // Create user modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
     email: "",
@@ -356,16 +357,31 @@ export default function Users() {
       });
       return;
     }
+
+    if (!createForm.name.trim() || !createForm.email.trim()) {
+      toast({
+        title: "Dados inválidos",
+        description: "Nome e email são obrigatórios",
+      });
+      return;
+    }
+
     try {
+      setCreatingUser(true);
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
-          email: createForm.email,
-          name: createForm.name,
+          email: createForm.email.trim(),
+          name: createForm.name.trim(),
           role: createForm.role,
-          password: createForm.password || undefined,
+          password: createForm.password ? createForm.password : undefined,
         },
       });
-      if (error) throw error;
+
+      if (error) {
+        const serverMsg = (data as any)?.error || error.message || 'Falha ao criar usuário';
+        throw new Error(serverMsg);
+      }
+
       toast({ title: 'Usuário criado', description: 'Usuário criado com sucesso' });
       setShowCreateModal(false);
       setCreateForm({ name: '', email: '', password: '', role: 'usuario' });
@@ -373,6 +389,8 @@ export default function Users() {
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({ title: 'Erro ao criar usuário', description: error?.message || String(error), variant: 'destructive' });
+    } finally {
+      setCreatingUser(false);
     }
   };
 
@@ -677,9 +695,9 @@ export default function Users() {
               </Button>
               <Button 
                 onClick={handleCreateUser}
-                disabled={!createForm.email || !createForm.name}
+                disabled={creatingUser || !createForm.email || !createForm.name}
               >
-                Criar Usuário
+                {creatingUser ? 'Criando...' : 'Criar Usuário'}
               </Button>
             </DialogFooter>
           </DialogContent>
