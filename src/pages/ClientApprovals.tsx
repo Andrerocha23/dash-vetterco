@@ -29,7 +29,7 @@ export default function ClientApprovals() {
   const fetchRegistrations = async () => {
     try {
       const { data, error } = await supabase
-        .from("public_client_registrations")
+        .from("clientes")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -50,9 +50,9 @@ export default function ClientApprovals() {
     try {
       const { data: session } = await supabase.auth.getSession();
       
-      // Atualizar status da submissão (cliente já foi criado no formulário)
+      // Atualizar status do cliente para aprovado
       const { error: updateError } = await supabase
-        .from("public_client_registrations")
+        .from("clientes")
         .update({
           status: "Aprovado",
           approved_by: session?.session?.user?.id,
@@ -92,7 +92,7 @@ export default function ClientApprovals() {
       const { data: session } = await supabase.auth.getSession();
 
       const { error } = await supabase
-        .from("public_client_registrations")
+        .from("clientes")
         .update({
           status: "Recusado",
           rejection_reason: rejectionReason,
@@ -124,7 +124,7 @@ export default function ClientApprovals() {
   const archiveRegistration = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("public_client_registrations")
+        .from("clientes")
         .update({ archived: true })
         .eq("id", id);
 

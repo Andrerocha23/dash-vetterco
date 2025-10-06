@@ -493,36 +493,171 @@ export type Database = {
       }
       clientes: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          archived: boolean | null
+          bairros_regioes: string[] | null
+          budget_mensal: number | null
+          campanhas_ativas: boolean | null
+          cidade_regiao: string | null
+          cidades: string[] | null
           cnpj: string | null
+          cnpj_cpf: string | null
+          contato_preferido: string | null
           created_at: string
+          crm_url: string | null
+          crm_utilizado: string | null
+          distribuicao_sugerida: Json | null
           email: string | null
+          estado: string | null
+          estrutura_setores: Json | null
+          gestor_comercial_email: string | null
+          gestor_comercial_nome: string | null
+          gestor_comercial_whatsapp: string | null
+          gestor_marketing_email: string | null
+          gestor_marketing_nome: string | null
+          gestor_marketing_whatsapp: string | null
+          google_ads_cid: string | null
+          horarios_contato: string | null
           id: string
           instagram_handle: string | null
+          lgpd_consent: boolean | null
+          meta_bm_id: string | null
+          nichos: string[] | null
           nome: string
+          nome_fantasia: string | null
+          observacoes_adicionais: string | null
+          pixel_analytics_configurado: boolean | null
+          qtd_corretores: number | null
+          qtd_funcionarios: number | null
+          qtd_sdr_total: number | null
+          razao_social: string | null
+          rejection_reason: string | null
+          responsavel_cargo: string | null
+          responsavel_email: string | null
+          responsavel_nome: string | null
+          responsavel_whatsapp: string | null
+          segmentos: string[] | null
           site: string | null
+          site_url: string | null
+          status: string | null
           telefone: string | null
+          tem_corretor_funcionario: boolean | null
+          tem_gestor_comercial: boolean | null
+          tem_gestor_marketing: boolean | null
+          tem_sdr: boolean | null
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived?: boolean | null
+          bairros_regioes?: string[] | null
+          budget_mensal?: number | null
+          campanhas_ativas?: boolean | null
+          cidade_regiao?: string | null
+          cidades?: string[] | null
           cnpj?: string | null
+          cnpj_cpf?: string | null
+          contato_preferido?: string | null
           created_at?: string
+          crm_url?: string | null
+          crm_utilizado?: string | null
+          distribuicao_sugerida?: Json | null
           email?: string | null
+          estado?: string | null
+          estrutura_setores?: Json | null
+          gestor_comercial_email?: string | null
+          gestor_comercial_nome?: string | null
+          gestor_comercial_whatsapp?: string | null
+          gestor_marketing_email?: string | null
+          gestor_marketing_nome?: string | null
+          gestor_marketing_whatsapp?: string | null
+          google_ads_cid?: string | null
+          horarios_contato?: string | null
           id?: string
           instagram_handle?: string | null
+          lgpd_consent?: boolean | null
+          meta_bm_id?: string | null
+          nichos?: string[] | null
           nome: string
+          nome_fantasia?: string | null
+          observacoes_adicionais?: string | null
+          pixel_analytics_configurado?: boolean | null
+          qtd_corretores?: number | null
+          qtd_funcionarios?: number | null
+          qtd_sdr_total?: number | null
+          razao_social?: string | null
+          rejection_reason?: string | null
+          responsavel_cargo?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_whatsapp?: string | null
+          segmentos?: string[] | null
           site?: string | null
+          site_url?: string | null
+          status?: string | null
           telefone?: string | null
+          tem_corretor_funcionario?: boolean | null
+          tem_gestor_comercial?: boolean | null
+          tem_gestor_marketing?: boolean | null
+          tem_sdr?: boolean | null
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived?: boolean | null
+          bairros_regioes?: string[] | null
+          budget_mensal?: number | null
+          campanhas_ativas?: boolean | null
+          cidade_regiao?: string | null
+          cidades?: string[] | null
           cnpj?: string | null
+          cnpj_cpf?: string | null
+          contato_preferido?: string | null
           created_at?: string
+          crm_url?: string | null
+          crm_utilizado?: string | null
+          distribuicao_sugerida?: Json | null
           email?: string | null
+          estado?: string | null
+          estrutura_setores?: Json | null
+          gestor_comercial_email?: string | null
+          gestor_comercial_nome?: string | null
+          gestor_comercial_whatsapp?: string | null
+          gestor_marketing_email?: string | null
+          gestor_marketing_nome?: string | null
+          gestor_marketing_whatsapp?: string | null
+          google_ads_cid?: string | null
+          horarios_contato?: string | null
           id?: string
           instagram_handle?: string | null
+          lgpd_consent?: boolean | null
+          meta_bm_id?: string | null
+          nichos?: string[] | null
           nome?: string
+          nome_fantasia?: string | null
+          observacoes_adicionais?: string | null
+          pixel_analytics_configurado?: boolean | null
+          qtd_corretores?: number | null
+          qtd_funcionarios?: number | null
+          qtd_sdr_total?: number | null
+          razao_social?: string | null
+          rejection_reason?: string | null
+          responsavel_cargo?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_whatsapp?: string | null
+          segmentos?: string[] | null
           site?: string | null
+          site_url?: string | null
+          status?: string | null
           telefone?: string | null
+          tem_corretor_funcionario?: boolean | null
+          tem_gestor_comercial?: boolean | null
+          tem_gestor_marketing?: boolean | null
+          tem_sdr?: boolean | null
           updated_at?: string
         }
         Relationships: []

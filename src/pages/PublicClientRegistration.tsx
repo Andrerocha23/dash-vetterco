@@ -107,34 +107,21 @@ export default function PublicClientRegistration() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      // Primeiro, criar o cliente na tabela clientes
-      const { data: clienteData, error: clienteError } = await supabase
-        .from("clientes")
-        .insert({
-          nome: values.razao_social || values.nome_fantasia || "Sem nome",
-          cnpj: values.cnpj_cpf,
-          email: values.responsavel_email,
-          telefone: values.responsavel_whatsapp || "",
-          instagram_handle: values.instagram_handle,
-          site: values.site_url,
-        })
-        .select()
-        .single();
-
-      if (clienteError) throw clienteError;
-
-      // Depois, salvar na tabela de registros com referência ao cliente criado
-      const { error } = await supabase.from("public_client_registrations").insert({
-        cidade_regiao: values.cidades[0] || "Não especificado",
+      // Salvar diretamente na tabela clientes com todas as informações
+      const { error } = await supabase.from("clientes").insert({
+        nome: values.razao_social || values.nome_fantasia || "Sem nome",
+        cnpj: values.cnpj_cpf,
         email: values.responsavel_email,
-        telefone: values.responsavel_whatsapp,
+        telefone: values.responsavel_whatsapp || "",
+        instagram_handle: values.instagram_handle,
+        site: values.site_url,
         razao_social: values.razao_social,
         nome_fantasia: values.nome_fantasia,
         cnpj_cpf: values.cnpj_cpf,
         site_url: values.site_url,
-        instagram_handle: values.instagram_handle,
         responsavel_nome: values.responsavel_nome,
         responsavel_email: values.responsavel_email,
+        responsavel_whatsapp: values.responsavel_whatsapp,
         responsavel_cargo: values.responsavel_cargo,
         tem_gestor_marketing: values.tem_gestor_marketing,
         gestor_marketing_nome: values.gestor_marketing_nome,
@@ -149,6 +136,7 @@ export default function PublicClientRegistration() {
         cidades: values.cidades,
         bairros_regioes: values.bairros_regioes,
         estado: values.estado,
+        cidade_regiao: values.cidades[0] || "Não especificado",
         tem_corretor_funcionario: values.tem_corretor_funcionario,
         qtd_corretores: values.qtd_corretores,
         qtd_funcionarios: values.qtd_funcionarios,
@@ -164,7 +152,6 @@ export default function PublicClientRegistration() {
         horarios_contato: values.horarios_contato,
         lgpd_consent: values.lgpd_consent,
         status: "Pendente",
-        client_id: clienteData.id,
       });
 
       if (error) throw error;
