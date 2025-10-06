@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 import { Calendar, TrendingDown, AlertCircle, Target, BarChart3 } from "lucide-react";
-
-const supabase = createClient("YOUR_SUPABASE_URL", "YOUR_SUPABASE_ANON_KEY");
 
 const DashboardAnalytics = () => {
   const [loading, setLoading] = useState(true);
@@ -34,25 +27,30 @@ const DashboardAnalytics = () => {
   const carregarDados = async () => {
     try {
       setLoading(true);
-      const hoje = new Date().toISOString().split("T")[0];
-      const ontem = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const ontem = new Date(hoje);
+      ontem.setDate(ontem.getDate() - 1);
+      const data30DiasAtras = new Date(hoje);
+      data30DiasAtras.setDate(data30DiasAtras.getDate() - 30);
 
       // 1. LEADS DE HOJE
       const { data: leadsHojeData } = await supabase
-        .from("campaign_leads_daily")
-        .select("leads_count")
-        .eq("date", hoje);
+        .from("leads")
+        .select("id")
+        .gte("created_at", hoje.toISOString());
 
-      const totalHoje = leadsHojeData?.reduce((sum, item) => sum + (item.leads_count || 0), 0) || 0;
+      const totalHoje = leadsHojeData?.length || 0;
       setLeadsHoje(totalHoje);
 
       // 2. LEADS DE ONTEM (para comparação)
       const { data: leadsOntemData } = await supabase
-        .from("campaign_leads_daily")
-        .select("leads_count")
-        .eq("date", ontem);
+        .from("leads")
+        .select("id")
+        .gte("created_at", ontem.toISOString())
+        .lt("created_at", hoje.toISOString());
 
-      const totalOntem = leadsOntemData?.reduce((sum, item) => sum + (item.leads_count || 0), 0) || 0;
+      const totalOntem = leadsOntemData?.length || 0;
 
       // 3. CONTAS QUE NÃO TIVERAM LEADS ONTEM
       const { data: accounts } = await supabase
@@ -61,43 +59,56 @@ const DashboardAnalytics = () => {
         .eq("status", "Ativo");
 
       const { data: leadsOntem } = await supabase
-        .from("campaign_leads_daily")
-        .select("client_id, leads_count")
-        .eq("date", ontem);
+        .from("leads")
+        .select("client_id")
+        .gte("created_at", ontem.toISOString())
+        .lt("created_at", hoje.toISOString());
 
-      const accountsComLeads = new Set(leadsOntem?.filter((l) => l.leads_count > 0).map((l) => l.client_id));
+      const accountsComLeads = new Set(leadsOntem?.map((l) => l.client_id));
       const semLeadsOntem = accounts?.filter((acc) => !accountsComLeads.has(acc.id)) || [];
 
       setContasSemLeads(semLeadsOntem);
 
       // 4. CAMPANHAS QUE NÃO GERARAM LEADS ONTEM
-      const { data: campanhasOntem } = await supabase
-        .from("campaign_leads_daily")
-        .select("campaign_name, client_id, leads_count, date")
-        .eq("date", ontem)
-        .eq("leads_count", 0);
+      const { data: todasCampanhas } = await supabase
+        .from("leads")
+        .select("campanha, client_id")
+        .not("campanha", "is", null)
+        .lt("created_at", hoje.toISOString());
 
-      // Enriquecer com nome da conta
-      const campanhasEnriquecidas = await Promise.all(
-        (campanhasOntem || []).map(async (camp) => {
-          const account = accounts?.find((a) => a.id === camp.client_id);
-          return {
-            ...camp,
-            nome_conta: account?.nome_cliente || "Desconhecido",
-          };
-        }),
+      const campanhasUnicas = [...new Set(todasCampanhas?.map((l) => `${l.campanha}|${l.client_id}`))];
+
+      const { data: campanhasComLeadsOntem } = await supabase
+        .from("leads")
+        .select("campanha, client_id")
+        .gte("created_at", ontem.toISOString())
+        .lt("created_at", hoje.toISOString())
+        .not("campanha", "is", null);
+
+      const campanhasComLeadsSet = new Set(
+        campanhasComLeadsOntem?.map((l) => `${l.campanha}|${l.client_id}`)
       );
 
-      setCampanhasSemLeads(campanhasEnriquecidas);
+      const campanhasSemLeadsOntem = campanhasUnicas
+        .filter((c) => !campanhasComLeadsSet.has(c))
+        .map((c) => {
+          const [campanha, client_id] = c.split("|");
+          const account = accounts?.find((a) => a.id === client_id);
+          return {
+            campaign_name: campanha,
+            client_id,
+            nome_conta: account?.nome_cliente || "Desconhecido",
+          };
+        })
+        .slice(0, 20);
+
+      setCampanhasSemLeads(campanhasSemLeadsOntem);
 
       // 5. LEADS POR DIA DA SEMANA (últimos 30 dias)
-      const data30DiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
-
       const { data: leads30d } = await supabase
-        .from("campaign_leads_daily")
-        .select("date, leads_count")
-        .gte("date", data30DiasAtras)
-        .lte("date", hoje);
+        .from("leads")
+        .select("created_at")
+        .gte("created_at", data30DiasAtras.toISOString());
 
       // Agrupar por dia da semana
       const leadsPorDia = {
@@ -113,9 +124,9 @@ const DashboardAnalytics = () => {
       const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
       leads30d?.forEach((lead) => {
-        const data = new Date(lead.date + "T00:00:00");
+        const data = new Date(lead.created_at);
         const diaSemana = diasSemana[data.getDay()];
-        leadsPorDia[diaSemana] += lead.leads_count || 0;
+        leadsPorDia[diaSemana] += 1;
       });
 
       const dadosGrafico = Object.entries(leadsPorDia).map(([dia, total]) => ({
@@ -144,72 +155,72 @@ const DashboardAnalytics = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
-        <div className="text-xl text-gray-600">Carregando dados...</div>
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="text-xl text-muted-foreground">Carregando dados...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Performance</h1>
-          <p className="text-gray-600">Análise completa de leads e campanhas</p>
+        <div className="bg-card rounded-lg shadow p-6 border">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard de Performance</h1>
+          <p className="text-muted-foreground">Análise completa de leads e campanhas</p>
         </div>
 
         {/* KPIs Principais */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Leads Hoje */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6 border">
             <div className="flex items-center justify-between mb-4">
-              <Target className="h-8 w-8 text-blue-600" />
+              <Target className="h-8 w-8 text-primary" />
               <div
-                className={`text-sm font-semibold px-2 py-1 rounded ${comparativoOntem?.positivo ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                className={`text-sm font-semibold px-2 py-1 rounded ${comparativoOntem?.positivo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"}`}
               >
                 {comparativoOntem?.positivo ? "+" : ""}
                 {comparativoOntem?.variacao}%
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">{leadsHoje}</h3>
-            <p className="text-sm text-gray-600 mt-1">Leads Hoje</p>
-            <p className="text-xs text-gray-500 mt-2">Ontem: {comparativoOntem?.ontem}</p>
+            <h3 className="text-2xl font-bold text-foreground">{leadsHoje}</h3>
+            <p className="text-sm text-muted-foreground mt-1">Leads Hoje</p>
+            <p className="text-xs text-muted-foreground mt-2">Ontem: {comparativoOntem?.ontem}</p>
           </div>
 
           {/* Contas Sem Leads Ontem */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6 border">
             <div className="flex items-center justify-between mb-4">
-              <TrendingDown className="h-8 w-8 text-orange-600" />
-              <span className="text-sm font-semibold text-orange-600">{contasSemLeads.length}</span>
+              <TrendingDown className="h-8 w-8 text-orange-500" />
+              <span className="text-sm font-semibold text-orange-500">{contasSemLeads.length}</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">{contasSemLeads.length}</h3>
-            <p className="text-sm text-gray-600 mt-1">Contas sem leads ontem</p>
+            <h3 className="text-2xl font-bold text-foreground">{contasSemLeads.length}</h3>
+            <p className="text-sm text-muted-foreground mt-1">Contas sem leads ontem</p>
           </div>
 
           {/* Campanhas Sem Leads Ontem */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6 border">
             <div className="flex items-center justify-between mb-4">
-              <AlertCircle className="h-8 w-8 text-red-600" />
-              <span className="text-sm font-semibold text-red-600">{campanhasSemLeads.length}</span>
+              <AlertCircle className="h-8 w-8 text-destructive" />
+              <span className="text-sm font-semibold text-destructive">{campanhasSemLeads.length}</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">{campanhasSemLeads.length}</h3>
-            <p className="text-sm text-gray-600 mt-1">Campanhas sem leads ontem</p>
+            <h3 className="text-2xl font-bold text-foreground">{campanhasSemLeads.length}</h3>
+            <p className="text-sm text-muted-foreground mt-1">Campanhas sem leads ontem</p>
           </div>
 
           {/* Melhor Dia da Semana */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6 border">
             <div className="flex items-center justify-between mb-4">
-              <Calendar className="h-8 w-8 text-green-600" />
-              <BarChart3 className="h-5 w-5 text-gray-400" />
+              <Calendar className="h-8 w-8 text-green-600 dark:text-green-500" />
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">
+            <h3 className="text-2xl font-bold text-foreground">
               {leadsPorDiaSemana.length > 0
                 ? leadsPorDiaSemana.reduce((max, item) => (item.leads > max.leads ? item : max)).dia
                 : "-"}
             </h3>
-            <p className="text-sm text-gray-600 mt-1">Melhor dia da semana</p>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-sm text-muted-foreground mt-1">Melhor dia da semana</p>
+            <p className="text-xs text-muted-foreground mt-2">
               {leadsPorDiaSemana.length > 0
                 ? leadsPorDiaSemana.reduce((max, item) => (item.leads > max.leads ? item : max)).leads
                 : 0}{" "}
@@ -219,15 +230,21 @@ const DashboardAnalytics = () => {
         </div>
 
         {/* Gráfico - Leads por Dia da Semana */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Leads por Dia da Semana (Últimos 30 dias)</h2>
+        <div className="bg-card rounded-lg shadow p-6 border">
+          <h2 className="text-xl font-bold text-foreground mb-6">Leads por Dia da Semana (Últimos 30 dias)</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={leadsPorDiaSemana}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="dia" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="leads" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="dia" className="text-muted-foreground" />
+              <YAxis className="text-muted-foreground" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--card))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '0.5rem'
+                }}
+              />
+              <Bar dataKey="leads" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
