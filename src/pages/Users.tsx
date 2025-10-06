@@ -74,12 +74,12 @@ export default function Users() {
   });
   const { toast } = useToast();
 
-  // Carregar usuários do banco com roles
+  // Carregar todos os usuários da tabela profiles
   const loadUsersData = async () => {
     try {
       setLoading(true);
       
-      // Buscar profiles com roles usando LEFT JOIN
+      // Buscar TODOS os profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -94,7 +94,7 @@ export default function Users() {
 
       if (rolesError) throw rolesError;
 
-      // Combinar profiles com roles
+      // Combinar TODOS os profiles com suas roles (se tiverem)
       const usersWithRoles = (profilesData || []).map(profile => {
         const userRole = rolesData?.find(r => r.user_id === profile.id);
         return {
