@@ -59,25 +59,40 @@ serve(async (req) => {
     if (authError) throw authError;
 
     // Load complementary data
-    const [profilesRes, rolesRes, gestorRes, usuarioRes] = await Promise.all([
+    const [profilesRes, rolesRes, accountsRes, clientesRes] = await Promise.all([
       supabase.from("profiles").select("*"),
       supabase.from("user_roles").select("*"),
-      supabase.from("gestor_clientes").select("*"),
-      supabase.from("usuario_clientes").select("*"),
+      supabase.from("accounts").select("gestor_id, cliente_id"),
+      supabase.from("clientes").select("id"),
     ]);
 
     const profiles = profilesRes.data ?? [];
     const roles = rolesRes.data ?? [];
-    const gestorClientes = gestorRes.data ?? [];
-    const usuarioClientes = usuarioRes.data ?? [];
+    const accounts = accountsRes.data ?? [];
+    const totalClientes = clientesRes.data?.length ?? 0;
+
+    // Count unique clientes per gestor
+    const clientCountByGestor: Record<string, Set<string>> = {};
+    accounts.forEach((acc: any) => {
+      if (acc.gestor_id && acc.cliente_id) {
+        if (!clientCountByGestor[acc.gestor_id]) {
+          clientCountByGestor[acc.gestor_id] = new Set();
+        }
+        clientCountByGestor[acc.gestor_id].add(acc.cliente_id);
+      }
+    });
 
     const users = (authUsers ?? []).map((au: any) => {
       const profile = profiles.find((p: any) => p.id === au.id);
       const roleRow = roles.find((r: any) => r.user_id === au.id);
       const role = roleRow?.role ?? "usuario";
 
-      const clientesGestor = gestorClientes.filter((gc: any) => gc.gestor_id === au.id);
-      const clientesUsuario = usuarioClientes.filter((uc: any) => uc.usuario_id === au.id);
+      let total_clientes = 0;
+      if (role === "admin") {
+        total_clientes = totalClientes;
+      } else if (role === "gestor") {
+        total_clientes = clientCountByGestor[au.id]?.size ?? 0;
+      }
 
       return {
         id: au.id,
@@ -91,7 +106,7 @@ serve(async (req) => {
         telefone: profile?.telefone ?? null,
         departamento: profile?.departamento ?? null,
         updated_at: profile?.updated_at ?? au.updated_at,
-        total_clientes: role === "admin" ? 999 : role === "gestor" ? clientesGestor.length : clientesUsuario.length,
+        total_clientes,
       };
     });
 
