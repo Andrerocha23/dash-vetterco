@@ -8,15 +8,29 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Crown, Briefcase } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export const UserMenu = () => {
   const { user, signOut } = useAuth();
+  const { role, isAdmin, isGestor } = useUserRole();
 
   if (!user) return null;
 
   const initials = user.email?.charAt(0).toUpperCase() || 'U';
+  
+  const getRoleLabel = () => {
+    if (isAdmin) return 'Administrador';
+    if (isGestor) return 'Gestor';
+    return 'Usuário';
+  };
+  
+  const getRoleIcon = () => {
+    if (isAdmin) return <Crown className="h-3 w-3 text-warning" />;
+    if (isGestor) return <Briefcase className="h-3 w-3 text-primary" />;
+    return null;
+  };
 
   return (
     <DropdownMenu>
@@ -35,8 +49,9 @@ export const UserMenu = () => {
             <p className="text-sm font-medium leading-none">
               {user.email}
             </p>
-            <p className="text-xs leading-none text-muted-foreground">
-              Usuário
+            <p className="text-xs leading-none text-muted-foreground flex items-center gap-1">
+              {getRoleIcon()}
+              {getRoleLabel()}
             </p>
           </div>
         </DropdownMenuLabel>

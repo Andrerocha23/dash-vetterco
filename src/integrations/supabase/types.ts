@@ -32,7 +32,6 @@ export type Database = {
           email: string | null
           forma_pagamento: string | null
           ga4_stream_id: string | null
-          gestor_id: string
           google_ads_id: string | null
           gtm_id: string | null
           horario_relatorio: string | null
@@ -91,7 +90,6 @@ export type Database = {
           email?: string | null
           forma_pagamento?: string | null
           ga4_stream_id?: string | null
-          gestor_id: string
           google_ads_id?: string | null
           gtm_id?: string | null
           horario_relatorio?: string | null
@@ -150,7 +148,6 @@ export type Database = {
           email?: string | null
           forma_pagamento?: string | null
           ga4_stream_id?: string | null
-          gestor_id?: string
           google_ads_id?: string | null
           gtm_id?: string | null
           horario_relatorio?: string | null
@@ -537,6 +534,7 @@ export type Database = {
           responsavel_email: string | null
           responsavel_nome: string | null
           responsavel_whatsapp: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
           segmentos: string[] | null
           site: string | null
           site_url: string | null
@@ -547,6 +545,7 @@ export type Database = {
           tem_gestor_marketing: boolean | null
           tem_sdr: boolean | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -593,6 +592,7 @@ export type Database = {
           responsavel_email?: string | null
           responsavel_nome?: string | null
           responsavel_whatsapp?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
           segmentos?: string[] | null
           site?: string | null
           site_url?: string | null
@@ -603,6 +603,7 @@ export type Database = {
           tem_gestor_marketing?: boolean | null
           tem_sdr?: boolean | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -649,6 +650,7 @@ export type Database = {
           responsavel_email?: string | null
           responsavel_nome?: string | null
           responsavel_whatsapp?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
           segmentos?: string[] | null
           site?: string | null
           site_url?: string | null
@@ -659,6 +661,7 @@ export type Database = {
           tem_gestor_marketing?: boolean | null
           tem_sdr?: boolean | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -793,42 +796,6 @@ export type Database = {
           },
         ]
       }
-      managers: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          department: string | null
-          email: string
-          id: string
-          name: string
-          phone: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          department?: string | null
-          email: string
-          id?: string
-          name: string
-          phone?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          department?: string | null
-          email?: string
-          id?: string
-          name?: string
-          phone?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       meta_sync_logs: {
         Row: {
           account_id: string | null
@@ -923,221 +890,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      public_client_registrations: {
-        Row: {
-          approved_at: string | null
-          approved_by: string | null
-          archived: boolean | null
-          bairros_regioes: string[] | null
-          budget_mensal: number | null
-          campanhas_ativas: boolean | null
-          cidade_regiao: string
-          cidades: string[] | null
-          client_id: string | null
-          cnpj_cpf: string | null
-          contato_preferido: string | null
-          created_at: string
-          crm_url: string | null
-          crm_utilizado: string | null
-          distribuicao_sugerida: Json | null
-          email: string
-          estado: string | null
-          estrutura_setores: Json | null
-          gestor_comercial_email: string | null
-          gestor_comercial_nome: string | null
-          gestor_comercial_whatsapp: string | null
-          gestor_marketing_email: string | null
-          gestor_marketing_nome: string | null
-          gestor_marketing_whatsapp: string | null
-          google_ads_cid: string | null
-          horarios_contato: string | null
-          id: string
-          instagram: string | null
-          instagram_handle: string | null
-          lgpd_consent: boolean | null
-          meta_bm_id: string | null
-          nichos: string[] | null
-          nome_fantasia: string | null
-          num_corretores: number | null
-          num_funcionarios: number | null
-          num_sdr: number | null
-          observacoes_adicionais: string | null
-          pixel_analytics_configurado: boolean | null
-          processed_at: string | null
-          qtd_corretores: number | null
-          qtd_funcionarios: number | null
-          qtd_sdr_total: number | null
-          razao_social: string | null
-          redes_sociais_adicionais: string[] | null
-          rejection_reason: string | null
-          responsavel_cargo: string | null
-          responsavel_email: string | null
-          responsavel_nome: string | null
-          segmentos: string[] | null
-          site_institucional: string | null
-          site_url: string | null
-          status: string | null
-          telefone: string
-          telefone_leads: string | null
-          tem_corretor_funcionario: boolean | null
-          tem_gestor_comercial: boolean | null
-          tem_gestor_marketing: boolean | null
-          tem_sdr: boolean | null
-          updated_at: string
-        }
-        Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          archived?: boolean | null
-          bairros_regioes?: string[] | null
-          budget_mensal?: number | null
-          campanhas_ativas?: boolean | null
-          cidade_regiao: string
-          cidades?: string[] | null
-          client_id?: string | null
-          cnpj_cpf?: string | null
-          contato_preferido?: string | null
-          created_at?: string
-          crm_url?: string | null
-          crm_utilizado?: string | null
-          distribuicao_sugerida?: Json | null
-          email: string
-          estado?: string | null
-          estrutura_setores?: Json | null
-          gestor_comercial_email?: string | null
-          gestor_comercial_nome?: string | null
-          gestor_comercial_whatsapp?: string | null
-          gestor_marketing_email?: string | null
-          gestor_marketing_nome?: string | null
-          gestor_marketing_whatsapp?: string | null
-          google_ads_cid?: string | null
-          horarios_contato?: string | null
-          id?: string
-          instagram?: string | null
-          instagram_handle?: string | null
-          lgpd_consent?: boolean | null
-          meta_bm_id?: string | null
-          nichos?: string[] | null
-          nome_fantasia?: string | null
-          num_corretores?: number | null
-          num_funcionarios?: number | null
-          num_sdr?: number | null
-          observacoes_adicionais?: string | null
-          pixel_analytics_configurado?: boolean | null
-          processed_at?: string | null
-          qtd_corretores?: number | null
-          qtd_funcionarios?: number | null
-          qtd_sdr_total?: number | null
-          razao_social?: string | null
-          redes_sociais_adicionais?: string[] | null
-          rejection_reason?: string | null
-          responsavel_cargo?: string | null
-          responsavel_email?: string | null
-          responsavel_nome?: string | null
-          segmentos?: string[] | null
-          site_institucional?: string | null
-          site_url?: string | null
-          status?: string | null
-          telefone: string
-          telefone_leads?: string | null
-          tem_corretor_funcionario?: boolean | null
-          tem_gestor_comercial?: boolean | null
-          tem_gestor_marketing?: boolean | null
-          tem_sdr?: boolean | null
-          updated_at?: string
-        }
-        Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          archived?: boolean | null
-          bairros_regioes?: string[] | null
-          budget_mensal?: number | null
-          campanhas_ativas?: boolean | null
-          cidade_regiao?: string
-          cidades?: string[] | null
-          client_id?: string | null
-          cnpj_cpf?: string | null
-          contato_preferido?: string | null
-          created_at?: string
-          crm_url?: string | null
-          crm_utilizado?: string | null
-          distribuicao_sugerida?: Json | null
-          email?: string
-          estado?: string | null
-          estrutura_setores?: Json | null
-          gestor_comercial_email?: string | null
-          gestor_comercial_nome?: string | null
-          gestor_comercial_whatsapp?: string | null
-          gestor_marketing_email?: string | null
-          gestor_marketing_nome?: string | null
-          gestor_marketing_whatsapp?: string | null
-          google_ads_cid?: string | null
-          horarios_contato?: string | null
-          id?: string
-          instagram?: string | null
-          instagram_handle?: string | null
-          lgpd_consent?: boolean | null
-          meta_bm_id?: string | null
-          nichos?: string[] | null
-          nome_fantasia?: string | null
-          num_corretores?: number | null
-          num_funcionarios?: number | null
-          num_sdr?: number | null
-          observacoes_adicionais?: string | null
-          pixel_analytics_configurado?: boolean | null
-          processed_at?: string | null
-          qtd_corretores?: number | null
-          qtd_funcionarios?: number | null
-          qtd_sdr_total?: number | null
-          razao_social?: string | null
-          redes_sociais_adicionais?: string[] | null
-          rejection_reason?: string | null
-          responsavel_cargo?: string | null
-          responsavel_email?: string | null
-          responsavel_nome?: string | null
-          segmentos?: string[] | null
-          site_institucional?: string | null
-          site_url?: string | null
-          status?: string | null
-          telefone?: string
-          telefone_leads?: string | null
-          tem_corretor_funcionario?: boolean | null
-          tem_gestor_comercial?: boolean | null
-          tem_gestor_marketing?: boolean | null
-          tem_sdr?: boolean | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "public_client_registrations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "public_client_registrations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_performance_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "public_client_registrations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "leads_stats"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "public_client_registrations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "relatorio_n8n_consolidated"
-            referencedColumns: ["conta_id"]
-          },
-        ]
       }
       relatorio_config: {
         Row: {

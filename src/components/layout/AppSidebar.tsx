@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
-import { navigationItems } from "./navigationConfig";
+import { navigationItems, filterNavigationByRole } from "./navigationConfig";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface AppSidebarProps {
   logoSrc?: string;
@@ -32,6 +33,7 @@ export function AppSidebar({
   const location = useLocation();
   const { user, signOut } = useAuth();
   const currentPath = location.pathname;
+  const filteredNavItems = filterNavigationByRole(navigationItems, role);
 
   // Salvar estado no localStorage
   useEffect(() => {
