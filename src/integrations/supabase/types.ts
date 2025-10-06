@@ -866,28 +866,37 @@ export type Database = {
       }
       profiles: {
         Row: {
-          created_at: string | null
-          email: string | null
+          avatar_url: string | null
+          cargo: string | null
+          created_at: string
+          departamento: string | null
+          email: string
           id: string
           name: string | null
-          role: string | null
-          updated_at: string | null
+          telefone: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
-          email?: string | null
+          avatar_url?: string | null
+          cargo?: string | null
+          created_at?: string
+          departamento?: string | null
+          email: string
           id: string
           name?: string | null
-          role?: string | null
-          updated_at?: string | null
+          telefone?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
-          email?: string | null
+          avatar_url?: string | null
+          cargo?: string | null
+          created_at?: string
+          departamento?: string | null
+          email?: string
           id?: string
           name?: string | null
-          role?: string | null
-          updated_at?: string | null
+          telefone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

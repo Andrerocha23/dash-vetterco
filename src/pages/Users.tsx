@@ -41,6 +41,9 @@ interface UserProfile {
   id: string;
   email: string | null;
   name: string | null;
+  telefone: string | null;
+  cargo: string | null;
+  departamento: string | null;
   role: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -48,9 +51,8 @@ interface UserProfile {
 
 const ROLES = [
   { value: 'admin', label: 'Administrador', color: 'bg-destructive' },
-  { value: 'manager', label: 'Gestor', color: 'bg-primary' },
-  { value: 'user', label: 'Usuário', color: 'bg-success' },
-  { value: 'viewer', label: 'Visualizador', color: 'bg-warning' }
+  { value: 'gestor', label: 'Gestor', color: 'bg-primary' },
+  { value: 'usuario', label: 'Usuário', color: 'bg-success' },
 ];
 
 export default function Users() {
@@ -64,114 +66,119 @@ export default function Users() {
   const [newUserData, setNewUserData] = useState({
     email: '',
     name: '',
-    role: 'user',
+    telefone: '',
+    cargo: '',
+    departamento: '',
+    role: 'usuario',
     password: ''
   });
   const { toast } = useToast();
 
-  // Carregar usuários do banco - versão simplificada
+  // Carregar usuários do banco com roles
   const loadUsersData = async () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Buscar profiles com roles usando LEFT JOIN
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading users:', error);
-        // Se der erro, usar dados mock para teste
-        setUsers([
-          {
-            id: '1',
-            name: 'Administrador do Sistema',
-            email: 'admin@vetter.com',
-            role: 'admin',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: '2', 
-            name: 'João Silva',
-            email: 'joao@vetter.com',
-            role: 'manager',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: '3',
-            name: 'Maria Santos',
-            email: 'maria@vetter.com', 
-            role: 'user',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ]);
-      } else {
-        setUsers(data || []);
-      }
+      if (profilesError) throw profilesError;
+
+      // Buscar roles separadamente
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) throw rolesError;
+
+      // Combinar profiles com roles
+      const usersWithRoles = (profilesData || []).map(profile => {
+        const userRole = rolesData?.find(r => r.user_id === profile.id);
+        return {
+          ...profile,
+          role: userRole?.role || null
+        };
+      });
+
+      setUsers(usersWithRoles);
 
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
       toast({
-        title: "Aviso",
-        description: "Usando dados de demonstração",
-        variant: "default",
+        title: "Erro",
+        description: "Não foi possível carregar usuários",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Criar novo usuário - versão simplificada
+  // Criar novo usuário
   const handleCreateUser = async () => {
     try {
-      if (!newUserData.email || !newUserData.name) {
+      if (!newUserData.email || !newUserData.name || !newUserData.password) {
         toast({
           title: "Erro",
-          description: "Preencha nome e email",
+          description: "Preencha nome, email e senha",
           variant: "destructive",
         });
         return;
       }
 
-      // Tentar inserir no banco
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: crypto.randomUUID(),
-          email: newUserData.email,
-          name: newUserData.name,
-          role: newUserData.role
-        })
-        .select()
-        .single();
+      // Criar usuário no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUserData.email,
+        password: newUserData.password,
+        options: {
+          data: {
+            name: newUserData.name
+          }
+        }
+      });
 
-      if (error) {
-        console.error('Error creating user:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível criar usuário no momento",
-          variant: "destructive",
-        });
-        return;
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Usuário não criado');
+
+      // Atualizar profile com informações extras
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          telefone: newUserData.telefone,
+          cargo: newUserData.cargo,
+          departamento: newUserData.departamento
+        })
+        .eq('id', authData.user.id);
+
+      if (profileError) throw profileError;
+
+      // Inserir role no user_roles
+      if (newUserData.role) {
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: authData.user.id,
+            role: newUserData.role as 'admin' | 'gestor' | 'usuario'
+          } as any);
       }
 
       await loadUsersData();
       setShowCreateModal(false);
-      setNewUserData({ email: '', name: '', role: 'user', password: '' });
+      setNewUserData({ email: '', name: '', telefone: '', cargo: '', departamento: '', role: 'usuario', password: '' });
 
       toast({
         title: "Sucesso",
-        description: `Usuário ${newUserData.name} criado`,
+        description: `Usuário ${newUserData.name} criado com sucesso`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar usuário:', error);
       toast({
         title: "Erro",
-        description: "Erro interno do sistema",
+        description: error.message || "Não foi possível criar usuário",
         variant: "destructive",
       });
     }
@@ -188,22 +195,32 @@ export default function Users() {
     if (!editingUser) return;
 
     try {
-      const { error } = await supabase
+      // Atualizar profile
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           name: editingUser.name,
-          role: editingUser.role
+          telefone: editingUser.telefone,
+          cargo: editingUser.cargo,
+          departamento: editingUser.departamento
         })
         .eq('id', editingUser.id);
 
-      if (error) {
-        console.error('Error updating user:', error);
-        toast({
-          title: "Erro", 
-          description: "Não foi possível atualizar usuário",
-          variant: "destructive",
-        });
-        return;
+      if (profileError) throw profileError;
+
+      // Deletar role antiga e inserir nova
+      if (editingUser.role) {
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', editingUser.id);
+
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: editingUser.id,
+            role: editingUser.role as 'admin' | 'gestor' | 'usuario'
+          } as any);
       }
 
       await loadUsersData();
@@ -212,11 +229,16 @@ export default function Users() {
 
       toast({
         title: "Sucesso",
-        description: "Usuário atualizado",
+        description: "Usuário atualizado com sucesso",
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar usuário:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível atualizar usuário",
+        variant: "destructive",
+      });
     }
   };
 
@@ -261,7 +283,7 @@ export default function Users() {
   const recentUsers = users.length; // Simplificado
 
   const getRoleInfo = (role: string | null) => {
-    return ROLES.find(r => r.value === role) || { value: 'user', label: 'Usuário', color: 'bg-success' };
+    return ROLES.find(r => r.value === role) || { value: 'usuario', label: 'Usuário', color: 'bg-success' };
   };
 
   const formatDate = (dateString: string | null) => {
@@ -433,11 +455,23 @@ export default function Users() {
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-4 text-sm text-text-secondary">
+                        <div className="flex items-center gap-4 text-sm text-text-secondary flex-wrap">
                           <div className="flex items-center gap-1">
                             <Mail className="h-3 w-3" />
                             {user.email}
                           </div>
+                          {user.telefone && (
+                            <div className="flex items-center gap-1">
+                              <span>📞</span>
+                              {user.telefone}
+                            </div>
+                          )}
+                          {user.cargo && (
+                            <div className="flex items-center gap-1">
+                              <span>💼</span>
+                              {user.cargo}
+                            </div>
+                          )}
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Criado em {formatDate(user.created_at)}
@@ -504,7 +538,7 @@ export default function Users() {
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo</Label>
+                <Label htmlFor="name">Nome Completo *</Label>
                 <Input
                   id="name"
                   value={newUserData.name}
@@ -514,7 +548,7 @@ export default function Users() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -525,7 +559,48 @@ export default function Users() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">Papel</Label>
+                <Label htmlFor="password">Senha *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={newUserData.telefone}
+                  onChange={(e) => setNewUserData(prev => ({ ...prev, telefone: e.target.value }))}
+                  placeholder="(11) 99999-9999"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cargo">Cargo</Label>
+                <Input
+                  id="cargo"
+                  value={newUserData.cargo}
+                  onChange={(e) => setNewUserData(prev => ({ ...prev, cargo: e.target.value }))}
+                  placeholder="Ex: Gerente de Marketing"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="departamento">Departamento</Label>
+                <Input
+                  id="departamento"
+                  value={newUserData.departamento}
+                  onChange={(e) => setNewUserData(prev => ({ ...prev, departamento: e.target.value }))}
+                  placeholder="Ex: Marketing Digital"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role">Papel *</Label>
                 <Select 
                   value={newUserData.role} 
                   onValueChange={(value) => setNewUserData(prev => ({ ...prev, role: value }))}
@@ -592,9 +667,39 @@ export default function Users() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="edit-telefone">Telefone</Label>
+                  <Input
+                    id="edit-telefone"
+                    value={editingUser.telefone || ''}
+                    onChange={(e) => setEditingUser(prev => prev ? { ...prev, telefone: e.target.value } : null)}
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cargo">Cargo</Label>
+                  <Input
+                    id="edit-cargo"
+                    value={editingUser.cargo || ''}
+                    onChange={(e) => setEditingUser(prev => prev ? { ...prev, cargo: e.target.value } : null)}
+                    placeholder="Ex: Gerente de Marketing"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-departamento">Departamento</Label>
+                  <Input
+                    id="edit-departamento"
+                    value={editingUser.departamento || ''}
+                    onChange={(e) => setEditingUser(prev => prev ? { ...prev, departamento: e.target.value } : null)}
+                    placeholder="Ex: Marketing Digital"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="edit-role">Papel</Label>
                   <Select 
-                    value={editingUser.role || 'user'} 
+                    value={editingUser.role || 'usuario'} 
                     onValueChange={(value) => setEditingUser(prev => prev ? { ...prev, role: value } : null)}
                   >
                     <SelectTrigger>
