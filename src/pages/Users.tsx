@@ -152,61 +152,10 @@ export default function Users() {
   const loadUsuarios = async () => {
     try {
       setLoading(true);
-      
-      // Buscar todos os usuários autenticados
-      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) throw authError;
-
-      // Buscar profiles sem tipagem
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("*") as any;
-
-      // Buscar roles sem tipagem
-      const { data: rolesData } = await (supabase as any)
-        .from("user_roles")
-        .select("*");
-
-      const { data: gestorClientesData } = await (supabase as any)
-        .from("gestor_clientes")
-        .select("*");
-
-      const { data: usuarioClientesData } = await (supabase as any)
-        .from("usuario_clientes")
-        .select("*");
-
-      const processedUsuarios = authUsers?.map((authUser) => {
-        const profile = profilesData?.find((p: any) => p.id === authUser.id);
-        const userRole = rolesData?.find((r: any) => r.user_id === authUser.id);
-        const role = userRole?.role || "usuario";
-        
-        const clientesGestor =
-          gestorClientesData?.filter((gc: any) => gc.gestor_id === authUser.id) || [];
-        const clientesUsuario =
-          usuarioClientesData?.filter((uc: any) => uc.usuario_id === authUser.id) || [];
-
-        return {
-          id: authUser.id,
-          email: authUser.email || "",
-          name: profile?.name || null,
-          role: role as "admin" | "gestor" | "usuario",
-          ativo: profile?.ativo ?? true,
-          ultimo_acesso: profile?.ultimo_acesso || null,
-          last_sign_in_at: authUser.last_sign_in_at || null,
-          created_at: authUser.created_at,
-          telefone: profile?.telefone || null,
-          departamento: profile?.departamento || null,
-          updated_at: profile?.updated_at || authUser.updated_at,
-          total_clientes:
-            role === "admin"
-              ? 999
-              : role === "gestor"
-              ? clientesGestor.length
-              : clientesUsuario.length,
-        };
-      }) || [];
-
-      setUsuarios(processedUsuarios);
+      // Buscar via Edge Function (usa Service Role e valida admin no servidor)
+      const { data, error } = await supabase.functions.invoke('list-users');
+      if (error) throw error;
+      setUsuarios(((data as any)?.users) || []);
     } catch (error) {
       console.error("Error loading users:", error);
       toast({
@@ -466,8 +415,173 @@ export default function Users() {
           </div>
         </div>
 
-        {/* Aqui seguia normalmente a tabela, modais, e o fechamento do layout */}
-        {/* ... o trecho restante já estava certo no seu original */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Usuários</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou email"
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Cargo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os cargos</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="usuario">Usuário</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="inativo">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Último acesso</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead className="text-right">Clientes</TableHead>
+                    <TableHead className="w-12" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsuarios.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{user.name || 'Sem nome'}</div>
+                            <div className="text-xs text-muted-foreground">{user.email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="min-w-[140px]">
+                        <Select value={user.role} onValueChange={(v) => updateRole(user.id, v)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="gestor">Gestor</SelectItem>
+                            <SelectItem value="usuario">Usuário</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={user.ativo} onCheckedChange={(v) => toggleStatus(user.id, v)} />
+                          <span className="text-xs text-muted-foreground">{user.ativo ? 'Ativo' : 'Inativo'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDate(user.last_sign_in_at || user.ultimo_acesso)}</TableCell>
+                      <TableCell>{formatDate(user.created_at)}</TableCell>
+                      <TableCell className="text-right">{user.total_clientes ?? 0}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditModal(user)}>
+                              <Edit className="mr-2 h-4 w-4" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => deleteUser(user)}>
+                              <Trash2 className="mr-2 h-4 w-4" /> Desativar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredUsuarios.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        Nenhum usuário encontrado
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar usuário</DialogTitle>
+              <DialogDescription>Atualize as informações do usuário</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label>Nome</Label>
+                <Input
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData((p) => ({ ...p, name: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={editFormData.telefone}
+                  onChange={(e) => setEditFormData((p) => ({ ...p, telefone: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Departamento</Label>
+                <Input
+                  value={editFormData.departamento}
+                  onChange={(e) => setEditFormData((p) => ({ ...p, departamento: e.target.value }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
+              <Button onClick={saveUserEdits}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Desativar usuário</DialogTitle>
+              <DialogDescription>Tem certeza que deseja desativar este usuário?</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmDelete}>Desativar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
