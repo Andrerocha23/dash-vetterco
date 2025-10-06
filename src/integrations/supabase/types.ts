@@ -197,6 +197,13 @@ export type Database = {
             referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       campaign_creatives: {
@@ -663,7 +670,68 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clientes_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gestor_clientes: {
+        Row: {
+          atribuido_em: string | null
+          atribuido_por: string | null
+          cliente_id: string | null
+          gestor_id: string | null
+          id: string
+        }
+        Insert: {
+          atribuido_em?: string | null
+          atribuido_por?: string | null
+          cliente_id?: string | null
+          gestor_id?: string | null
+          id?: string
+        }
+        Update: {
+          atribuido_em?: string | null
+          atribuido_por?: string | null
+          cliente_id?: string | null
+          gestor_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gestor_clientes_atribuido_por_fkey"
+            columns: ["atribuido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gestor_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gestor_clientes_gestor_id_fkey"
+            columns: ["gestor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -862,43 +930,61 @@ export type Database = {
             referencedRelation: "relatorio_n8n_consolidated"
             referencedColumns: ["conta_id"]
           },
+          {
+            foreignKeyName: "meta_sync_logs_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "users_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
+          ativo: boolean | null
           avatar_url: string | null
           cargo: string | null
-          created_at: string
           departamento: string | null
-          email: string
           id: string
           name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
           telefone: string | null
+          ultimo_acesso: string | null
           updated_at: string
         }
         Insert: {
+          ativo?: boolean | null
           avatar_url?: string | null
           cargo?: string | null
-          created_at?: string
           departamento?: string | null
-          email: string
           id: string
           name?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
           telefone?: string | null
+          ultimo_acesso?: string | null
           updated_at?: string
         }
         Update: {
+          ativo?: boolean | null
           avatar_url?: string | null
           cargo?: string | null
-          created_at?: string
           departamento?: string | null
-          email?: string
           id?: string
           name?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
           telefone?: string | null
+          ultimo_acesso?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       relatorio_config: {
         Row: {
@@ -1046,7 +1132,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1116,8 +1210,32 @@ export type Database = {
         }
         Relationships: []
       }
+      users_view: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          departamento: string | null
+          email: string | null
+          id: string | null
+          last_sign_in_at: string | null
+          name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          telefone: string | null
+          ultimo_acesso: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      create_admin_user: {
+        Args: {
+          admin_email: string
+          admin_name?: string
+          admin_password: string
+        }
+        Returns: Json
+      }
       get_relatorio_n8n_data: {
         Args: { client_id_param?: string; only_active?: boolean }
         Returns: {
@@ -1161,6 +1279,10 @@ export type Database = {
       }
       is_gestor: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      user_has_client_access: {
+        Args: { _cliente_id: string; _user_id: string }
         Returns: boolean
       }
     }
