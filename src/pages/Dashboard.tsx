@@ -66,16 +66,16 @@ export default function Dashboard() {
 
       if (leadsError) throw leadsError;
 
-      // Buscar dados de campanhas dos últimos 30 dias
+      // Buscar dados de criativos de campanhas (campaign_creatives existe)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
       const { data: campaignData, error: campaignError } = await supabase
-        .from('campaign_leads_daily')
+        .from('campaign_creatives')
         .select('*')
-        .gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
+        .gte('first_seen_date', thirtyDaysAgo.toISOString().split('T')[0]);
 
-      if (campaignError) throw campaignError;
+      if (campaignError) console.warn('Campaign creatives error:', campaignError);
 
       if (!clients || clients.length === 0) {
         setStats({
@@ -127,11 +127,11 @@ export default function Dashboard() {
       const totalLeads = leadsStats?.reduce((sum, s) => sum + (s.total_leads || 0), 0) || 0;
       const convertedLeads = leadsStats?.reduce((sum, s) => sum + (s.leads_convertidos || 0), 0) || 0;
 
-      // Calcular métricas de campanhas dos últimos 30 dias
-      const totalSpend30d = campaignData?.reduce((sum, c) => sum + (Number(c.spend) || 0), 0) || 0;
-      const totalImpressions = campaignData?.reduce((sum, c) => sum + (c.impressions || 0), 0) || 0;
-      const totalClicks = campaignData?.reduce((sum, c) => sum + (c.clicks || 0), 0) || 0;
-      const totalCampaignLeads = campaignData?.reduce((sum, c) => sum + (c.leads_count || 0), 0) || 0;
+      // Calcular métricas de campanhas dos últimos 30 dias usando campaign_creatives
+      const totalSpend30d = campaignData?.reduce((sum, c) => sum + (Number(c.total_spend) || 0), 0) || 0;
+      const totalImpressions = campaignData?.reduce((sum, c) => sum + (c.total_impressions || 0), 0) || 0;
+      const totalClicks = campaignData?.reduce((sum, c) => sum + (c.total_clicks || 0), 0) || 0;
+      const totalCampaignLeads = campaignData?.reduce((sum, c) => sum + (c.total_leads || 0), 0) || 0;
       
       const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
       const avgCPL = totalCampaignLeads > 0 ? totalSpend30d / totalCampaignLeads : 0;
