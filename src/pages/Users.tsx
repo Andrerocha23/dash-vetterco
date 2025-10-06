@@ -152,10 +152,28 @@ export default function Users() {
   const loadUsuarios = async () => {
     try {
       setLoading(true);
-      // Buscar via Edge Function (usa Service Role e valida admin no servidor)
-      const { data, error } = await supabase.functions.invoke('list-users');
+      // Buscar direto da view consolidada users_view (respeita RLS: admin vê todos)
+      const { data, error } = await (supabase as any)
+        .from("users_view")
+        .select("*");
       if (error) throw error;
-      setUsuarios(((data as any)?.users) || []);
+
+      const processed = (data || []).map((u: any) => ({
+        id: u.id,
+        email: u.email || "",
+        name: u.name || null,
+        role: (u.role || "usuario") as "admin" | "gestor" | "usuario",
+        ativo: u.ativo ?? true,
+        ultimo_acesso: u.ultimo_acesso || null,
+        last_sign_in_at: u.last_sign_in_at || null,
+        created_at: u.created_at || new Date().toISOString(),
+        telefone: u.telefone || null,
+        departamento: u.departamento || null,
+        updated_at: u.updated_at || new Date().toISOString(),
+        total_clientes: 0,
+      }));
+
+      setUsuarios(processed);
     } catch (error) {
       console.error("Error loading users:", error);
       toast({
