@@ -369,100 +369,273 @@ export default function ClientDetailPage() {
             </TabsContent>
 
             <TabsContent value="detalhes" className="mt-6 space-y-6">
-              {/* INFORMAÇÕES DETALHADAS */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5 text-primary" />
-                      Informações de Contato
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{accountData?.telefone || "-"}</p>
+              {/* 📋 INFORMAÇÕES DO CLIENTE - DESIGN LIMPO */}
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-blue-500/10 via-primary/10 to-purple-500/10 border-b">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <User className="h-5 w-5 text-primary" />
+                    Informações do Cliente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Cliente */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        Cliente
                       </div>
+                      <p className="text-lg font-semibold">{accountData?.nome_cliente || "-"}</p>
                     </div>
 
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Email</p>
-                        <p className="font-medium">{accountData?.email || "-"}</p>
+                    {/* Empresa */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Building2 className="h-4 w-4" />
+                        Empresa
                       </div>
+                      <p className="text-lg font-semibold">{accountData?.nome_empresa || "-"}</p>
                     </div>
 
-                    {accountData?.link_drive && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                        <div className="flex-1">
-                          <p className="text-xs text-muted-foreground mb-1">Documentos</p>
-                          <Button
-                            variant="link"
-                            className="h-auto p-0 text-primary"
-                            onClick={() => window.open(accountData.link_drive, "_blank")}
-                          >
-                            Abrir Drive <ExternalLink className="h-3 w-3 ml-1" />
-                          </Button>
+                    {/* Email */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        Email
+                      </div>
+                      <p className="text-base">{accountData?.email || "-"}</p>
+                    </div>
+
+                    {/* Telefone */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        Telefone
+                      </div>
+                      <p className="text-base font-medium">{accountData?.telefone || "-"}</p>
+                    </div>
+
+                    {/* Gestor */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        Gestor
+                      </div>
+                      <p className="text-base font-semibold">{accountData?.gestor_name || "-"}</p>
+                    </div>
+
+                    {/* Documentos */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <FolderOpen className="h-4 w-4" />
+                        Documentos
+                      </div>
+                      {accountData?.link_drive ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-fit gap-2"
+                          onClick={() => window.open(accountData.link_drive, "_blank")}
+                        >
+                          Abrir Drive
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Não configurado</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ⚙️ CONFIGURAÇÕES & INTEGRAÇÕES - SUPER VISUAL */}
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-purple-500/10 via-primary/10 to-blue-500/10 border-b">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Activity className="h-5 w-5 text-primary" />
+                    Configurações & Integrações
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* 📊 CANAIS ATIVOS */}
+                    <div className="space-y-4">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        <BarChart3 className="h-4 w-4" />
+                        Canais Ativos
+                      </h3>
+
+                      <div className="space-y-3">
+                        {/* Meta Ads */}
+                        <div
+                          className="flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:shadow-md"
+                          style={{
+                            borderColor: accountData?.usa_meta_ads ? "rgb(59 130 246 / 0.5)" : "rgb(148 163 184 / 0.2)",
+                            backgroundColor: accountData?.usa_meta_ads ? "rgb(59 130 246 / 0.05)" : "transparent",
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`p-2 rounded-lg ${accountData?.usa_meta_ads ? "bg-blue-500/20" : "bg-gray-500/10"}`}
+                            >
+                              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">Meta Ads</p>
+                              <p className="text-xs text-muted-foreground">Facebook & Instagram</p>
+                            </div>
+                          </div>
+                          <Badge variant={accountData?.usa_meta_ads ? "default" : "secondary"} className="gap-1">
+                            {accountData?.usa_meta_ads ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            {accountData?.usa_meta_ads ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </div>
+
+                        {/* Google Ads */}
+                        <div
+                          className="flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:shadow-md"
+                          style={{
+                            borderColor: accountData?.usa_google_ads
+                              ? "rgb(234 179 8 / 0.5)"
+                              : "rgb(148 163 184 / 0.2)",
+                            backgroundColor: accountData?.usa_google_ads ? "rgb(234 179 8 / 0.05)" : "transparent",
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`p-2 rounded-lg ${accountData?.usa_google_ads ? "bg-yellow-500/20" : "bg-gray-500/10"}`}
+                            >
+                              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">Google Ads</p>
+                              <p className="text-xs text-muted-foreground">Pesquisa & Display</p>
+                            </div>
+                          </div>
+                          <Badge variant={accountData?.usa_google_ads ? "default" : "secondary"} className="gap-1">
+                            {accountData?.usa_google_ads ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            {accountData?.usa_google_ads ? "Ativo" : "Inativo"}
+                          </Badge>
                         </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Target className="h-5 w-5 text-primary" />
-                      Configurações de Campanha
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 rounded-lg bg-muted/50">
-                        <p className="text-xs text-muted-foreground mb-1">Meta Ads</p>
-                        <Badge variant={accountData?.usa_meta_ads ? "default" : "secondary"}>
-                          {accountData?.usa_meta_ads ? (
-                            <Check className="h-3 w-3 mr-1" />
-                          ) : (
-                            <X className="h-3 w-3 mr-1" />
-                          )}
-                          {accountData?.usa_meta_ads ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </div>
+                    {/* 🔔 NOTIFICAÇÕES */}
+                    <div className="space-y-4">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                          />
+                        </svg>
+                        Notificações
+                      </h3>
 
-                      <div className="p-3 rounded-lg bg-muted/50">
-                        <p className="text-xs text-muted-foreground mb-1">Google Ads</p>
-                        <Badge variant={accountData?.usa_google_ads ? "default" : "secondary"}>
-                          {accountData?.usa_google_ads ? (
-                            <Check className="h-3 w-3 mr-1" />
-                          ) : (
-                            <X className="h-3 w-3 mr-1" />
-                          )}
-                          {accountData?.usa_google_ads ? "Ativo" : "Inativo"}
-                        </Badge>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                          <span className="text-sm">Saldo Baixo</span>
+                          <Badge variant="outline" className="gap-1">
+                            <Check className="h-3 w-3 text-green-600" />
+                            Ativo
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                          <span className="text-sm">Erro de Sync</span>
+                          <Badge variant="outline" className="gap-1">
+                            <Check className="h-3 w-3 text-green-600" />
+                            Ativo
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                          <span className="text-sm">Leads Diários</span>
+                          <Badge variant="outline" className="gap-1">
+                            <Check className="h-3 w-3 text-green-600" />
+                            Ativo
+                          </Badge>
+                        </div>
                       </div>
                     </div>
 
-                    {accountData?.meta_account_id && (
-                      <div className="p-3 rounded-lg bg-muted/50">
-                        <p className="text-xs text-muted-foreground mb-1">Meta Account ID</p>
-                        <p className="font-mono text-sm">{accountData.meta_account_id}</p>
-                      </div>
-                    )}
+                    {/* 🔗 INTEGRAÇÕES */}
+                    <div className="space-y-4">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        <Link2 className="h-4 w-4" />
+                        Integrações
+                      </h3>
 
-                    {accountData?.google_ads_id && (
-                      <div className="p-3 rounded-lg bg-muted/50">
-                        <p className="text-xs text-muted-foreground mb-1">Google Ads ID</p>
-                        <p className="font-mono text-sm">{accountData.google_ads_id}</p>
+                      <div className="space-y-3">
+                        {/* Pixel Meta */}
+                        <div className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">Pixel Meta</span>
+                            <Badge variant="secondary" className="gap-1">
+                              <X className="h-3 w-3" />
+                              Não configurado
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* GA4 */}
+                        <div className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">Google Analytics 4</span>
+                            <Badge variant="secondary" className="gap-1">
+                              <X className="h-3 w-3" />
+                              Não configurado
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Typebot */}
+                        <div className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">Typebot</span>
+                            <Badge variant="secondary" className="gap-1">
+                              <X className="h-3 w-3" />
+                              Não configurado
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                    </div>
+                  </div>
+
+                  {/* IDS DE CONTAS - SE EXISTIREM */}
+                  {(accountData?.meta_account_id || accountData?.google_ads_id) && (
+                    <div className="mt-6 pt-6 border-t">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+                        <Target className="h-4 w-4" />
+                        IDs das Contas
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {accountData?.meta_account_id && (
+                          <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                            <p className="text-xs text-muted-foreground mb-1">Meta Account ID</p>
+                            <p className="font-mono text-sm font-semibold">{accountData.meta_account_id}</p>
+                          </div>
+                        )}
+
+                        {accountData?.google_ads_id && (
+                          <div className="p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                            <p className="text-xs text-muted-foreground mb-1">Google Ads ID</p>
+                            <p className="font-mono text-sm font-semibold">{accountData.google_ads_id}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
