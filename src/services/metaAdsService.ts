@@ -3,7 +3,15 @@ import type { MetaAdsResponse } from "@/types/meta";
 import type { MetaPeriod } from "@/components/meta/MetaPeriodFilter";
 
 const CACHE_KEY_PREFIX = 'meta_ads_cache_';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+/**
+ * Returns cache duration based on period
+ * "today" has shorter cache (1 min) for more real-time updates
+ */
+const getCacheDuration = (period: MetaPeriod): number => {
+  if (period === 'today') return 60 * 1000; // 1 minute for today
+  return 5 * 60 * 1000; // 5 minutes for other periods
+};
 
 interface CacheData {
   data: MetaAdsResponse;
@@ -22,7 +30,7 @@ export const metaAdsService = {
 
     // Check cache first (cache key includes period parameter)
     const cacheKey = `${metaAccountId}_${period}`;
-    const cached = this.getCachedData(cacheKey);
+    const cached = this.getCachedData(cacheKey, period);
     if (cached) {
       console.log('Using cached Meta Ads data for period:', period);
       return cached;
@@ -69,7 +77,7 @@ export const metaAdsService = {
   /**
    * Gets cached data if available and not expired
    */
-  getCachedData(metaAccountId: string): MetaAdsResponse | null {
+  getCachedData(metaAccountId: string, period: MetaPeriod = 'last_7d'): MetaAdsResponse | null {
     try {
       const cacheKey = CACHE_KEY_PREFIX + metaAccountId;
       const cached = localStorage.getItem(cacheKey);
@@ -80,9 +88,10 @@ export const metaAdsService = {
 
       const { data, timestamp }: CacheData = JSON.parse(cached);
       const now = Date.now();
+      const cacheDuration = getCacheDuration(period);
       
       // Check if cache is still valid
-      if (now - timestamp < CACHE_DURATION) {
+      if (now - timestamp < cacheDuration) {
         return data;
       }
 

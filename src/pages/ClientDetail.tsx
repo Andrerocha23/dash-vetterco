@@ -118,6 +118,18 @@ export default function ClientDetailPage() {
     if (metaAccountId) fetchMeta();
   }, [metaAccountId, period]);
 
+  // Auto-refresh for "today" period every 2 minutes
+  useEffect(() => {
+    if (period !== 'today' || !metaAccountId) return;
+
+    const intervalId = setInterval(() => {
+      console.log('Auto-refreshing Meta data for today period...');
+      fetchMeta(false); // Silent refresh without clearing cache
+    }, 2 * 60 * 1000); // 2 minutes
+
+    return () => clearInterval(intervalId);
+  }, [period, metaAccountId]);
+
   const orderedCampaigns = useMemo(() => {
     const orderMap: Record<string, number> = { ACTIVE: 0, PAUSED: 1 };
     const copy = [...campaigns];
@@ -293,20 +305,22 @@ export default function ClientDetailPage() {
           </div>
 
           {/* 🎯 FILTROS E INFORMAÇÕES */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
             <MetaPeriodFilter value={period} onChange={(p) => setPeriod(p)} />
 
             {lastFetchTime && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">
                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Atualizado {new Date(lastFetchTime).toLocaleTimeString("pt-BR")}
+                Atualizado há {Math.floor((Date.now() - lastFetchTime) / 1000 / 60)}min
               </div>
             )}
 
             {period === "today" && (
-              <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-md">
-                <AlertCircle className="h-3 w-3" />
-                Dados de hoje podem ter delay
+              <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/50 px-3 py-1.5 rounded-md border border-amber-300 dark:border-amber-800">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span className="font-medium">
+                  Meta API tem delay de 2-4h para dados de hoje • Auto-refresh a cada 2min
+                </span>
               </div>
             )}
           </div>
