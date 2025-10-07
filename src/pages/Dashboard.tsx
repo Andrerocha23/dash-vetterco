@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { fetchAllAccountsMetaData } from "@/services/dashboardMetaService";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardStats {
   totalClients: number;
@@ -43,6 +45,14 @@ interface DashboardStats {
   leadsHoje: number;
   leadsOntem: number;
   variacaoLeads: number;
+  // Meta Ads data from yesterday
+  metaSpendOntem: number;
+  metaLeadsOntem: number;
+  metaImpressionsOntem: number;
+  metaClicksOntem: number;
+  metaCTROntem: number;
+  metaCPLOntem: number;
+  metaActiveCampaigns: number;
 }
 
 interface Alert {
@@ -68,13 +78,55 @@ interface CampanhaSemLead {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [period, setPeriod] = useState<Period>("30d");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMeta, setIsLoadingMeta] = useState(false);
   const [contasSemLeads, setContasSemLeads] = useState<ContaSemLead[]>([]);
   const [campanhasSemLeads, setCampanhasSemLeads] = useState<CampanhaSemLead[]>([]);
   const [leadsPorDiaSemana, setLeadsPorDiaSemana] = useState<any[]>([]);
+
+  const loadMetaData = async () => {
+    try {
+      setIsLoadingMeta(true);
+      console.log("Fetching Meta Ads data from all accounts...");
+      
+      const metaData = await fetchAllAccountsMetaData();
+      
+      console.log("Meta data received:", metaData);
+      
+      // Update stats with Meta data
+      setStats((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          metaSpendOntem: metaData.totalSpend,
+          metaLeadsOntem: metaData.totalLeads,
+          metaImpressionsOntem: metaData.totalImpressions,
+          metaClicksOntem: metaData.totalClicks,
+          metaCTROntem: metaData.avgCTR,
+          metaCPLOntem: metaData.avgCPL,
+          metaActiveCampaigns: metaData.activeCampaigns,
+        };
+      });
+
+      toast({
+        title: "Dados Meta atualizados",
+        description: `${metaData.accountsWithData} contas sincronizadas com sucesso`,
+      });
+    } catch (error) {
+      console.error("Error loading Meta data:", error);
+      toast({
+        title: "Erro ao carregar dados Meta",
+        description: "Não foi possível buscar dados das campanhas",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingMeta(false);
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -264,6 +316,14 @@ export default function Dashboard() {
         leadsHoje: totalLeadsHoje,
         leadsOntem: totalLeadsOntem,
         variacaoLeads,
+        // Meta data - will be loaded separately
+        metaSpendOntem: 0,
+        metaLeadsOntem: 0,
+        metaImpressionsOntem: 0,
+        metaClicksOntem: 0,
+        metaCTROntem: 0,
+        metaCPLOntem: 0,
+        metaActiveCampaigns: 0,
       };
 
       setStats(dashboardStats);
@@ -321,6 +381,9 @@ export default function Dashboard() {
       }
 
       setAlerts(dashboardAlerts);
+      
+      // Load Meta data after initial load
+      loadMetaData();
     } catch (error) {
       console.error("Erro ao carregar dashboard:", error);
     } finally {
@@ -379,6 +442,260 @@ export default function Dashboard() {
             Atualizar Dados
           </Button>
         </div>
+
+        {/* KPIs de Leads */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <KPICard
+            title="Leads Hoje"
+            value={stats?.leadsHoje || 0}
+            icon={Target}
+            description={`Ontem: ${stats?.leadsOntem || 0}`}
+            trend={
+              stats && stats.variacaoLeads !== 0
+                ? {
+                    value: Math.abs(stats.variacaoLeads),
+                    isPositive: stats.variacaoLeads >= 0,
+                  }
+                : undefined
+            }
+          />
+
+          <KPICard
+            title="Contas Sem Leads"
+            value={contasSemLeads.length}
+            icon={TrendingDown}
+            description="Não geraram leads ontem"
+          />
+
+        {/* KPIs Meta Ads - Dados de Ontem */}
+        <Card className="col-span-full">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Meta Ads - Desempenho de Ontem</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Dados consolidados de todas as contas ativas
+                </p>
+              </div>
+              <Button
+                onClick={loadMetaData}
+                variant="outline"
+                size="sm"
+                disabled={isLoadingMeta}
+              >
+                {isLoadingMeta ? "Sincronizando..." : "Atualizar Meta"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Investimento</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    formatCurrency(stats?.metaSpendOntem || 0)
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Leads</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? <Skeleton className="h-8 w-16" /> : stats?.metaLeadsOntem || 0}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">CTR Médio</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    `${(stats?.metaCTROntem || 0).toFixed(2)}%`
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">CPL Médio</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    formatCurrency(stats?.metaCPLOntem || 0)
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Campanhas Ativas</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? <Skeleton className="h-8 w-16" /> : stats?.metaActiveCampaigns || 0}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Impressões</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    (stats?.metaImpressionsOntem || 0).toLocaleString("pt-BR")
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Cliques</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    (stats?.metaClicksOntem || 0).toLocaleString("pt-BR")
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPIs Meta Ads - Dados de Ontem */}
+        <Card className="col-span-full">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Meta Ads - Desempenho de Ontem</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Dados consolidados de todas as contas ativas
+                </p>
+              </div>
+              <Button
+                onClick={loadMetaData}
+                variant="outline"
+                size="sm"
+                disabled={isLoadingMeta}
+              >
+                {isLoadingMeta ? "Sincronizando..." : "Atualizar Meta"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Investimento</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    formatCurrency(stats?.metaSpendOntem || 0)
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Leads</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? <Skeleton className="h-8 w-16" /> : stats?.metaLeadsOntem || 0}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">CTR Médio</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    `${(stats?.metaCTROntem || 0).toFixed(2)}%`
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">CPL Médio</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    formatCurrency(stats?.metaCPLOntem || 0)
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Campanhas Ativas</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? <Skeleton className="h-8 w-16" /> : stats?.metaActiveCampaigns || 0}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Impressões</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    (stats?.metaImpressionsOntem || 0).toLocaleString("pt-BR")
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Cliques</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoadingMeta ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    (stats?.metaClicksOntem || 0).toLocaleString("pt-BR")
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* KPIs de Leads */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
