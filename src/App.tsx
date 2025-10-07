@@ -14,21 +14,14 @@ import Accounts from "./pages/ContasCliente";
 import Clientes from "./pages/Clientes";
 import ClienteDetail from "./pages/ClienteDetail";
 import ClienteEdit from "./pages/ClienteEdit";
-import Analytics from "./pages/Analytics";
-import Templates from "./pages/Templates";
 import Training from "./pages/Training";
 import TrainingDetail from "./pages/TrainingDetail";
 import AddTraining from "./pages/AddTraining";
-import ClientApprovals from "./pages/ClientApprovals";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
-import Feedbacks from "./pages/Feedbacks";
 import RelatorioN8n from "./pages/RelatorioN8n";
 import NotFound from "./pages/NotFound";
 import MetaConfigPage from './pages/MetaConfigPage';
-import PublicClientRegistration from './pages/PublicClientRegistration';
-import ClientRegistrations from './pages/ClientRegistrations';
-import CadastroCliente from './pages/CadastroCliente';
 
 const queryClient = new QueryClient();
 
@@ -82,17 +75,6 @@ const App = () => (
                 <ClientDetail />
               </ProtectedRoute>
             } />
-            {/* ❌ REMOVIDO: Rotas /clients e /clients/:id */}
-            <Route path="/analytics" element={
-              <ProtectedRoute>
-                <Analytics />
-              </ProtectedRoute>
-            } />
-            <Route path="/templates" element={
-              <ProtectedRoute>
-                <Templates />
-              </ProtectedRoute>
-            } />
             <Route path="/capacitacao" element={
               <ProtectedRoute>
                 <Training />
@@ -108,11 +90,6 @@ const App = () => (
                 <AddTraining />
               </ProtectedRoute>
             } />
-            <Route path="/aprovacoes-clientes" element={
-              <ProtectedRoute>
-                <ClientApprovals />
-              </ProtectedRoute>
-            } />
             <Route path="/usuarios" element={
               <ProtectedRoute>
                 <Users />
@@ -123,11 +100,6 @@ const App = () => (
                 <Settings />
               </ProtectedRoute>
             } />
-            <Route path="/feedbacks" element={
-              <ProtectedRoute>
-                <Feedbacks />
-              </ProtectedRoute>
-            } />
             <Route path="/settings/meta" element={
               <ProtectedRoute>
                 <MetaConfigPage />
@@ -136,13 +108,6 @@ const App = () => (
             <Route path="/relatorio-n8n" element={
               <ProtectedRoute>
                 <RelatorioN8n />
-              </ProtectedRoute>
-            } />
-            <Route path="/cadastro-publico" element={<PublicClientRegistration />} />
-            <Route path="/cadastro-cliente" element={<CadastroCliente />} />
-            <Route path="/cadastros" element={
-              <ProtectedRoute>
-                <ClientRegistrations />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

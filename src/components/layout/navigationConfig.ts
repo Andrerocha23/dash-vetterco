@@ -26,8 +26,6 @@ export const navigationItems: NavigationItem[] = [
   { title: "Contas", url: "/contas", icon: Building2 },
   { title: pt.nav.training, url: "/capacitacao", icon: GraduationCap, roles: ['admin'] },
   { title: pt.nav.users, url: "/usuarios", icon: ShieldCheck, roles: ['admin'] },
-  { title: "Aprovações", url: "/aprovacoes-clientes", icon: ShieldCheck, roles: ['admin'] },
-  { title: pt.nav.feedbacks, url: "/feedbacks", icon: MessageSquare, roles: ['admin'] },
   { title: pt.nav.reportN8n, url: "/relatorio-n8n", icon: Webhook, roles: ['admin'] },
 ];
 
