@@ -160,6 +160,16 @@ export default function ClientDetailPage() {
     };
   }, [orderedCampaigns]);
 
+  const hasAnyData = useMemo(() => {
+    const m = metrics ?? kpis;
+    return (
+      (m?.total_spend || 0) > 0 ||
+      (m?.total_clicks || 0) > 0 ||
+      (m?.total_impressions || 0) > 0 ||
+      (m?.total_conversions || 0) > 0
+    );
+  }, [metrics, kpis]);
+
   const onOpenCampaign = (c: MetaCampaign) => {
     setSelectedCampaign(c);
     setDialogOpen(true);
@@ -270,7 +280,7 @@ export default function ClientDetailPage() {
                 <MetaMetricsGrid metrics={metrics ?? kpis} loading={loading} />
               </div>
 
-              {!loading && orderedCampaigns.length === 0 && (
+              {!loading && (orderedCampaigns.length === 0 || (period === 'today' && !hasAnyData)) && (
                 <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30">
                   <CardContent className="p-6">
                     <div className="flex items-start gap-3">
