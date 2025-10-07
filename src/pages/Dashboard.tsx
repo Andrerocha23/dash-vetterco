@@ -1,117 +1,152 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import { Calendar, TrendingDown, AlertCircle, Target, BarChart3 } from "lucide-react";
+  Users,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+  TrendingUp,
+  Target,
+  BarChart3,
+  Zap,
+  Activity,
+  TrendingDown,
+  Calendar,
+} from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { KPICard } from "@/components/dashboard/KPICard";
+import { PeriodSelector, Period } from "@/components/dashboard/PeriodSelector";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-const DashboardAnalytics = () => {
-  const [loading, setLoading] = useState(true);
-  const [leadsHoje, setLeadsHoje] = useState(0);
-  const [contasSemLeads, setContasSemLeads] = useState([]);
-  const [campanhasSemLeads, setCampanhasSemLeads] = useState([]);
-  const [leadsPorDiaSemana, setLeadsPorDiaSemana] = useState([]);
-  const [comparativoOntem, setComparativoOntem] = useState(null);
+interface DashboardStats {
+  totalClients: number;
+  activeClients: number;
+  pausedClients: number;
+  archivedClients: number;
+  totalMetaBalance: number;
+  lowBalanceClients: number;
+  trackingActiveClients: number;
+  metaAdsClients: number;
+  googleAdsClients: number;
+  bothChannelsClients: number;
+  totalLeads: number;
+  convertedLeads: number;
+  totalSpend30d: number;
+  avgCTR: number;
+  avgCPL: number;
+  totalCampaigns: number;
+  leadsHoje: number;
+  leadsOntem: number;
+  variacaoLeads: number;
+}
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
+interface Alert {
+  id: string;
+  type: "saldo_baixo" | "sem_rastreamento" | "pausado" | "sem_leads";
+  title: string;
+  description: string;
+  count: number;
+  severity: "high" | "medium" | "low";
+  action: string;
+}
 
-  const carregarDados = async () => {
+interface ContaSemLead {
+  id: string;
+  nome_cliente: string;
+  nome_empresa: string;
+}
+
+interface CampanhaSemLead {
+  campaign_name: string;
+  nome_conta: string;
+}
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const [period, setPeriod] = useState<Period>("30d");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [contasSemLeads, setContasSemLeads] = useState<ContaSemLead[]>([]);
+  const [campanhasSemLeads, setCampanhasSemLeads] = useState<CampanhaSemLead[]>([]);
+  const [leadsPorDiaSemana, setLeadsPorDiaSemana] = useState<any[]>([]);
+
+  const loadDashboardData = async () => {
     try {
-      setLoading(true);
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      const ontem = new Date(hoje);
-      ontem.setDate(ontem.getDate() - 1);
-      const data30DiasAtras = new Date(hoje);
-      data30DiasAtras.setDate(data30DiasAtras.getDate() - 30);
+      setIsLoading(true);
 
-      // 1. LEADS DE HOJE
+      const hoje = new Date().toISOString().split("T")[0];
+      const ontem = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const data30DiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+
+      // Buscar accounts
+      const { data: clients, error: clientsError } = await supabase.from("accounts").select("*");
+
+      if (clientsError) {
+        console.error("Erro ao buscar accounts:", clientsError);
+      }
+
+      // Buscar leads de hoje
       const { data: leadsHojeData } = await supabase
-        .from("leads")
-        .select("id")
-        .gte("created_at", hoje.toISOString());
+        .from("campaign_leads_daily")
+        .select("leads_count")
+        .eq("date", hoje);
 
-      const totalHoje = leadsHojeData?.length || 0;
-      setLeadsHoje(totalHoje);
+      const totalLeadsHoje = leadsHojeData?.reduce((sum, item) => sum + (item.leads_count || 0), 0) || 0;
 
-      // 2. LEADS DE ONTEM (para comparação)
+      // Buscar leads de ontem
       const { data: leadsOntemData } = await supabase
-        .from("leads")
-        .select("id")
-        .gte("created_at", ontem.toISOString())
-        .lt("created_at", hoje.toISOString());
+        .from("campaign_leads_daily")
+        .select("leads_count, client_id")
+        .eq("date", ontem);
 
-      const totalOntem = leadsOntemData?.length || 0;
+      const totalLeadsOntem = leadsOntemData?.reduce((sum, item) => sum + (item.leads_count || 0), 0) || 0;
 
-      // 3. CONTAS QUE NÃO TIVERAM LEADS ONTEM
-      const { data: accounts } = await supabase
-        .from("accounts")
-        .select("id, nome_cliente, nome_empresa, status")
-        .eq("status", "Ativo");
+      // Contas sem leads ontem
+      const accountsComLeadsOntem = new Set(
+        leadsOntemData?.filter((l) => l.leads_count > 0).map((l) => l.client_id) || [],
+      );
 
-      const { data: leadsOntem } = await supabase
-        .from("leads")
-        .select("client_id")
-        .gte("created_at", ontem.toISOString())
-        .lt("created_at", hoje.toISOString());
-
-      const accountsComLeads = new Set(leadsOntem?.map((l) => l.client_id));
-      const semLeadsOntem = accounts?.filter((acc) => !accountsComLeads.has(acc.id)) || [];
+      const semLeadsOntem = (clients || [])
+        .filter((acc) => acc.status === "Ativo" && !accountsComLeadsOntem.has(acc.id))
+        .map((acc) => ({
+          id: acc.id,
+          nome_cliente: acc.nome_cliente,
+          nome_empresa: acc.nome_empresa,
+        }));
 
       setContasSemLeads(semLeadsOntem);
 
-      // 4. CAMPANHAS QUE NÃO GERARAM LEADS ONTEM
-      const { data: todasCampanhas } = await supabase
-        .from("leads")
-        .select("campanha, client_id")
-        .not("campanha", "is", null)
-        .lt("created_at", hoje.toISOString());
+      // Campanhas sem leads ontem
+      const { data: campanhasOntem } = await supabase
+        .from("campaign_leads_daily")
+        .select("campaign_name, client_id, leads_count")
+        .eq("date", ontem)
+        .eq("leads_count", 0);
 
-      const campanhasUnicas = [...new Set(todasCampanhas?.map((l) => `${l.campanha}|${l.client_id}`))];
+      const campanhasEnriquecidas = (campanhasOntem || []).map((camp) => {
+        const account = clients?.find((a) => a.id === camp.client_id);
+        return {
+          campaign_name: camp.campaign_name,
+          nome_conta: account?.nome_cliente || "Desconhecido",
+        };
+      });
 
-      const { data: campanhasComLeadsOntem } = await supabase
-        .from("leads")
-        .select("campanha, client_id")
-        .gte("created_at", ontem.toISOString())
-        .lt("created_at", hoje.toISOString())
-        .not("campanha", "is", null);
+      setCampanhasSemLeads(campanhasEnriquecidas);
 
-      const campanhasComLeadsSet = new Set(
-        campanhasComLeadsOntem?.map((l) => `${l.campanha}|${l.client_id}`)
-      );
-
-      const campanhasSemLeadsOntem = campanhasUnicas
-        .filter((c) => !campanhasComLeadsSet.has(c))
-        .map((c) => {
-          const [campanha, client_id] = c.split("|");
-          const account = accounts?.find((a) => a.id === client_id);
-          return {
-            campaign_name: campanha,
-            client_id,
-            nome_conta: account?.nome_cliente || "Desconhecido",
-          };
-        })
-        .slice(0, 20);
-
-      setCampanhasSemLeads(campanhasSemLeadsOntem);
-
-      // 5. LEADS POR DIA DA SEMANA (últimos 30 dias)
+      // Leads por dia da semana (últimos 30 dias)
       const { data: leads30d } = await supabase
-        .from("leads")
-        .select("created_at")
-        .gte("created_at", data30DiasAtras.toISOString());
+        .from("campaign_leads_daily")
+        .select("date, leads_count")
+        .gte("date", data30DiasAtras)
+        .lte("date", hoje);
 
-      // Agrupar por dia da semana
-      const leadsPorDia = {
+      const leadsPorDia: Record<string, number> = {
         Domingo: 0,
         Segunda: 0,
         Terça: 0,
@@ -124,9 +159,9 @@ const DashboardAnalytics = () => {
       const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
       leads30d?.forEach((lead) => {
-        const data = new Date(lead.created_at);
+        const data = new Date(lead.date + "T00:00:00");
         const diaSemana = diasSemana[data.getDay()];
-        leadsPorDia[diaSemana] += 1;
+        leadsPorDia[diaSemana] += lead.leads_count || 0;
       });
 
       const dadosGrafico = Object.entries(leadsPorDia).map(([dia, total]) => ({
@@ -136,196 +171,422 @@ const DashboardAnalytics = () => {
 
       setLeadsPorDiaSemana(dadosGrafico);
 
-      // Comparativo
-      const variacao = totalOntem > 0 ? ((totalHoje - totalOntem) / totalOntem) * 100 : 0;
-      setComparativoOntem({
-        ontem: totalOntem,
-        hoje: totalHoje,
-        variacao: variacao.toFixed(1),
-        positivo: variacao >= 0,
+      // Buscar dados de campanhas
+      const { data: campaignData } = await supabase
+        .from("campaign_leads_daily")
+        .select("*")
+        .gte("date", data30DiasAtras);
+
+      // Calcular estatísticas
+      if (!clients || clients.length === 0) {
+        setStats({
+          totalClients: 0,
+          activeClients: 0,
+          pausedClients: 0,
+          archivedClients: 0,
+          totalMetaBalance: 0,
+          lowBalanceClients: 0,
+          trackingActiveClients: 0,
+          metaAdsClients: 0,
+          googleAdsClients: 0,
+          bothChannelsClients: 0,
+          totalLeads: 0,
+          convertedLeads: 0,
+          totalSpend30d: 0,
+          avgCTR: 0,
+          avgCPL: 0,
+          totalCampaigns: 0,
+          leadsHoje: totalLeadsHoje,
+          leadsOntem: totalLeadsOntem,
+          variacaoLeads: 0,
+        });
+        return;
+      }
+
+      const activeClients = clients.filter((c) => c.status === "Ativo");
+      const pausedClients = clients.filter((c) => c.status === "Pausado");
+      const archivedClients = clients.filter((c) => c.status === "Arquivado");
+
+      const metaAdsClients = clients.filter((c) => c.usa_meta_ads === true);
+      const googleAdsClients = clients.filter((c) => c.usa_google_ads === true);
+      const bothChannelsClients = clients.filter((c) => c.usa_meta_ads && c.usa_google_ads);
+
+      const trackingActiveClients = clients.filter((c) => c.traqueamento_ativo === true);
+
+      const totalMetaBalance = metaAdsClients.reduce((sum, client) => {
+        return sum + (client.saldo_meta || 0) / 100;
+      }, 0);
+
+      const lowBalanceClients = metaAdsClients.filter((client) => {
+        const balance = (client.saldo_meta || 0) / 100;
+        const threshold = (client.alerta_saldo_baixo || 10000) / 100;
+        return balance < threshold;
       });
+
+      const totalSpend30d = campaignData?.reduce((sum, c) => sum + (Number(c.spend) || 0), 0) || 0;
+      const totalImpressions = campaignData?.reduce((sum, c) => sum + (c.impressions || 0), 0) || 0;
+      const totalClicks = campaignData?.reduce((sum, c) => sum + (c.clicks || 0), 0) || 0;
+      const totalCampaignLeads = campaignData?.reduce((sum, c) => sum + (c.leads_count || 0), 0) || 0;
+      const convertedLeads = campaignData?.reduce((sum, c) => sum + (c.converted_leads || 0), 0) || 0;
+
+      const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+      const avgCPL = totalCampaignLeads > 0 ? totalSpend30d / totalCampaignLeads : 0;
+      const totalCampaigns = campaignData?.length || 0;
+
+      const variacaoLeads = totalLeadsOntem > 0 ? ((totalLeadsHoje - totalLeadsOntem) / totalLeadsOntem) * 100 : 0;
+
+      const dashboardStats: DashboardStats = {
+        totalClients: clients.length,
+        activeClients: activeClients.length,
+        pausedClients: pausedClients.length,
+        archivedClients: archivedClients.length,
+        totalMetaBalance,
+        lowBalanceClients: lowBalanceClients.length,
+        trackingActiveClients: trackingActiveClients.length,
+        metaAdsClients: metaAdsClients.length,
+        googleAdsClients: googleAdsClients.length,
+        bothChannelsClients: bothChannelsClients.length,
+        totalLeads: totalCampaignLeads,
+        convertedLeads,
+        totalSpend30d,
+        avgCTR,
+        avgCPL,
+        totalCampaigns,
+        leadsHoje: totalLeadsHoje,
+        leadsOntem: totalLeadsOntem,
+        variacaoLeads,
+      };
+
+      setStats(dashboardStats);
+
+      // Gerar alertas
+      const dashboardAlerts: Alert[] = [];
+
+      if (lowBalanceClients.length > 0) {
+        dashboardAlerts.push({
+          id: "saldo_baixo",
+          type: "saldo_baixo",
+          title: "Saldo Baixo",
+          description: `${lowBalanceClients.length} cliente(s) com saldo abaixo do limite`,
+          count: lowBalanceClients.length,
+          severity: "high",
+          action: "Verificar contas",
+        });
+      }
+
+      if (semLeadsOntem.length > 0) {
+        dashboardAlerts.push({
+          id: "sem_leads",
+          type: "sem_leads",
+          title: "Contas Sem Leads",
+          description: `${semLeadsOntem.length} conta(s) não geraram leads ontem`,
+          count: semLeadsOntem.length,
+          severity: "high",
+          action: "Verificar campanhas",
+        });
+      }
+
+      const noTrackingClients = activeClients.filter((c) => !c.traqueamento_ativo);
+      if (noTrackingClients.length > 0) {
+        dashboardAlerts.push({
+          id: "sem_rastreamento",
+          type: "sem_rastreamento",
+          title: "Rastreamento Inativo",
+          description: `${noTrackingClients.length} cliente(s) sem rastreamento`,
+          count: noTrackingClients.length,
+          severity: "medium",
+          action: "Configurar tracking",
+        });
+      }
+
+      if (pausedClients.length > 0) {
+        dashboardAlerts.push({
+          id: "pausado",
+          type: "pausado",
+          title: "Clientes Pausados",
+          description: `${pausedClients.length} cliente(s) pausado(s)`,
+          count: pausedClients.length,
+          severity: "medium",
+          action: "Revisar status",
+        });
+      }
+
+      setAlerts(dashboardAlerts);
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("Erro ao carregar dashboard:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
+  useEffect(() => {
+    loadDashboardData();
+  }, [period]);
 
-  if (loading) {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const getSeverityColor = (severity: "high" | "medium" | "low") => {
+    switch (severity) {
+      case "high":
+        return "bg-red-500/20 text-red-400 border-red-500/50";
+      case "medium":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/50";
+      case "low":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/50";
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
-        <div className="text-xl text-muted-foreground">Carregando dados...</div>
-      </div>
+      <AppLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-20 w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-card rounded-lg shadow p-6 border">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard de Performance</h1>
-          <p className="text-muted-foreground">Análise completa de leads e campanhas</p>
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Visão geral completa de performance</p>
+          </div>
+          <Button onClick={loadDashboardData} variant="outline">
+            Atualizar Dados
+          </Button>
         </div>
+
+        {/* KPIs de Leads */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <KPICard
+            title="Leads Hoje"
+            value={stats?.leadsHoje || 0}
+            icon={Target}
+            description={`Ontem: ${stats?.leadsOntem || 0}`}
+            trend={
+              stats && stats.variacaoLeads !== 0
+                ? {
+                    value: Math.abs(stats.variacaoLeads),
+                    isPositive: stats.variacaoLeads >= 0,
+                  }
+                : undefined
+            }
+          />
+
+          <KPICard
+            title="Contas Sem Leads"
+            value={contasSemLeads.length}
+            icon={TrendingDown}
+            description="Não geraram leads ontem"
+          />
+
+          <KPICard
+            title="Campanhas Sem Leads"
+            value={campanhasSemLeads.length}
+            icon={AlertTriangle}
+            description="Campanhas zeradas ontem"
+          />
+
+          <KPICard
+            title="Melhor Dia"
+            value={
+              leadsPorDiaSemana.length > 0
+                ? leadsPorDiaSemana.reduce((max, item) => (item.leads > max.leads ? item : max)).dia
+                : "-"
+            }
+            icon={Calendar}
+            description={`${leadsPorDiaSemana.length > 0 ? leadsPorDiaSemana.reduce((max, item) => (item.leads > max.leads ? item : max)).leads : 0} leads`}
+          />
+        </div>
+
+        {/* Gráfico Leads por Dia da Semana */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Leads por Dia da Semana (Últimos 30 dias)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={leadsPorDiaSemana}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="dia" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="leads" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
         {/* KPIs Principais */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Leads Hoje */}
-          <div className="bg-card rounded-lg shadow p-6 border">
-            <div className="flex items-center justify-between mb-4">
-              <Target className="h-8 w-8 text-primary" />
-              <div
-                className={`text-sm font-semibold px-2 py-1 rounded ${comparativoOntem?.positivo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"}`}
-              >
-                {comparativoOntem?.positivo ? "+" : ""}
-                {comparativoOntem?.variacao}%
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-foreground">{leadsHoje}</h3>
-            <p className="text-sm text-muted-foreground mt-1">Leads Hoje</p>
-            <p className="text-xs text-muted-foreground mt-2">Ontem: {comparativoOntem?.ontem}</p>
-          </div>
+          <KPICard
+            title="Total de Clientes"
+            value={stats?.totalClients || 0}
+            icon={Users}
+            description="Clientes cadastrados"
+          />
 
-          {/* Contas Sem Leads Ontem */}
-          <div className="bg-card rounded-lg shadow p-6 border">
-            <div className="flex items-center justify-between mb-4">
-              <TrendingDown className="h-8 w-8 text-orange-500" />
-              <span className="text-sm font-semibold text-orange-500">{contasSemLeads.length}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-foreground">{contasSemLeads.length}</h3>
-            <p className="text-sm text-muted-foreground mt-1">Contas sem leads ontem</p>
-          </div>
+          <KPICard
+            title="Clientes Ativos"
+            value={stats?.activeClients || 0}
+            icon={CheckCircle}
+            description="Com campanhas rodando"
+            trend={
+              stats && stats.totalClients > 0
+                ? {
+                    value: Math.round((stats.activeClients / stats.totalClients) * 100),
+                    isPositive: true,
+                  }
+                : undefined
+            }
+          />
 
-          {/* Campanhas Sem Leads Ontem */}
-          <div className="bg-card rounded-lg shadow p-6 border">
-            <div className="flex items-center justify-between mb-4">
-              <AlertCircle className="h-8 w-8 text-destructive" />
-              <span className="text-sm font-semibold text-destructive">{campanhasSemLeads.length}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-foreground">{campanhasSemLeads.length}</h3>
-            <p className="text-sm text-muted-foreground mt-1">Campanhas sem leads ontem</p>
-          </div>
+          <KPICard
+            title="Saldo Meta Total"
+            value={formatCurrency(stats?.totalMetaBalance || 0)}
+            icon={DollarSign}
+            description={`Em ${stats?.metaAdsClients || 0} contas`}
+          />
 
-          {/* Melhor Dia da Semana */}
-          <div className="bg-card rounded-lg shadow p-6 border">
-            <div className="flex items-center justify-between mb-4">
-              <Calendar className="h-8 w-8 text-green-600 dark:text-green-500" />
-              <BarChart3 className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="text-2xl font-bold text-foreground">
-              {leadsPorDiaSemana.length > 0
-                ? leadsPorDiaSemana.reduce((max, item) => (item.leads > max.leads ? item : max)).dia
-                : "-"}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">Melhor dia da semana</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              {leadsPorDiaSemana.length > 0
-                ? leadsPorDiaSemana.reduce((max, item) => (item.leads > max.leads ? item : max)).leads
-                : 0}{" "}
-              leads
-            </p>
-          </div>
+          <KPICard
+            title="Com Rastreamento"
+            value={stats?.trackingActiveClients || 0}
+            icon={TrendingUp}
+            description="Tracking ativo"
+          />
         </div>
 
-        {/* Gráfico - Leads por Dia da Semana */}
-        <div className="bg-card rounded-lg shadow p-6 border">
-          <h2 className="text-xl font-bold text-foreground mb-6">Leads por Dia da Semana (Últimos 30 dias)</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={leadsPorDiaSemana}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="dia" className="text-muted-foreground" />
-              <YAxis className="text-muted-foreground" />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))', 
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '0.5rem'
-                }}
-              />
-              <Bar dataKey="leads" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Métricas de Performance */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KPICard
+            title="Total de Leads (30d)"
+            value={stats?.totalLeads || 0}
+            icon={Target}
+            description={`${stats?.convertedLeads || 0} convertidos`}
+            trend={
+              stats && stats.totalLeads > 0 && stats.convertedLeads > 0
+                ? {
+                    value: Math.round((stats.convertedLeads / stats.totalLeads) * 100),
+                    isPositive: true,
+                  }
+                : undefined
+            }
+          />
+
+          <KPICard
+            title="Gasto Total (30d)"
+            value={formatCurrency(stats?.totalSpend30d || 0)}
+            icon={BarChart3}
+            description={`${stats?.totalCampaigns || 0} campanhas`}
+          />
+
+          <KPICard
+            title="CTR Médio"
+            value={`${(stats?.avgCTR || 0).toFixed(2)}%`}
+            icon={Zap}
+            description="Taxa de cliques"
+          />
+
+          <KPICard
+            title="CPL Médio"
+            value={formatCurrency(stats?.avgCPL || 0)}
+            icon={Activity}
+            description="Custo por lead"
+          />
         </div>
 
-        {/* Tabelas Lado a Lado */}
+        {/* Tabelas de Contas e Campanhas Sem Leads */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Contas Sem Leads Ontem */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Contas Sem Leads Ontem</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 text-sm font-semibold text-gray-700">Conta</th>
-                    <th className="text-left py-2 text-sm font-semibold text-gray-700">Empresa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contasSemLeads.length === 0 ? (
-                    <tr>
-                      <td colSpan={2} className="py-4 text-center text-gray-500">
-                        Todas as contas geraram leads ontem! 🎉
-                      </td>
-                    </tr>
-                  ) : (
-                    contasSemLeads.map((conta) => (
-                      <tr key={conta.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 text-sm text-gray-900">{conta.nome_cliente}</td>
-                        <td className="py-3 text-sm text-gray-600">{conta.nome_empresa}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Contas Sem Leads Ontem</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {contasSemLeads.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Todas as contas geraram leads ontem!</p>
+                ) : (
+                  contasSemLeads.map((conta) => (
+                    <div key={conta.id} className="flex justify-between items-center p-3 bg-card rounded-lg border">
+                      <div>
+                        <p className="font-medium">{conta.nome_cliente}</p>
+                        <p className="text-sm text-muted-foreground">{conta.nome_empresa}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Campanhas Sem Leads Ontem */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Campanhas Sem Leads Ontem</h2>
-            <div className="overflow-x-auto max-h-80 overflow-y-auto">
-              <table className="w-full">
-                <thead className="sticky top-0 bg-white">
-                  <tr className="border-b">
-                    <th className="text-left py-2 text-sm font-semibold text-gray-700">Campanha</th>
-                    <th className="text-left py-2 text-sm font-semibold text-gray-700">Conta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {campanhasSemLeads.length === 0 ? (
-                    <tr>
-                      <td colSpan={2} className="py-4 text-center text-gray-500">
-                        Todas as campanhas geraram leads ontem! 🎉
-                      </td>
-                    </tr>
-                  ) : (
-                    campanhasSemLeads.map((campanha, idx) => (
-                      <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="py-3 text-sm text-gray-900">{campanha.campaign_name}</td>
-                        <td className="py-3 text-sm text-gray-600">{campanha.nome_conta}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Campanhas Sem Leads Ontem</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {campanhasSemLeads.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Todas as campanhas geraram leads ontem!</p>
+                ) : (
+                  campanhasSemLeads.slice(0, 10).map((campanha, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 bg-card rounded-lg border">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm truncate">{campanha.campaign_name}</p>
+                        <p className="text-xs text-muted-foreground">{campanha.nome_conta}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Botão Atualizar */}
-        <div className="flex justify-center">
-          <button
-            onClick={carregarDados}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow transition-colors"
-          >
-            Atualizar Dados
-          </button>
-        </div>
+        {/* Alertas */}
+        {alerts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                Alertas do Sistema
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <Badge className={getSeverityColor(alert.severity)}>{alert.count}</Badge>
+                      <div>
+                        <h4 className="font-medium">{alert.title}</h4>
+                        <p className="text-sm text-muted-foreground">{alert.description}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      {alert.action}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-    </div>
+    </AppLayout>
   );
-};
-
-export default DashboardAnalytics;
+}
