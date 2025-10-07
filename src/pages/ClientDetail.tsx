@@ -32,7 +32,8 @@ import {
   X,
   Sparkles,
   BarChart3,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from "lucide-react";
 
 // ===== Helpers =====
@@ -54,6 +55,7 @@ export default function ClientDetailPage() {
 
   const [period, setPeriod] = useState<MetaPeriod>("today");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [resp, setResp] = useState<MetaAdsResponse | null>(null);
   const [metrics, setMetrics] = useState<MetaAccountMetrics | null>(null);
@@ -62,6 +64,7 @@ export default function ClientDetailPage() {
   const [clientDriveUrl, setClientDriveUrl] = useState<string | null>(null);
   const [metaAccountId, setMetaAccountId] = useState<string | null>(null);
   const [accountData, setAccountData] = useState<any>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<MetaCampaign | null>(null);
@@ -88,15 +91,20 @@ export default function ClientDetailPage() {
   }
 
   // Busca Meta
-  async function fetchMeta() {
+  async function fetchMeta(forceRefresh = false) {
     if (!metaAccountId) return;
     setLoading(true);
+    if (forceRefresh) {
+      setRefreshing(true);
+      metaAdsService.clearCache(`${metaAccountId}_${period}`);
+    }
     try {
       const data = await metaAdsService.fetchMetaCampaigns(metaAccountId, period);
       if (!data?.success) throw new Error(data?.error || "Falha ao buscar Meta Ads");
       setResp(data);
       setMetrics(data.account_metrics || null);
       setCampaigns(Array.isArray(data.campaigns) ? data.campaigns : []);
+      setLastFetchTime(Date.now());
     } catch (e: any) {
       console.error(e);
       toast({
@@ -106,6 +114,7 @@ export default function ClientDetailPage() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -206,19 +215,34 @@ export default function ClientDetailPage() {
                   </Button>
                 )}
                 <Button 
-                  onClick={fetchMeta} 
-                  disabled={!metaAccountId}
+                  onClick={() => fetchMeta(true)} 
+                  disabled={!metaAccountId || refreshing}
                   className="bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} /> 
+                  {refreshing ? 'Atualizando...' : 'Forçar Atualização'}
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Filtros */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
             <MetaPeriodFilter value={period} onChange={(p) => setPeriod(p)} />
+            
+            {lastFetchTime && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                Atualizado {new Date(lastFetchTime).toLocaleTimeString('pt-BR')}
+              </div>
+            )}
+            
+            {period === 'today' && (
+              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-md">
+                <AlertCircle className="h-3 w-3" />
+                Dados de "hoje" podem ter delay de processamento
+              </div>
+            )}
           </div>
 
           {/* Tabs */}
@@ -246,6 +270,47 @@ export default function ClientDetailPage() {
                 <MetaMetricsGrid metrics={metrics ?? kpis} loading={loading} />
               </div>
 
+              {!loading && orderedCampaigns.length === 0 && (
+                <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                          Nenhum dado disponível para o período selecionado
+                        </h3>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                          Isso pode acontecer porque:
+                        </p>
+                        <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1 list-disc list-inside mb-3">
+                          <li>Os dados de "hoje" podem levar algumas horas para serem processados pelo Meta</li>
+                          <li>Não houve impressões ou gastos nas campanhas neste período</li>
+                          <li>As campanhas estão pausadas ou arquivadas</li>
+                        </ul>
+                        <div className="flex gap-2 mt-3">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setPeriod('yesterday')}
+                            className="border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900"
+                          >
+                            Ver dados de ontem
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setPeriod('last_7d')}
+                            className="border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900"
+                          >
+                            Ver últimos 7 dias
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur">
                 <CardHeader className="border-b bg-muted/30">
                   <div className="flex items-center justify-between">
@@ -267,9 +332,9 @@ export default function ClientDetailPage() {
                       <Skeleton className="h-12 w-full" />
                       <Skeleton className="h-12 w-full" />
                     </div>
-                  ) : (
+                  ) : orderedCampaigns.length > 0 ? (
                     <MetaCampaignTable campaigns={orderedCampaigns} loading={loading} />
-                  )}
+                  ) : null}
                 </CardContent>
               </Card>
             </TabsContent>

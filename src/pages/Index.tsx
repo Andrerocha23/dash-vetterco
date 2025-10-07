@@ -34,8 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { getAccountHealth, type AccountHealthStatus, type HealthCheckResult } from "@/lib/accounts-health";
-import { Sparkline } from "@/components/charts/Sparkline";
+// Removed non-existent imports
 
 // Exportamos o tipo para que o `accounts-health.ts` possa importá-lo
 export interface AccountData {
@@ -66,7 +65,6 @@ export interface AccountData {
   campanhas_ativas?: number;
   // Novos dados de performance e saúde
   daily_leads?: { date: string; leads: number }[];
-  health?: HealthCheckResult;
 }
 
 interface Manager {
@@ -85,7 +83,7 @@ export default function ContasCliente() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("Ativo"); // Padrão para Ativo
   const [filterGestor, setFilterGestor] = useState("Todos os Gestores");
-  const [filterHealth, setFilterHealth] = useState("all"); // ok, warning, danger
+  // Removed filterHealth state
 
   useEffect(() => {
     loadAll();
@@ -99,37 +97,26 @@ export default function ContasCliente() {
         .select("*")
         .order("created_at", { ascending: false });
       if (accountsError) throw accountsError;
-      const { data: managersData } = await supabase.from("managers").select("id, name, avatar_url").order("name");
+      const { data: profilesData } = await supabase.from("profiles").select("id, name").order("name");
       const { data: clientesData } = await supabase.from("clientes").select("id, nome").order("nome");
 
-      // Chamada da nossa "Super Função"
-      const { data: perfData, error: perfError } = await supabase.rpc("get_accounts_performance_summary");
-      if (perfError) throw perfError;
-
-      const performanceMap = new Map((perfData || []).map((p: any) => [p.account_id, p]));
-
       const processed: AccountData[] = (accountsData || []).map((acc: any) => {
-        const manager = (managersData || []).find((m: any) => m.id === acc.gestor_id);
+        const gestor = (profilesData || []).find((p: any) => p.id === acc.gestor_id);
         const cliente = (clientesData || []).find((c: any) => c.id === acc.cliente_id);
-        const perf = performanceMap.get(acc.id);
 
-        const accountWithPerf: AccountData = {
+        return {
           ...acc,
-          gestor_name: manager?.name || "—",
+          gestor_name: gestor?.name || "—",
           cliente_nome: cliente?.nome || "—",
           total_budget: (acc.budget_mensal_meta || 0) + (acc.budget_mensal_google || 0),
-          leads_mes: perf?.total_leads_30d || 0,
-          campanhas_ativas: perf?.active_campaigns_count || 0,
-          daily_leads: perf?.daily_leads || [],
+          leads_mes: 0,
+          campanhas_ativas: 0,
+          daily_leads: [],
         };
-
-        // Camada de Inteligência: Calcula a saúde da conta
-        accountWithPerf.health = getAccountHealth(accountWithPerf);
-        return accountWithPerf;
       });
 
       setAccounts(processed);
-      setManagers(managersData || []);
+      setManagers((profilesData || []).map((p: any) => ({ id: p.id, name: p.name })));
     } catch (error) {
       console.error("Erro ao carregar contas:", error);
       toast({ title: "Erro", description: "Não foi possível carregar as contas.", variant: "destructive" });
@@ -152,20 +139,14 @@ export default function ContasCliente() {
           !q || a.nome_cliente?.toLowerCase().includes(q) || a.nome_empresa?.toLowerCase().includes(q);
         const matchesStatus = filterStatus === "Todos os Status" || a.status === filterStatus;
         const matchesGestor = filterGestor === "Todos os Gestores" || a.gestor_id === filterGestor;
-        const matchesHealth = filterHealth === "all" || a.health?.status === filterHealth;
-        return matchesSearch && matchesStatus && matchesGestor && matchesHealth;
-      })
-      .sort((a, b) => {
-        // Ordena para mostrar problemas primeiro
-        const order: Record<AccountHealthStatus, number> = { danger: 1, warning: 2, ok: 3, neutral: 4 };
-        return order[a.health?.status || "neutral"] - order[b.health?.status || "neutral"];
+        return matchesSearch && matchesStatus && matchesGestor;
       });
-  }, [accounts, searchTerm, filterStatus, filterGestor, filterHealth]);
+  }, [accounts, searchTerm, filterStatus, filterGestor]);
 
   const stats = useMemo(() => {
     const total = accounts.length;
     const ativos = accounts.filter((a) => a.status === "Ativo").length;
-    const comProblemas = accounts.filter((a) => a.health?.status === "danger" || a.health?.status === "warning").length;
+    const comProblemas = 0;
     const leadsTotal = accounts.reduce((s, a) => s + (a.leads_mes || 0), 0);
     return { total, ativos, comProblemas, leadsTotal };
   }, [accounts]);
@@ -180,24 +161,7 @@ export default function ContasCliente() {
   const formatCurrency = (value: number | undefined | null) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((value || 0) / 100);
 
-  const HealthIndicator = ({ status, message }: { status?: AccountHealthStatus; message?: string }) => {
-    const healthInfo = {
-      ok: { icon: <CheckCircle className="h-6 w-6 text-success" />, color: "border-l-success" },
-      warning: { icon: <AlertCircle className="h-6 w-6 text-warning" />, color: "border-l-warning" },
-      danger: { icon: <XCircle className="h-6 w-6 text-destructive" />, color: "border-l-destructive" },
-      neutral: { icon: <HelpCircle className="h-6 w-6 text-muted-foreground" />, color: "border-l-border" },
-    }[status || "neutral"];
-    return (
-      <Tooltip>
-        <TooltipTrigger className={`flex items-center justify-center p-4 h-full ${healthInfo.color} border-l-4`}>
-          {healthInfo.icon}
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{message || "Status indefinido"}</p>
-        </TooltipContent>
-      </Tooltip>
-    );
-  };
+  // Removed HealthIndicator component
 
   return (
     <AppLayout>
@@ -279,17 +243,6 @@ export default function ContasCliente() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={filterHealth} onValueChange={setFilterHealth}>
-              <SelectTrigger className="w-full md:w-52 h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toda a Carteira</SelectItem>
-                <SelectItem value="danger">Somente com Perigo</SelectItem>
-                <SelectItem value="warning">Somente com Avisos</SelectItem>
-                <SelectItem value="ok">Somente Contas OK</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-full md:w-48 h-11">
                 <SelectValue />
@@ -331,8 +284,7 @@ export default function ContasCliente() {
               </Card>
             ) : (
               filtered.map((acc) => (
-                <Card key={acc.id} className="surface-elevated hover:shadow-lg transition-shadow flex overflow-hidden">
-                  <HealthIndicator status={acc.health?.status} message={acc.health?.message} />
+                <Card key={acc.id} className="surface-elevated hover:shadow-lg transition-shadow overflow-hidden">
                   <div className="flex-1">
                     <CardHeader className="p-4">
                       <div className="flex items-center justify-between gap-4">
@@ -350,7 +302,7 @@ export default function ContasCliente() {
                               >
                                 {acc.nome_cliente}
                               </h3>
-                              <Badge variant={acc.status === "Ativo" ? "success" : "secondary"}>{acc.status}</Badge>
+                              <Badge variant={acc.status === "Ativo" ? "secondary" : "secondary"}>{acc.status}</Badge>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">
                               Gestor: <strong className="text-foreground/80">{acc.gestor_name}</strong>
@@ -392,18 +344,6 @@ export default function ContasCliente() {
                               <p className="text-xs text-muted-foreground">Saldo Meta</p>
                               <p className="font-semibold">{formatCurrency(acc.saldo_meta)}</p>
                             </div>
-                          </div>
-                          <div className="md:col-span-2">
-                            <p className="text-xs text-muted-foreground mb-1">Performance de Leads (30d)</p>
-                            {acc.daily_leads && acc.daily_leads.length > 1 ? (
-                              <Sparkline data={acc.daily_leads} />
-                            ) : (
-                              <div className="w-full h-[60px] rounded-md bg-muted/50 flex items-center justify-center text-xs text-muted-foreground">
-                                {(acc.campanhas_ativas ?? 0) > 0
-                                  ? "Aguardando dados de performance..."
-                                  : "Sem campanhas ativas para gerar dados."}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>

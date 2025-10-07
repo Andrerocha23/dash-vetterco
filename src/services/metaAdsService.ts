@@ -137,5 +137,25 @@ export const metaAdsService = {
     } catch (error) {
       console.error('Error clearing all cache:', error);
     }
+  },
+
+  /**
+   * Gets last fetch timestamp for a cache key
+   */
+  getLastFetchTimestamp(metaAccountId: string): number | null {
+    try {
+      const cacheKey = CACHE_KEY_PREFIX + metaAccountId;
+      const cached = localStorage.getItem(cacheKey);
+      
+      if (!cached) {
+        return null;
+      }
+
+      const { timestamp }: CacheData = JSON.parse(cached);
+      return timestamp;
+    } catch (error) {
+      console.error('Error getting last fetch timestamp:', error);
+      return null;
+    }
   }
 };
