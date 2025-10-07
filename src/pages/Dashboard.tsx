@@ -80,9 +80,12 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
 
-      const hoje = new Date().toISOString().split("T")[0];
-      const ontem = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-      const data30DiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const ontem = new Date(hoje);
+      ontem.setDate(ontem.getDate() - 1);
+      const data30DiasAtras = new Date(hoje);
+      data30DiasAtras.setDate(data30DiasAtras.getDate() - 30);
 
       // Buscar accounts
       const { data: clients, error: clientsError } = await supabase.from("accounts").select("*");
@@ -91,26 +94,31 @@ export default function Dashboard() {
         console.error("Erro ao buscar accounts:", clientsError);
       }
 
-      // Buscar leads de hoje
-      const { data: leadsHojeData } = await supabase
-        .from("campaign_leads_daily")
-        .select("leads_count")
-        .eq("date", hoje);
+      // Buscar todos os leads dos últimos 30 dias
+      const { data: allLeads } = await supabase
+        .from("leads")
+        .select("id, created_at, client_id, campanha, status, valor_conversao")
+        .gte("created_at", data30DiasAtras.toISOString());
 
-      const totalLeadsHoje = leadsHojeData?.reduce((sum, item) => sum + (item.leads_count || 0), 0) || 0;
+      // Leads de hoje
+      const leadsHoje = allLeads?.filter((lead) => {
+        const leadDate = new Date(lead.created_at);
+        leadDate.setHours(0, 0, 0, 0);
+        return leadDate.getTime() === hoje.getTime();
+      }) || [];
 
-      // Buscar leads de ontem
-      const { data: leadsOntemData } = await supabase
-        .from("campaign_leads_daily")
-        .select("leads_count, client_id")
-        .eq("date", ontem);
+      // Leads de ontem
+      const leadsOntem = allLeads?.filter((lead) => {
+        const leadDate = new Date(lead.created_at);
+        leadDate.setHours(0, 0, 0, 0);
+        return leadDate.getTime() === ontem.getTime();
+      }) || [];
 
-      const totalLeadsOntem = leadsOntemData?.reduce((sum, item) => sum + (item.leads_count || 0), 0) || 0;
+      const totalLeadsHoje = leadsHoje.length;
+      const totalLeadsOntem = leadsOntem.length;
 
       // Contas sem leads ontem
-      const accountsComLeadsOntem = new Set(
-        leadsOntemData?.filter((l) => l.leads_count > 0).map((l) => l.client_id) || [],
-      );
+      const accountsComLeadsOntem = new Set(leadsOntem.map((l) => l.client_id));
 
       const semLeadsOntem = (clients || [])
         .filter((acc) => acc.status === "Ativo" && !accountsComLeadsOntem.has(acc.id))
@@ -122,30 +130,36 @@ export default function Dashboard() {
 
       setContasSemLeads(semLeadsOntem);
 
-      // Campanhas sem leads ontem
-      const { data: campanhasOntem } = await supabase
-        .from("campaign_leads_daily")
-        .select("campaign_name, client_id, leads_count")
-        .eq("date", ontem)
-        .eq("leads_count", 0);
+      // Campanhas sem leads ontem (agrupar por campanha)
+      const campanhasComLeads = new Set(
+        leadsOntem.filter((l) => l.campanha).map((l) => `${l.client_id}|${l.campanha}`)
+      );
 
-      const campanhasEnriquecidas = (campanhasOntem || []).map((camp) => {
-        const account = clients?.find((a) => a.id === camp.client_id);
-        return {
-          campaign_name: camp.campaign_name,
-          nome_conta: account?.nome_cliente || "Desconhecido",
-        };
+      // Pegar todas as campanhas únicas dos últimos 30 dias
+      const todasCampanhas = new Map<string, { campanha: string; client_id: string }>();
+      allLeads?.forEach((lead) => {
+        if (lead.campanha) {
+          const key = `${lead.client_id}|${lead.campanha}`;
+          if (!todasCampanhas.has(key)) {
+            todasCampanhas.set(key, { campanha: lead.campanha, client_id: lead.client_id });
+          }
+        }
       });
 
-      setCampanhasSemLeads(campanhasEnriquecidas);
+      const campanhasSemLeads = Array.from(todasCampanhas.values())
+        .filter((camp) => !campanhasComLeads.has(`${camp.client_id}|${camp.campanha}`))
+        .map((camp) => {
+          const account = clients?.find((a) => a.id === camp.client_id);
+          return {
+            campaign_name: camp.campanha,
+            nome_conta: account?.nome_cliente || "Desconhecido",
+          };
+        })
+        .slice(0, 20);
+
+      setCampanhasSemLeads(campanhasSemLeads);
 
       // Leads por dia da semana (últimos 30 dias)
-      const { data: leads30d } = await supabase
-        .from("campaign_leads_daily")
-        .select("date, leads_count")
-        .gte("date", data30DiasAtras)
-        .lte("date", hoje);
-
       const leadsPorDia: Record<string, number> = {
         Domingo: 0,
         Segunda: 0,
@@ -158,10 +172,10 @@ export default function Dashboard() {
 
       const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-      leads30d?.forEach((lead) => {
-        const data = new Date(lead.date + "T00:00:00");
+      allLeads?.forEach((lead) => {
+        const data = new Date(lead.created_at);
         const diaSemana = diasSemana[data.getDay()];
-        leadsPorDia[diaSemana] += lead.leads_count || 0;
+        leadsPorDia[diaSemana] += 1;
       });
 
       const dadosGrafico = Object.entries(leadsPorDia).map(([dia, total]) => ({
@@ -170,12 +184,6 @@ export default function Dashboard() {
       }));
 
       setLeadsPorDiaSemana(dadosGrafico);
-
-      // Buscar dados de campanhas
-      const { data: campaignData } = await supabase
-        .from("campaign_leads_daily")
-        .select("*")
-        .gte("date", data30DiasAtras);
 
       // Calcular estatísticas
       if (!clients || clients.length === 0) {
@@ -223,15 +231,16 @@ export default function Dashboard() {
         return balance < threshold;
       });
 
-      const totalSpend30d = campaignData?.reduce((sum, c) => sum + (Number(c.spend) || 0), 0) || 0;
-      const totalImpressions = campaignData?.reduce((sum, c) => sum + (c.impressions || 0), 0) || 0;
-      const totalClicks = campaignData?.reduce((sum, c) => sum + (c.clicks || 0), 0) || 0;
-      const totalCampaignLeads = campaignData?.reduce((sum, c) => sum + (c.leads_count || 0), 0) || 0;
-      const convertedLeads = campaignData?.reduce((sum, c) => sum + (c.converted_leads || 0), 0) || 0;
-
-      const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-      const avgCPL = totalCampaignLeads > 0 ? totalSpend30d / totalCampaignLeads : 0;
-      const totalCampaigns = campaignData?.length || 0;
+      // Calcular métricas dos leads
+      const totalCampaignLeads = allLeads?.length || 0;
+      const convertedLeads = allLeads?.filter((l) => l.status === "Convertido").length || 0;
+      const totalSpend30d = 0; // Não temos dados de spend na tabela leads
+      const avgCTR = 0; // Não temos dados de CTR
+      const avgCPL = 0; // Não temos dados de CPL
+      
+      // Contar campanhas únicas
+      const campanhasUnicas = new Set(allLeads?.filter((l) => l.campanha).map((l) => l.campanha));
+      const totalCampaigns = campanhasUnicas.size;
 
       const variacaoLeads = totalLeadsOntem > 0 ? ((totalLeadsHoje - totalLeadsOntem) / totalLeadsOntem) * 100 : 0;
 
