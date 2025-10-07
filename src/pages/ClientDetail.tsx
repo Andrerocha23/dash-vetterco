@@ -28,6 +28,7 @@ import {
   Check,
   X,
   BarChart3,
+  Link2,
   TrendingUp,
   AlertCircle,
   Instagram,

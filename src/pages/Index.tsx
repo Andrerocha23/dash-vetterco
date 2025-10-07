@@ -108,8 +108,12 @@ export default function ContasCliente() {
 
       if (accountsError) throw accountsError;
 
-      // 2) managers
-      const { data: managersData } = await supabase.from("managers").select("id, name, avatar_url").order("name");
+      // 2) managers - using profiles table
+      const { data: managersData } = await supabase
+        .from("profiles")
+        .select("id, name, avatar_url")
+        .eq("role", "gestor")
+        .order("name");
 
       // 3) clientes
       const { data: clientesData } = await supabase.from("clientes").select("id, nome").order("nome");
@@ -127,70 +131,28 @@ export default function ContasCliente() {
       > = {};
 
       try {
-        // pegar muitas linhas para garantir dados "de hoje" — ajuste o limit conforme necessidade
+        // Using leads_stats view for aggregated data
         const { data: campaignRows } = await supabase
-          .from("campaign_leads_daily")
-          .select("client_id, leads_count, date, campaign_name")
-          .order("date", { ascending: true }) // asc para facilitar sparkline
-          .limit(20000);
+          .from("leads_stats")
+          .select("client_id, total_leads")
+          .limit(10000);
 
         if (campaignRows) {
-          const now = new Date();
-          const cutoff30 = new Date(now);
-          cutoff30.setDate(now.getDate() - 30);
-          const cutoff7 = new Date(now);
-          cutoff7.setDate(now.getDate() - 7);
-
-          // temp map by client_id
-          const map: Record<
-            string,
-            {
-              leads_7d: number;
-              leads_30d: number;
-              campanhas: Set<string>;
-              last_lead_ts: number | null;
-              daily: Record<string, number>;
-            }
-          > = {};
-
           campaignRows.forEach((r: any) => {
             const clientId = r.client_id;
-            if (!clientId) return; // sem client_id ignorar
-            const date = new Date(r.date);
-            if (!map[clientId])
-              map[clientId] = { leads_7d: 0, leads_30d: 0, campanhas: new Set(), last_lead_ts: null, daily: {} };
-            const leadsN = Number(r.leads_count || 0);
-
-            // daily bucket (YYYY-MM-DD)
-            const dayKey = date.toISOString().slice(0, 10);
-            map[clientId].daily[dayKey] = (map[clientId].daily[dayKey] || 0) + leadsN;
-
-            if (date >= cutoff30) {
-              map[clientId].leads_30d += leadsN;
-            }
-            if (date >= cutoff7) {
-              map[clientId].leads_7d += leadsN;
-            }
-            if (r.campaign_name) map[clientId].campanhas.add(r.campaign_name);
-
-            // last lead ts
-            const ts = date.getTime();
-            if (!map[clientId].last_lead_ts || ts > map[clientId].last_lead_ts) map[clientId].last_lead_ts = ts;
-          });
-
-          // convert map -> campaignAgg
-          Object.keys(map).forEach((k) => {
-            campaignAgg[k] = {
-              leads_7d: map[k].leads_7d,
-              leads_30d: map[k].leads_30d,
-              campanhas_ativas: map[k].campanhas.size,
-              last_lead_date: map[k].last_lead_ts ? new Date(map[k].last_lead_ts).toISOString() : null,
-              daily: map[k].daily,
-            } as any;
+            if (!clientId) return;
+            
+            campaignAgg[clientId] = {
+              leads_7d: 0, // Not available in leads_stats
+              leads_30d: Number(r.total_leads || 0),
+              campanhas_ativas: 0,
+              last_lead_date: null,
+              daily: {},
+            };
           });
         }
       } catch (e) {
-        console.debug("campaign_leads_daily missing or error", e);
+        console.debug("leads_stats missing or error", e);
       }
 
       // 5) process accounts: OBSERVE que usamos cliente_id para buscar aggregates
