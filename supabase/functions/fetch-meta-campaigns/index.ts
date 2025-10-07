@@ -67,19 +67,24 @@ Deno.serve(async (req) => {
     const now = new Date();
     let since: string;
     let until: string;
+    let datePreset: string | null = null;
 
     switch (period) {
       case 'today':
-        since = formatDate(now);
+        // Use date_preset for "today" to leverage Meta's automatic timezone handling
+        datePreset = 'today';
+        since = formatDate(now); // Fallback only
         until = formatDate(now);
         break;
       case 'yesterday':
+        datePreset = 'yesterday';
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
         since = formatDate(yesterday);
         until = formatDate(yesterday);
         break;
       case 'last_7d':
+        datePreset = 'last_7d';
         const last7 = new Date(now);
         last7.setDate(last7.getDate() - 7);
         since = formatDate(last7);
@@ -92,11 +97,13 @@ Deno.serve(async (req) => {
         until = formatDate(now);
         break;
       case 'this_month':
+        datePreset = 'this_month';
         const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         since = formatDate(thisMonthStart);
         until = formatDate(now);
         break;
       case 'last_month':
+        datePreset = 'last_month';
         const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
         since = formatDate(lastMonthStart);
@@ -109,7 +116,7 @@ Deno.serve(async (req) => {
         until = formatDate(now);
     }
     
-    console.log('Date range:', { since, until, period });
+    console.log('Date config:', { since, until, period, datePreset });
 
     // Fetch campaigns
     const campaignsUrl = `${META_BASE_URL}/${formattedAccountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget&access_token=${accessToken}`;
@@ -127,7 +134,12 @@ Deno.serve(async (req) => {
     console.log('Campaigns fetched:', campaignsData.data?.length || 0);
 
     // Fetch account-level insights
-    const insightsUrl = `${META_BASE_URL}/${formattedAccountId}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&time_range={"since":"${since}","until":"${until}"}&time_increment=1&action_report_time=impression&access_token=${accessToken}`;
+    // Use date_preset for supported periods, otherwise use time_range
+    const insightsTimeParam = datePreset 
+      ? `date_preset=${datePreset}` 
+      : `time_range={"since":"${since}","until":"${until}"}`;
+    
+    const insightsUrl = `${META_BASE_URL}/${formattedAccountId}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&${insightsTimeParam}&time_increment=1&action_report_time=impression&access_token=${accessToken}`;
     
     console.log('Fetching account insights from Meta API...');
     const insightsResponse = await fetch(insightsUrl);
@@ -142,15 +154,27 @@ Deno.serve(async (req) => {
     let accountInsights = null;
     if (insightsResponse.ok) {
       const insightsData = await insightsResponse.json();
-      accountInsights = insightsData.data?.[0] || null;
-      console.log('Account insights fetched');
+      const insightsArray = insightsData.data || [];
+      
+      console.log(`Account insights: received ${insightsArray.length} records`);
+      if (insightsArray.length > 0) {
+        console.log('First insight record:', JSON.stringify(insightsArray[0]).substring(0, 200));
+      }
+      
+      accountInsights = insightsArray[0] || null;
+      console.log('Account insights processed:', accountInsights ? 'YES' : 'NO DATA');
     }
 
     // Fetch insights for each campaign
     const campaignsWithInsights = await Promise.all(
       (campaignsData.data || []).map(async (campaign: MetaCampaignResponse) => {
         try {
-          const campaignInsightsUrl = `${META_BASE_URL}/${campaign.id}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&time_range={"since":"${since}","until":"${until}"}&time_increment=1&action_report_time=impression&access_token=${accessToken}`;
+          // Use date_preset for supported periods, otherwise use time_range
+          const campaignTimeParam = datePreset 
+            ? `date_preset=${datePreset}` 
+            : `time_range={"since":"${since}","until":"${until}"}`;
+          
+          const campaignInsightsUrl = `${META_BASE_URL}/${campaign.id}/insights?fields=impressions,reach,clicks,spend,ctr,cpc,cpm,actions,cost_per_action_type&${campaignTimeParam}&time_increment=1&action_report_time=impression&access_token=${accessToken}`;
           
           const response = await fetch(campaignInsightsUrl);
           if (!response.ok) {
