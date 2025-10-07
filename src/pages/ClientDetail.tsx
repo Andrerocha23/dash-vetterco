@@ -1,4 +1,4 @@
-// src/pages/ClientDetail.tsx — Conta (Detalhes) — versão moderna
+// src/pages/ClientDetail.tsx - VERSÃO REDESENHADA 🔥
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { MetaPeriodFilter, type MetaPeriod } from "@/components/meta/MetaPeriodFilter";
@@ -16,32 +16,31 @@ import { MetaCampaignTable } from "@/components/meta/MetaCampaignTable";
 import { MetaCampaignDetailDialog } from "@/components/meta/MetaCampaignDetailDialog";
 import { metaAdsService } from "@/services/metaAdsService";
 import type { MetaAdsResponse, MetaCampaign, MetaAccountMetrics } from "@/types/meta";
-import { 
-  ArrowLeft, 
-  ExternalLink, 
-  RefreshCw, 
-  FolderOpen, 
-  Building2, 
-  Mail, 
-  Phone, 
+import {
+  ArrowLeft,
+  ExternalLink,
+  RefreshCw,
+  FolderOpen,
+  Building2,
+  Mail,
+  Phone,
   User,
-  DollarSign,
-  Bell,
-  Link2,
   Check,
   X,
-  Sparkles,
   BarChart3,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Instagram,
+  Globe,
+  Calendar,
+  DollarSign,
+  Target,
+  Activity,
 } from "lucide-react";
 
-// ===== Helpers =====
-const safe = (n: number | null | undefined, fallback = 0) =>
-  typeof n === "number" && !Number.isNaN(n) ? n : fallback;
+const safe = (n: number | null | undefined, fallback = 0) => (typeof n === "number" && !Number.isNaN(n) ? n : fallback);
 
-const currency = (v: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
+const currency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
 const getLeads = (c: MetaCampaign) => {
   const conv = (c as any)?.insights?.conversions;
@@ -69,13 +68,8 @@ export default function ClientDetailPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<MetaCampaign | null>(null);
 
-  // Carrega dados completos da conta
   async function loadAccountBasics(accountId: string) {
-    const { data, error } = await supabase
-      .from("accounts")
-      .select("*")
-      .eq("id", accountId)
-      .single();
+    const { data, error } = await supabase.from("accounts").select("*").eq("id", accountId).single();
 
     if (error) {
       console.error("Erro buscando accounts:", error);
@@ -83,14 +77,11 @@ export default function ClientDetailPage() {
       return;
     }
 
-    // Não há mais gestor_id - foi substituído por user_id em clientes
-
     setAccountData(data);
     setMetaAccountId(data?.meta_account_id || null);
     setClientDriveUrl(data?.link_drive || null);
   }
 
-  // Busca Meta
   async function fetchMeta(forceRefresh = false) {
     if (!metaAccountId) return;
     setLoading(true);
@@ -126,7 +117,6 @@ export default function ClientDetailPage() {
     if (metaAccountId) fetchMeta();
   }, [metaAccountId, period]);
 
-  // Ordena campanhas
   const orderedCampaigns = useMemo(() => {
     const orderMap: Record<string, number> = { ACTIVE: 0, PAUSED: 1 };
     const copy = [...campaigns];
@@ -141,7 +131,6 @@ export default function ClientDetailPage() {
     return copy;
   }, [campaigns]);
 
-  // KPIs agregados
   const kpis = useMemo((): MetaAccountMetrics => {
     const totalSpend = orderedCampaigns.reduce((acc, c) => acc + safe(c.insights?.spend), 0);
     const totalClicks = orderedCampaigns.reduce((acc, c) => acc + safe(c.insights?.clicks), 0);
@@ -160,16 +149,6 @@ export default function ClientDetailPage() {
     };
   }, [orderedCampaigns]);
 
-  const hasAnyData = useMemo(() => {
-    const m = metrics ?? kpis;
-    return (
-      (m?.total_spend || 0) > 0 ||
-      (m?.total_clicks || 0) > 0 ||
-      (m?.total_impressions || 0) > 0 ||
-      (m?.total_conversions || 0) > 0
-    );
-  }, [metrics, kpis]);
-
   const onOpenCampaign = (c: MetaCampaign) => {
     setSelectedCampaign(c);
     setDialogOpen(true);
@@ -177,158 +156,193 @@ export default function ClientDetailPage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">{/* Largura dinâmica sem max-width fixo */}
-          {/* Header moderno */}
-          <div className="mb-8">
-            <div className="flex items-center gap-4 mb-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/10">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* 🎨 HEADER HERO - CLEAN E MODERNO */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b">
+            <div className="flex items-start gap-4 flex-1">
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => navigate(-1)}
-                className="hover:bg-primary/10 hover:text-primary transition-colors"
+                className="shrink-0 hover:bg-primary/10 hover:text-primary"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <Building2 className="h-8 w-8 text-primary" />
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    {accountData?.nome_cliente || 'Detalhes da Conta'}
-                  </h1>
+
+              <div className="flex items-start gap-4 flex-1">
+                <Avatar className="h-16 w-16 border-2 border-primary/20 shadow">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-white text-xl font-bold">
+                    {accountData?.nome_cliente
+                      ?.split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2) || "CL"}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-3xl font-bold truncate">{accountData?.nome_cliente || "Carregando..."}</h1>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
+                    {accountData?.nome_empresa && (
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="h-3.5 w-3.5" />
+                          {accountData.nome_empresa}
+                        </div>
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+                      </>
+                    )}
+
+                    <Badge
+                      variant="outline"
+                      className={
+                        accountData?.status === "Ativo"
+                          ? "bg-green-500/10 text-green-600 border-green-500/30"
+                          : "bg-red-500/10 text-red-600 border-red-500/30"
+                      }
+                    >
+                      {accountData?.status === "Ativo" ? (
+                        <Check className="h-3 w-3 mr-1" />
+                      ) : (
+                        <X className="h-3 w-3 mr-1" />
+                      )}
+                      {accountData?.status || "Status"}
+                    </Badge>
+                  </div>
                 </div>
-                <p className="text-muted-foreground text-sm flex items-center gap-2">
-                  {accountData?.nome_empresa && (
-                    <>
-                      <span>{accountData.nome_empresa}</span>
-                      <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
-                    </>
-                  )}
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    accountData?.status === 'Ativo' 
-                      ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
-                      : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                  }`}>
-                    {accountData?.status === 'Ativo' ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                    {accountData?.status || 'Status'}
-                  </span>
-                </p>
               </div>
-              <div className="flex items-center gap-2">
-                {clientDriveUrl && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => window.open(clientDriveUrl!, "_blank")}
-                    className="hover:bg-primary hover:text-primary-foreground transition-colors"
-                  >
-                    <FolderOpen className="h-4 w-4 mr-2" /> Drive
-                  </Button>
-                )}
-                <Button 
-                  onClick={() => fetchMeta(true)} 
-                  disabled={!metaAccountId || refreshing}
-                  className="bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} /> 
-                  {refreshing ? 'Atualizando...' : 'Forçar Atualização'}
+            </div>
+
+            {/* AÇÕES RÁPIDAS */}
+            <div className="flex flex-wrap items-center gap-2">
+              {clientDriveUrl && (
+                <Button variant="outline" onClick={() => window.open(clientDriveUrl!, "_blank")} className="gap-2">
+                  <FolderOpen className="h-4 w-4" />
+                  Drive
                 </Button>
-              </div>
+              )}
+
+              <Button onClick={() => fetchMeta(true)} disabled={!metaAccountId || refreshing} className="gap-2">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                {refreshing ? "Atualizando..." : "Atualizar"}
+              </Button>
             </div>
           </div>
 
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+          {/* 📊 CARDS DE INFO RÁPIDA - COMPACTO E ELEGANTE */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <Phone className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">Telefone</p>
+                    <p className="text-sm font-semibold truncate">{accountData?.telefone || "-"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <Mail className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">Email</p>
+                    <p className="text-sm font-semibold truncate">{accountData?.email || "-"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-500/10">
+                    <DollarSign className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">Saldo Meta</p>
+                    <p className="text-sm font-semibold">{currency(accountData?.saldo_meta || 0)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/10">
+                    <Target className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">Budget Mensal</p>
+                    <p className="text-sm font-semibold">{currency(accountData?.budget_mensal_meta || 0)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 🎯 FILTROS E INFORMAÇÕES */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <MetaPeriodFilter value={period} onChange={(p) => setPeriod(p)} />
-            
+
             {lastFetchTime && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">
                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Atualizado {new Date(lastFetchTime).toLocaleTimeString('pt-BR')}
+                Atualizado {new Date(lastFetchTime).toLocaleTimeString("pt-BR")}
               </div>
             )}
-            
-            {period === 'today' && (
-              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-md">
+
+            {period === "today" && (
+              <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-md">
                 <AlertCircle className="h-3 w-3" />
-                Dados de "hoje" podem ter delay de processamento
+                Dados de hoje podem ter delay
               </div>
             )}
           </div>
 
-          {/* Tabs */}
+          {/* 📈 MÉTRICAS PRINCIPAIS */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                Performance do Período
+              </CardTitle>
+              <CardDescription>Métricas agregadas de todas as campanhas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MetaMetricsGrid metrics={metrics ?? kpis} loading={loading} />
+            </CardContent>
+          </Card>
+
+          {/* 🎪 TABS DE CONTEÚDO */}
           <Tabs defaultValue="campanhas" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50 p-1 rounded-lg">
-              <TabsTrigger 
-                value="campanhas" 
-                className="data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+              <TabsTrigger value="campanhas" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
                 Campanhas
               </TabsTrigger>
-              <TabsTrigger 
-                value="visao"
-                className="data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Visão Geral
+              <TabsTrigger value="detalhes" className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Detalhes da Conta
               </TabsTrigger>
             </TabsList>
 
-            {/* CAMPANHAS */}
-            <TabsContent value="campanhas" className="mt-0 space-y-6">
-              <div className="grid gap-4">
-                <MetaMetricsGrid metrics={metrics ?? kpis} loading={loading} />
-              </div>
-
-              {!loading && (orderedCampaigns.length === 0 || (period === 'today' && !hasAnyData)) && (
-                <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                          Nenhum dado disponível para o período selecionado
-                        </h3>
-                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                          Isso pode acontecer porque:
-                        </p>
-                        <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1 list-disc list-inside mb-3">
-                          <li>Os dados de "hoje" podem levar algumas horas para serem processados pelo Meta</li>
-                          <li>Não houve impressões ou gastos nas campanhas neste período</li>
-                          <li>As campanhas estão pausadas ou arquivadas</li>
-                        </ul>
-                        <div className="flex gap-2 mt-3">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setPeriod('yesterday')}
-                            className="border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900"
-                          >
-                            Ver dados de ontem
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setPeriod('last_7d')}
-                            className="border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900"
-                          >
-                            Ver últimos 7 dias
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur">
-                <CardHeader className="border-b bg-muted/30">
+            <TabsContent value="campanhas" className="mt-6">
+              <Card>
+                <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-2xl flex items-center gap-2">
-                        <TrendingUp className="h-6 w-6 text-primary" />
-                        Campanhas Ativas
-                      </CardTitle>
+                      <CardTitle>Campanhas Ativas</CardTitle>
                       <CardDescription className="mt-1">
                         {orderedCampaigns.length} campanhas no período selecionado
                       </CardDescription>
@@ -344,205 +358,117 @@ export default function ClientDetailPage() {
                     </div>
                   ) : orderedCampaigns.length > 0 ? (
                     <MetaCampaignTable campaigns={orderedCampaigns} loading={loading} />
-                  ) : null}
+                  ) : (
+                    <div className="p-12 text-center text-muted-foreground">
+                      <Target className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                      <p>Nenhuma campanha encontrada no período selecionado</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* VISÃO GERAL */}
-            <TabsContent value="visao" className="mt-0 space-y-6">
-              {/* Info Cliente */}
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <User className="h-6 w-6 text-primary" />
-                    Informações do Cliente
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <User className="h-4 w-4" />
-                        <span>Cliente</span>
-                      </div>
-                      <p className="text-lg font-semibold">{accountData?.nome_cliente || '-'}</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <Building2 className="h-4 w-4" />
-                        <span>Empresa</span>
-                      </div>
-                      <p className="text-lg font-semibold">{accountData?.nome_empresa || '-'}</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <Mail className="h-4 w-4" />
-                        <span>Email</span>
-                      </div>
-                      <p className="text-base">{accountData?.email || '-'}</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <Phone className="h-4 w-4" />
-                        <span>Telefone</span>
-                      </div>
-                      <p className="text-base">{accountData?.telefone || '-'}</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <User className="h-4 w-4" />
-                        <span>Gestor</span>
-                      </div>
-                      <p className="text-base font-semibold">{accountData?.managers?.name || '-'}</p>
-                      {accountData?.managers?.email && (
-                        <p className="text-sm text-muted-foreground">{accountData.managers.email}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <FolderOpen className="h-4 w-4" />
-                        <span>Documentos</span>
-                      </div>
-                      {clientDriveUrl ? (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => window.open(clientDriveUrl, "_blank")}
-                          className="hover:bg-primary hover:text-primary-foreground"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-2" /> Abrir Drive
-                        </Button>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Não configurado</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {accountData?.observacoes && (
-                    <>
-                      <Separator className="my-6" />
+            <TabsContent value="detalhes" className="mt-6 space-y-6">
+              {/* INFORMAÇÕES DETALHADAS */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      Informações de Contato
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">Observações</p>
-                        <p className="text-sm leading-relaxed">{accountData.observacoes}</p>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Integrações */}
-              <Card className="border-0 shadow-lg">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Sparkles className="h-6 w-6 text-primary" />
-                    Configurações & Integrações
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Canais Ativos</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {accountData?.canais?.length > 0 ? (
-                          accountData.canais.map((canal: string) => (
-                            <Badge key={canal} variant="secondary" className="bg-primary/10 text-primary">
-                              {canal}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Nenhum canal</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Bell className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Notificações</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Leads Diários</span>
-                          {accountData?.notificacao_leads_diarios ? 
-                            <Check className="h-4 w-4 text-green-600" /> : 
-                            <X className="h-4 w-4 text-red-600" />
-                          }
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Saldo Baixo</span>
-                          {accountData?.notificacao_saldo_baixo ? 
-                            <Check className="h-4 w-4 text-green-600" /> : 
-                            <X className="h-4 w-4 text-red-600" />
-                          }
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Erro Sync</span>
-                          {accountData?.notificacao_erro_sync ? 
-                            <Check className="h-4 w-4 text-green-600" /> : 
-                            <X className="h-4 w-4 text-red-600" />
-                          }
-                        </div>
+                        <p className="text-xs text-muted-foreground">Telefone</p>
+                        <p className="font-medium">{accountData?.telefone || "-"}</p>
                       </div>
                     </div>
 
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Link2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Integrações</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Meta Ads</span>
-                          {accountData?.usa_meta_ads ? 
-                            <Check className="h-4 w-4 text-green-600" /> : 
-                            <X className="h-4 w-4 text-red-600" />
-                          }
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Google Ads</span>
-                          {accountData?.usa_google_ads ? 
-                            <Check className="h-4 w-4 text-green-600" /> : 
-                            <X className="h-4 w-4 text-red-600" />
-                          }
-                        </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Email</p>
+                        <p className="font-medium">{accountData?.email || "-"}</p>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Performance */}
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-primary/5 to-card">
-                <CardHeader className="border-b bg-primary/5">
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <TrendingUp className="h-6 w-6 text-primary" />
-                    Performance do Período
-                  </CardTitle>
-                  <CardDescription>Métricas agregadas do período selecionado</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <MetaMetricsGrid metrics={metrics ?? kpis} loading={loading} />
-                </CardContent>
-              </Card>
+                    {accountData?.link_drive && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground mb-1">Documentos</p>
+                          <Button
+                            variant="link"
+                            className="h-auto p-0 text-primary"
+                            onClick={() => window.open(accountData.link_drive, "_blank")}
+                          >
+                            Abrir Drive <ExternalLink className="h-3 w-3 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-primary" />
+                      Configurações de Campanha
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground mb-1">Meta Ads</p>
+                        <Badge variant={accountData?.usa_meta_ads ? "default" : "secondary"}>
+                          {accountData?.usa_meta_ads ? (
+                            <Check className="h-3 w-3 mr-1" />
+                          ) : (
+                            <X className="h-3 w-3 mr-1" />
+                          )}
+                          {accountData?.usa_meta_ads ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground mb-1">Google Ads</p>
+                        <Badge variant={accountData?.usa_google_ads ? "default" : "secondary"}>
+                          {accountData?.usa_google_ads ? (
+                            <Check className="h-3 w-3 mr-1" />
+                          ) : (
+                            <X className="h-3 w-3 mr-1" />
+                          )}
+                          {accountData?.usa_google_ads ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {accountData?.meta_account_id && (
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground mb-1">Meta Account ID</p>
+                        <p className="font-mono text-sm">{accountData.meta_account_id}</p>
+                      </div>
+                    )}
+
+                    {accountData?.google_ads_id && (
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground mb-1">Google Ads ID</p>
+                        <p className="font-mono text-sm">{accountData.google_ads_id}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
       </div>
 
-      <MetaCampaignDetailDialog
-        campaign={selectedCampaign}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
+      <MetaCampaignDetailDialog campaign={selectedCampaign} open={dialogOpen} onOpenChange={setDialogOpen} />
     </AppLayout>
   );
 }
