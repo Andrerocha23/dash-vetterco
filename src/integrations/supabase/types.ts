@@ -966,6 +966,15 @@ export type Database = {
         }
         Returns: Json
       }
+      get_accounts_performance_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          account_id: string
+          active_campaigns_count: number
+          daily_leads: Json
+          total_leads_30d: number
+        }[]
+      }
       get_relatorio_n8n_data: {
         Args: { client_id_param?: string; only_active?: boolean }
         Returns: {
