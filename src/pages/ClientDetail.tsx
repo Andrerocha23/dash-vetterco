@@ -176,9 +176,16 @@ export default function ClientDetailPage() {
     
     setIsSubmitting(true);
     try {
+      // Converter strings vazias em null para campos de data
+      const cleanedData = {
+        ...data,
+        contrato_inicio: data.contrato_inicio === "" ? null : data.contrato_inicio,
+        contrato_renovacao: data.contrato_renovacao === "" ? null : data.contrato_renovacao,
+      };
+
       const { error } = await supabase
         .from("accounts")
-        .update(data)
+        .update(cleanedData)
         .eq("id", id);
 
       if (error) throw error;
