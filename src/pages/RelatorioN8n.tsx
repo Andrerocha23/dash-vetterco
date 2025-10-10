@@ -337,9 +337,23 @@ export default function RelatorioN8n() {
 
   const handleToggleAllMeta = async () => {
     try {
-      // Verifica se todos estão desativados
-      const allMetaInactive = clients.every((c) => !c.config?.ativo_meta);
+      // Filtrar apenas contas que têm Meta configurado
+      const clientsWithMeta = clients.filter((c) => c.meta_account_id && String(c.meta_account_id).trim().length > 0);
+      
+      if (clientsWithMeta.length === 0) {
+        toast({ 
+          title: "Aviso", 
+          description: "Nenhuma conta com Meta Ads configurado",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Verifica se todos os que têm Meta estão desativados
+      const allMetaInactive = clientsWithMeta.every((c) => !c.config?.ativo_meta);
       const newStatus = allMetaInactive;
+
+      const clientIds = clientsWithMeta.map(c => c.id);
 
       const { error } = await supabase
         .from("relatorio_config")
@@ -347,26 +361,32 @@ export default function RelatorioN8n() {
           ativo_meta: newStatus,
           updated_at: new Date().toISOString() 
         })
-        .in('client_id', clients.map(c => c.id));
+        .in('client_id', clientIds);
 
       if (error) throw error;
 
       setClients((prev) =>
-        prev.map((c) => ({
-          ...c,
-          config: {
-            ...c.config,
-            ativo_meta: newStatus,
-            ativo_google: c.config?.ativo_google || false,
-            horario_disparo: c.config?.horario_disparo || "09:00:00",
-            dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
-          },
-        }))
+        prev.map((c) => {
+          // Só atualiza se a conta tem Meta configurado
+          if (clientIds.includes(c.id)) {
+            return {
+              ...c,
+              config: {
+                ...c.config,
+                ativo_meta: newStatus,
+                ativo_google: c.config?.ativo_google || false,
+                horario_disparo: c.config?.horario_disparo || "09:00:00",
+                dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
+              },
+            };
+          }
+          return c;
+        })
       );
 
       toast({ 
         title: "Sucesso", 
-        description: `Todos os relatórios Meta foram ${newStatus ? "ativados" : "desativados"} (${clients.length} contas)` 
+        description: `Relatórios Meta ${newStatus ? "ativados" : "desativados"} (${clientsWithMeta.length} contas)` 
       });
     } catch (error) {
       console.error("Erro ao alterar Meta:", error);
@@ -380,9 +400,23 @@ export default function RelatorioN8n() {
 
   const handleToggleAllGoogle = async () => {
     try {
-      // Verifica se todos estão desativados
-      const allGoogleInactive = clients.every((c) => !c.config?.ativo_google);
+      // Filtrar apenas contas que têm Google configurado
+      const clientsWithGoogle = clients.filter((c) => c.google_ads_id && String(c.google_ads_id).trim().length > 0);
+      
+      if (clientsWithGoogle.length === 0) {
+        toast({ 
+          title: "Aviso", 
+          description: "Nenhuma conta com Google Ads configurado",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Verifica se todos os que têm Google estão desativados
+      const allGoogleInactive = clientsWithGoogle.every((c) => !c.config?.ativo_google);
       const newStatus = allGoogleInactive;
+
+      const clientIds = clientsWithGoogle.map(c => c.id);
 
       const { error } = await supabase
         .from("relatorio_config")
@@ -390,26 +424,32 @@ export default function RelatorioN8n() {
           ativo_google: newStatus,
           updated_at: new Date().toISOString() 
         })
-        .in('client_id', clients.map(c => c.id));
+        .in('client_id', clientIds);
 
       if (error) throw error;
 
       setClients((prev) =>
-        prev.map((c) => ({
-          ...c,
-          config: {
-            ...c.config,
-            ativo_meta: c.config?.ativo_meta || false,
-            ativo_google: newStatus,
-            horario_disparo: c.config?.horario_disparo || "09:00:00",
-            dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
-          },
-        }))
+        prev.map((c) => {
+          // Só atualiza se a conta tem Google configurado
+          if (clientIds.includes(c.id)) {
+            return {
+              ...c,
+              config: {
+                ...c.config,
+                ativo_meta: c.config?.ativo_meta || false,
+                ativo_google: newStatus,
+                horario_disparo: c.config?.horario_disparo || "09:00:00",
+                dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
+              },
+            };
+          }
+          return c;
+        })
       );
 
       toast({ 
         title: "Sucesso", 
-        description: `Todos os relatórios Google foram ${newStatus ? "ativados" : "desativados"} (${clients.length} contas)` 
+        description: `Relatórios Google ${newStatus ? "ativados" : "desativados"} (${clientsWithGoogle.length} contas)` 
       });
     } catch (error) {
       console.error("Erro ao alterar Google:", error);
@@ -452,9 +492,11 @@ export default function RelatorioN8n() {
   const totalMeta = clients.filter((c) => c.meta_account_id).length;
   const totalGoogle = clients.filter((c) => c.google_ads_id).length;
   
-  // Verificar se todos estão desativados
-  const allMetaInactive = clients.every((c) => !c.config?.ativo_meta);
-  const allGoogleInactive = clients.every((c) => !c.config?.ativo_google);
+  // Verificar se todos os que TÊM a plataforma configurada estão desativados
+  const clientsWithMeta = clients.filter((c) => c.meta_account_id && String(c.meta_account_id).trim().length > 0);
+  const clientsWithGoogle = clients.filter((c) => c.google_ads_id && String(c.google_ads_id).trim().length > 0);
+  const allMetaInactive = clientsWithMeta.length > 0 && clientsWithMeta.every((c) => !c.config?.ativo_meta);
+  const allGoogleInactive = clientsWithGoogle.length > 0 && clientsWithGoogle.every((c) => !c.config?.ativo_google);
 
   const StatCard = ({
     icon,
