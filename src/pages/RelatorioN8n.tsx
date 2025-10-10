@@ -335,12 +335,16 @@ export default function RelatorioN8n() {
     }
   };
 
-  const handleDeactivateAllMeta = async () => {
+  const handleToggleAllMeta = async () => {
     try {
+      // Verifica se todos estão desativados
+      const allMetaInactive = clients.every((c) => !c.config?.ativo_meta);
+      const newStatus = allMetaInactive;
+
       const { error } = await supabase
         .from("relatorio_config")
         .update({ 
-          ativo_meta: false,
+          ativo_meta: newStatus,
           updated_at: new Date().toISOString() 
         })
         .in('client_id', clients.map(c => c.id));
@@ -352,7 +356,8 @@ export default function RelatorioN8n() {
           ...c,
           config: {
             ...c.config,
-            ativo_meta: false,
+            ativo_meta: newStatus,
+            ativo_google: c.config?.ativo_google || false,
             horario_disparo: c.config?.horario_disparo || "09:00:00",
             dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
           },
@@ -361,24 +366,28 @@ export default function RelatorioN8n() {
 
       toast({ 
         title: "Sucesso", 
-        description: `Todos os relatórios Meta foram desativados (${clients.length} contas)` 
+        description: `Todos os relatórios Meta foram ${newStatus ? "ativados" : "desativados"} (${clients.length} contas)` 
       });
     } catch (error) {
-      console.error("Erro ao desativar Meta:", error);
+      console.error("Erro ao alterar Meta:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível desativar os relatórios Meta: " + (error as Error).message,
+        description: "Não foi possível alterar os relatórios Meta: " + (error as Error).message,
         variant: "destructive",
       });
     }
   };
 
-  const handleDeactivateAllGoogle = async () => {
+  const handleToggleAllGoogle = async () => {
     try {
+      // Verifica se todos estão desativados
+      const allGoogleInactive = clients.every((c) => !c.config?.ativo_google);
+      const newStatus = allGoogleInactive;
+
       const { error } = await supabase
         .from("relatorio_config")
         .update({ 
-          ativo_google: false,
+          ativo_google: newStatus,
           updated_at: new Date().toISOString() 
         })
         .in('client_id', clients.map(c => c.id));
@@ -390,7 +399,8 @@ export default function RelatorioN8n() {
           ...c,
           config: {
             ...c.config,
-            ativo_google: false,
+            ativo_meta: c.config?.ativo_meta || false,
+            ativo_google: newStatus,
             horario_disparo: c.config?.horario_disparo || "09:00:00",
             dias_semana: c.config?.dias_semana || [1, 2, 3, 4, 5],
           },
@@ -399,13 +409,13 @@ export default function RelatorioN8n() {
 
       toast({ 
         title: "Sucesso", 
-        description: `Todos os relatórios Google foram desativados (${clients.length} contas)` 
+        description: `Todos os relatórios Google foram ${newStatus ? "ativados" : "desativados"} (${clients.length} contas)` 
       });
     } catch (error) {
-      console.error("Erro ao desativar Google:", error);
+      console.error("Erro ao alterar Google:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível desativar os relatórios Google: " + (error as Error).message,
+        description: "Não foi possível alterar os relatórios Google: " + (error as Error).message,
         variant: "destructive",
       });
     }
@@ -441,6 +451,10 @@ export default function RelatorioN8n() {
   const totalAtivos = clients.filter((c) => c.config?.ativo_meta || c.config?.ativo_google).length;
   const totalMeta = clients.filter((c) => c.meta_account_id).length;
   const totalGoogle = clients.filter((c) => c.google_ads_id).length;
+  
+  // Verificar se todos estão desativados
+  const allMetaInactive = clients.every((c) => !c.config?.ativo_meta);
+  const allGoogleInactive = clients.every((c) => !c.config?.ativo_google);
 
   const StatCard = ({
     icon,
@@ -498,21 +512,21 @@ export default function RelatorioN8n() {
             <div className="flex items-center gap-3 self-start md:self-auto">
               <Button 
                 variant="outline" 
-                className="gap-2 text-warning hover:text-warning" 
-                onClick={handleDeactivateAllMeta}
-                aria-label="Desativar todos Meta"
+                className={`gap-2 ${allMetaInactive ? 'text-success hover:text-success' : 'text-warning hover:text-warning'}`}
+                onClick={handleToggleAllMeta}
+                aria-label={allMetaInactive ? "Ativar todos Meta" : "Desativar todos Meta"}
               >
-                <XCircle className="h-4 w-4" />
-                Desativar Meta
+                {allMetaInactive ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {allMetaInactive ? "Ativar Meta" : "Desativar Meta"}
               </Button>
               <Button 
                 variant="outline" 
-                className="gap-2 text-warning hover:text-warning" 
-                onClick={handleDeactivateAllGoogle}
-                aria-label="Desativar todos Google"
+                className={`gap-2 ${allGoogleInactive ? 'text-success hover:text-success' : 'text-warning hover:text-warning'}`}
+                onClick={handleToggleAllGoogle}
+                aria-label={allGoogleInactive ? "Ativar todos Google" : "Desativar todos Google"}
               >
-                <XCircle className="h-4 w-4" />
-                Desativar Google
+                {allGoogleInactive ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {allGoogleInactive ? "Ativar Google" : "Desativar Google"}
               </Button>
               <Button variant="outline" className="gap-2" onClick={() => loadClientsData()} aria-label="Atualizar">
                 <RefreshCw className="h-4 w-4" />
