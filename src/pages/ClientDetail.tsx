@@ -14,6 +14,7 @@ import { MetaPeriodFilter, type MetaPeriod } from "@/components/meta/MetaPeriodF
 import { MetaMetricsGrid } from "@/components/meta/MetaMetricsGrid";
 import { MetaCampaignTable } from "@/components/meta/MetaCampaignTable";
 import { MetaCampaignDetailDialog } from "@/components/meta/MetaCampaignDetailDialog";
+import { ModernAccountForm } from "@/components/forms/ModernAccountForm";
 import { metaAdsService } from "@/services/metaAdsService";
 import type { MetaAdsResponse, MetaCampaign, MetaAccountMetrics } from "@/types/meta";
 import {
@@ -37,6 +38,7 @@ import {
   DollarSign,
   Target,
   Activity,
+  Pencil,
 } from "lucide-react";
 
 const safe = (n: number | null | undefined, fallback = 0) => (typeof n === "number" && !Number.isNaN(n) ? n : fallback);
@@ -68,6 +70,8 @@ export default function ClientDetailPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<MetaCampaign | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function loadAccountBasics(accountId: string) {
     const { data, error } = await supabase.from("accounts").select("*").eq("id", accountId).single();
@@ -167,6 +171,37 @@ export default function ClientDetailPage() {
     setDialogOpen(true);
   };
 
+  const handleEditAccount = async (data: any) => {
+    if (!id) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("accounts")
+        .update(data)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Conta atualizada com sucesso!",
+      });
+
+      setEditModalOpen(false);
+      await loadAccountBasics(id);
+    } catch (error: any) {
+      console.error("Erro ao atualizar conta:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível atualizar a conta",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/10">
@@ -231,6 +266,11 @@ export default function ClientDetailPage() {
 
             {/* AÇÕES RÁPIDAS */}
             <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => setEditModalOpen(true)} className="gap-2">
+                <Pencil className="h-4 w-4" />
+                Editar
+              </Button>
+
               {clientDriveUrl && (
                 <Button variant="outline" onClick={() => window.open(clientDriveUrl!, "_blank")} className="gap-2">
                   <FolderOpen className="h-4 w-4" />
@@ -657,6 +697,14 @@ export default function ClientDetailPage() {
       </div>
 
       <MetaCampaignDetailDialog campaign={selectedCampaign} open={dialogOpen} onOpenChange={setDialogOpen} />
+      
+      <ModernAccountForm
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        initialData={accountData}
+        onSubmit={handleEditAccount}
+        isEdit={true}
+      />
     </AppLayout>
   );
 }
