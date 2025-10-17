@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { 
+import {
   ArrowLeft,
   Edit,
   Phone,
@@ -38,24 +38,12 @@ import {
   Hash,
   FileText,
   Link as LinkIcon,
-  Shield
+  Shield,
 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type ClienteStatus = 'Ativo' | 'Pausado' | 'Aguardando confirmação';
+type ClienteStatus = "Ativo" | "Pausado" | "Aguardando confirmação";
 
 interface Cliente {
   id: string;
@@ -69,7 +57,7 @@ interface Cliente {
   status: ClienteStatus;
   created_at: string;
   updated_at: string;
-  
+
   // Campos do formulário completo
   razao_social?: string | null;
   nome_fantasia?: string | null;
@@ -138,21 +126,21 @@ interface Account {
 }
 
 const STATUS_CONFIG = {
-  'Ativo': {
-    color: 'bg-success/20 text-success border-success/30',
+  Ativo: {
+    color: "bg-success/20 text-success border-success/30",
     icon: CheckCircle,
-    label: 'Ativo'
+    label: "Ativo",
   },
-  'Pausado': {
-    color: 'bg-warning/20 text-warning border-warning/30',
+  Pausado: {
+    color: "bg-warning/20 text-warning border-warning/30",
     icon: Pause,
-    label: 'Pausado'
+    label: "Pausado",
   },
-  'Aguardando confirmação': {
-    color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  "Aguardando confirmação": {
+    color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
     icon: Clock,
-    label: 'Aguardando Confirmação'
-  }
+    label: "Aguardando Confirmação",
+  },
 };
 
 export default function ClienteDetailCompleta() {
@@ -171,27 +159,26 @@ export default function ClienteDetailCompleta() {
 
       // Buscar cliente completo
       const { data: clienteData, error: clienteError } = await supabase
-        .from('clientes')
-        .select('*')
-        .eq('id', id)
+        .from("clientes")
+        .select("*")
+        .eq("id", id)
         .single();
 
       if (clienteError) throw clienteError;
 
       // Buscar contas do cliente
       const { data: accountsData, error: accountsError } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('cliente_id', id)
-        .order('created_at', { ascending: false });
+        .from("accounts")
+        .select("*")
+        .eq("cliente_id", id)
+        .order("created_at", { ascending: false });
 
-      if (accountsError) console.warn('Accounts not found:', accountsError);
+      if (accountsError) console.warn("Accounts not found:", accountsError);
 
       setCliente(clienteData);
       setAccounts(accountsData || []);
-
     } catch (error) {
-      console.error('Erro ao carregar cliente:', error);
+      console.error("Erro ao carregar cliente:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os dados do cliente",
@@ -206,22 +193,18 @@ export default function ClienteDetailCompleta() {
     if (!cliente) return;
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .update({ status: newStatus })
-        .eq('id', cliente.id);
+      const { error } = await supabase.from("clientes").update({ status: newStatus }).eq("id", cliente.id);
 
       if (error) throw error;
 
-      setCliente(prev => prev ? { ...prev, status: newStatus } : null);
-      
+      setCliente((prev) => (prev ? { ...prev, status: newStatus } : null));
+
       toast({
         title: "Sucesso",
         description: `Status alterado para ${newStatus}`,
       });
-
     } catch (error) {
-      console.error('Erro ao alterar status:', error);
+      console.error("Erro ao alterar status:", error);
       toast({
         title: "Erro",
         description: "Não foi possível alterar o status.",
@@ -235,20 +218,25 @@ export default function ClienteDetailCompleta() {
   }, [id]);
 
   const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
   const formatCurrency = (value: number | null | undefined) => {
-    if (!value) return 'R$ 0,00';
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+    if (!value) return "R$ 0,00";
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   if (loading) {
@@ -271,10 +259,7 @@ export default function ClienteDetailCompleta() {
           <div className="text-center">
             <h2 className="text-xl font-semibold text-foreground mb-2">Cliente não encontrado</h2>
             <p className="text-text-secondary">O cliente que você está procurando não existe.</p>
-            <Button 
-              onClick={() => navigate('/clientes')} 
-              className="mt-4 gap-2"
-            >
+            <Button onClick={() => navigate("/clientes")} className="mt-4 gap-2">
               <ArrowLeft className="h-4 w-4" />
               Voltar aos Clientes
             </Button>
@@ -292,12 +277,7 @@ export default function ClienteDetailCompleta() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate('/clientes')}
-              className="gap-2"
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate("/clientes")} className="gap-2">
               <ArrowLeft className="h-4 w-4" />
               Voltar
             </Button>
@@ -309,13 +289,11 @@ export default function ClienteDetailCompleta() {
               </Avatar>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">{cliente.nome}</h1>
-                <p className="text-text-secondary">
-                  Cliente desde {formatDate(cliente.created_at)}
-                </p>
+                <p className="text-text-secondary">Cliente desde {formatDate(cliente.created_at)}</p>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Status Badge */}
             <Badge className={STATUS_CONFIG[cliente.status].color}>
@@ -325,24 +303,24 @@ export default function ClienteDetailCompleta() {
 
             {/* Botões de Status */}
             <div className="flex gap-1">
-              {cliente.status !== 'Ativo' && (
+              {cliente.status !== "Ativo" && (
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-success hover:bg-success/10"
-                  onClick={() => handleStatusChange('Ativo')}
+                  onClick={() => handleStatusChange("Ativo")}
                 >
                   <Play className="h-3 w-3 mr-1" />
                   Ativar
                 </Button>
               )}
-              
-              {cliente.status !== 'Pausado' && (
+
+              {cliente.status !== "Pausado" && (
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-warning hover:bg-warning/10"
-                  onClick={() => handleStatusChange('Pausado')}
+                  onClick={() => handleStatusChange("Pausado")}
                 >
                   <Pause className="h-3 w-3 mr-1" />
                   Pausar
@@ -350,10 +328,7 @@ export default function ClienteDetailCompleta() {
               )}
             </div>
 
-            <Button 
-              onClick={() => navigate(`/clientes/${cliente.id}/editar`)}
-              className="gap-2"
-            >
+            <Button onClick={() => navigate(`/clientes/${cliente.id}/editar`)} className="gap-2">
               <Edit className="h-4 w-4" />
               Editar
             </Button>
@@ -372,7 +347,6 @@ export default function ClienteDetailCompleta() {
           {/* ABA 1: INFORMAÇÕES GERAIS */}
           <TabsContent value="geral" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
               {/* Dados Básicos */}
               <Card className="surface-elevated">
                 <CardHeader>
@@ -387,14 +361,14 @@ export default function ClienteDetailCompleta() {
                       <label className="text-sm font-medium text-text-secondary">Nome/Razão Social</label>
                       <p className="text-foreground font-medium">{cliente.razao_social || cliente.nome}</p>
                     </div>
-                    
+
                     {cliente.nome_fantasia && (
                       <div>
                         <label className="text-sm font-medium text-text-secondary">Nome Fantasia</label>
                         <p className="text-foreground">{cliente.nome_fantasia}</p>
                       </div>
                     )}
-                    
+
                     {cliente.cnpj && (
                       <div>
                         <label className="text-sm font-medium text-text-secondary">CNPJ</label>
@@ -430,7 +404,7 @@ export default function ClienteDetailCompleta() {
                       </div>
                     </div>
                   )}
-                  
+
                   {cliente.email && (
                     <div className="flex items-center gap-3">
                       <Mail className="h-4 w-4 text-text-secondary" />
@@ -455,13 +429,13 @@ export default function ClienteDetailCompleta() {
                     <div className="flex items-center gap-3">
                       <Globe className="h-4 w-4 text-text-secondary" />
                       <div>
-                        <a 
-                          href={cliente.site || cliente.site_url || '#'} 
-                          target="_blank" 
+                        <a
+                          href={cliente.site || cliente.site_url || "#"}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:underline flex items-center gap-1 font-medium"
                         >
-                          {(cliente.site || cliente.site_url || '').replace(/^https?:\/\//, '')}
+                          {(cliente.site || cliente.site_url || "").replace(/^https?:\/\//, "")}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                         <p className="text-xs text-text-secondary">Website</p>
@@ -487,7 +461,7 @@ export default function ClienteDetailCompleta() {
                         <p className="text-foreground">{cliente.estado}</p>
                       </div>
                     )}
-                    
+
                     {cliente.cidade_regiao && (
                       <div>
                         <label className="text-sm font-medium text-text-secondary">Cidade/Região</label>
@@ -568,7 +542,6 @@ export default function ClienteDetailCompleta() {
           {/* ABA 2: CONTATOS & RESPONSÁVEIS */}
           <TabsContent value="contatos" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
               {/* Responsável Principal */}
               {(cliente.responsavel_nome || cliente.responsavel_email || cliente.responsavel_whatsapp) && (
                 <Card className="surface-elevated">
@@ -585,7 +558,7 @@ export default function ClienteDetailCompleta() {
                         <p className="text-foreground font-medium">{cliente.responsavel_nome}</p>
                       </div>
                     )}
-                    
+
                     {cliente.responsavel_cargo && (
                       <div>
                         <label className="text-sm font-medium text-text-secondary">Cargo</label>
@@ -735,7 +708,6 @@ export default function ClienteDetailCompleta() {
           {/* ABA 3: ESTRUTURA & OPERAÇÃO */}
           <TabsContent value="estrutura" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
               {/* Estrutura da Equipe */}
               <Card className="surface-elevated">
                 <CardHeader>
@@ -826,9 +798,9 @@ export default function ClienteDetailCompleta() {
                   {cliente.crm_url && (
                     <div>
                       <label className="text-sm font-medium text-text-secondary">URL do CRM</label>
-                      <a 
-                        href={cliente.crm_url} 
-                        target="_blank" 
+                      <a
+                        href={cliente.crm_url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline flex items-center gap-1"
                       >
@@ -930,14 +902,9 @@ export default function ClienteDetailCompleta() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Contas de Anúncio</h3>
-                <p className="text-text-secondary">
-                  {accounts.length} conta(s) vinculada(s) a este cliente
-                </p>
+                <p className="text-text-secondary">{accounts.length} conta(s) vinculada(s) a este cliente</p>
               </div>
-              <Button 
-                onClick={() => navigate('/contas?cliente=' + cliente.id)}
-                className="gap-2"
-              >
+              <Button onClick={() => navigate("/contas?cliente=" + cliente.id)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Nova Conta
               </Button>
@@ -955,28 +922,30 @@ export default function ClienteDetailCompleta() {
                               {getInitials(account.nome_empresa || account.nome_cliente)}
                             </AvatarFallback>
                           </Avatar>
-                          
+
                           <div>
                             <h4 className="font-semibold text-foreground">
                               {account.nome_empresa || account.nome_cliente}
                             </h4>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge 
+                              <Badge
                                 className={
-                                  account.status === 'Ativo' ? 'bg-success/20 text-success' :
-                                  account.status === 'Pausado' ? 'bg-warning/20 text-warning' :
-                                  'bg-muted text-muted-foreground'
+                                  account.status === "Ativo"
+                                    ? "bg-success/20 text-success"
+                                    : account.status === "Pausado"
+                                      ? "bg-warning/20 text-warning"
+                                      : "bg-muted text-muted-foreground"
                                 }
                               >
                                 {account.status}
                               </Badge>
-                              
+
                               {account.usa_meta_ads && (
                                 <Badge variant="outline" className="text-xs border-blue-500 text-blue-500">
                                   Meta
                                 </Badge>
                               )}
-                              
+
                               {account.usa_google_ads && (
                                 <Badge variant="outline" className="text-xs border-green-500 text-green-500">
                                   Google
@@ -997,9 +966,7 @@ export default function ClienteDetailCompleta() {
                           {account.saldo_meta && (
                             <div className="text-right">
                               <p className="text-sm text-text-secondary">Saldo Meta</p>
-                              <p className="font-semibold text-foreground">
-                                {formatCurrency(account.saldo_meta)}
-                              </p>
+                              <p className="font-semibold text-foreground">{formatCurrency(account.saldo_meta)}</p>
                             </div>
                           )}
 
@@ -1028,7 +995,7 @@ export default function ClienteDetailCompleta() {
                               size="sm"
                               variant="outline"
                               className="gap-2"
-                              onClick={() => window.open(account.link_drive!, '_blank')}
+                              onClick={() => window.open(account.link_drive!, "_blank")}
                             >
                               <FolderOpen className="h-4 w-4" />
                               Drive
@@ -1056,7 +1023,7 @@ export default function ClienteDetailCompleta() {
                             <p className="text-sm font-mono text-foreground">{account.meta_account_id}</p>
                           </div>
                         )}
-                        
+
                         {account.google_ads_id && (
                           <div>
                             <label className="text-xs text-text-secondary">Google Ads ID</label>
@@ -1072,16 +1039,11 @@ export default function ClienteDetailCompleta() {
               <Card className="surface-elevated">
                 <CardContent className="p-12 text-center">
                   <Building2 className="h-12 w-12 mx-auto mb-4 text-text-tertiary" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Nenhuma conta encontrada
-                  </h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Nenhuma conta encontrada</h3>
                   <p className="text-text-secondary mb-4">
                     Este cliente ainda não possui contas de anúncio vinculadas.
                   </p>
-                  <Button 
-                    onClick={() => navigate('/contas?cliente=' + cliente.id)}
-                    className="gap-2"
-                  >
+                  <Button onClick={() => navigate("/contas?cliente=" + cliente.id)} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Criar Primeira Conta
                   </Button>
@@ -1089,7 +1051,7 @@ export default function ClienteDetailCompleta() {
               </Card>
             )}
           </TabsContent>
-        </tabs>
+        </Tabs>
 
         {/* Informações de Sistema (Footer) */}
         <Card className="surface-elevated">
