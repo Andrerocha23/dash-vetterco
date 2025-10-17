@@ -51,6 +51,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+type ClienteStatus = "Ativo" | "Pausado" | "Aguardando confirmação";
+
 interface Cliente {
   id: string;
   nome: string;
@@ -60,7 +62,7 @@ interface Cliente {
   instagram_handle?: string | null;
   site?: string | null;
   id_grupo?: string | null;
-  status: "Ativo" | "Pausado" | "Aguardando confirmação";
+  status: ClienteStatus;
   created_at: string;
   updated_at: string;
   // Campos calculados
@@ -77,7 +79,7 @@ interface Stats {
   configuracoes_pendentes: number;
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<ClienteStatus, { color: string; icon: any; label: string }> = {
   Ativo: {
     color: "bg-success/20 text-success border-success/30",
     icon: CheckCircle,
@@ -113,7 +115,7 @@ export default function ClientesReformulada() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [newStatus, setNewStatus] = useState<string>("");
+  const [newStatus, setNewStatus] = useState<ClienteStatus | "">("");
 
   // Novo cliente
   const [newClienteData, setNewClienteData] = useState({
@@ -150,16 +152,10 @@ export default function ClientesReformulada() {
 
       if (accountsError) console.warn("Erro ao buscar contas:", accountsError);
 
-      // 3. Buscar gestores responsáveis
+      // 3. Buscar gestores responsáveis (simplificado)
       const { data: gestoresData, error: gestoresError } = await supabase
         .from("user_roles")
-        .select(
-          `
-          user_id,
-          auth.users!inner(email),
-          profiles!inner(name)
-        `,
-        )
+        .select("user_id")
         .eq("role", "gestor");
 
       if (gestoresError) console.warn("Erro ao buscar gestores:", gestoresError);
@@ -174,8 +170,8 @@ export default function ClientesReformulada() {
         const temGoogle = contasCliente.some((conta) => conta.google_ads_id);
         const configuracoesPendentes = !temMeta && !temGoogle;
 
-        // Buscar gestor (simplificado - pode precisar ajustar lógica)
-        const gestor = gestoresData?.[0]; // Aqui você precisa definir a lógica de vinculação
+        // Buscar gestor (simplificado por enquanto)
+        const gestorNome = "Sem gestor atribuído";
 
         return {
           ...cliente,
@@ -183,7 +179,7 @@ export default function ClientesReformulada() {
           tem_meta: temMeta,
           tem_google: temGoogle,
           configuracoes_pendentes: configuracoesPendentes,
-          gestor_nome: gestor?.profiles?.name || gestor?.auth?.users?.email || "Sem gestor",
+          gestor_nome: gestorNome,
         };
       });
 
@@ -226,8 +222,14 @@ export default function ClientesReformulada() {
         .from("clientes")
         .insert([
           {
-            ...newClienteData,
-            status: "Aguardando confirmação", // Status padrão para novos clientes
+            nome: newClienteData.nome,
+            cnpj: newClienteData.cnpj || null,
+            email: newClienteData.email || null,
+            telefone: newClienteData.telefone || null,
+            instagram_handle: newClienteData.instagram_handle || null,
+            site: newClienteData.site || null,
+            id_grupo: newClienteData.id_grupo || null,
+            status: "Aguardando confirmação" as const,
           },
         ])
         .select()
@@ -266,7 +268,10 @@ export default function ClientesReformulada() {
     if (!selectedCliente || !newStatus) return;
 
     try {
-      const { error } = await supabase.from("clientes").update({ status: newStatus }).eq("id", selectedCliente.id);
+      const { error } = await supabase
+        .from("clientes")
+        .update({ status: newStatus as ClienteStatus })
+        .eq("id", selectedCliente.id);
 
       if (error) throw error;
 
