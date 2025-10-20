@@ -117,13 +117,25 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
           description: "Conta atualizada com sucesso",
         });
       } else {
-        // Not supported - accounts should be created from client approvals
+        // Create new account
+        const { error } = await supabase
+          .from('accounts')
+          .insert({
+            cliente_id: clientId,
+            canais: [data.tipo],
+            nome_empresa: data.account_id,
+            status: data.status,
+            observacoes: data.observacoes || null,
+            nome_cliente: data.account_id,
+            telefone: '',
+          });
+
+        if (error) throw error;
+
         toast({
-          title: "Não suportado",
-          description: "Contas devem ser criadas ao aprovar cadastros de clientes",
-          variant: "destructive",
+          title: "Sucesso!",
+          description: "Conta criada com sucesso",
         });
-        return;
       }
 
       setShowModal(false);
