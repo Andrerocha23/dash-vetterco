@@ -161,7 +161,7 @@ export default function ClientesReformulada() {
       if (gestoresError) console.warn("Erro ao buscar gestores:", gestoresError);
 
       // 4. Processar dados
-      const processedClientes: Cliente[] = (clientesData || []).map((cliente) => {
+      const processedClientes: Cliente[] = (clientesData || []).map((cliente) => cliente as any).map((cliente) => {
         // Contar contas do cliente
         const contasCliente = (accountsData || []).filter((account) => account.cliente_id === cliente.id);
 

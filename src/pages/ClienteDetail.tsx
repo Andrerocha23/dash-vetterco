@@ -175,7 +175,7 @@ export default function ClienteDetailCompleta() {
 
       if (accountsError) console.warn("Accounts not found:", accountsError);
 
-      setCliente(clienteData);
+      setCliente(clienteData as Cliente);
       setAccounts(accountsData || []);
     } catch (error) {
       console.error("Erro ao carregar cliente:", error);
