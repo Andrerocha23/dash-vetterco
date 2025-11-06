@@ -66,64 +66,62 @@ export default function RelatorioN8n() {
   const [sendingReport, setSendingReport] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // ======= LOAD DATA (mantido) =======
+  // ======= LOAD DATA =======
   const loadClientsData = async () => {
     try {
       setLoading(true);
 
-      let accountsData: any[] | null | undefined;
-      let accountsError: any;
+      // Buscar dados da tabela accounts
+      const { data: accountsData, error: accountsError } = await supabase
+        .from("accounts")
+        .select("id, nome_cliente, id_grupo, meta_account_id, google_ads_id, status, telefone, email")
+        .eq("status", "Ativo")
+        .order("nome_cliente");
 
-      try {
-        const { error: testError } = await supabase
-          .from("accounts")
-          .select("id")
-          .limit(1);
-        if (!testError) {
-          const { data, error } = await supabase
-            .from("accounts")
-            .select("id, nome_cliente, nome_empresa, id_grupo, meta_account_id, google_ads_id, status")
-            .eq("status", "Ativo")
-            .order("nome_cliente");
-          accountsData = data;
-          accountsError = error;
-        }
-      } catch {
-        try {
-          const { data, error } = await supabase
-            .from("accounts")
-            .select("id, nome_cliente, nome_empresa, id_grupo, meta_account_id, google_ads_id, status")
-            .eq("status", "Ativo")
-            .order("nome_cliente");
-          accountsData = data;
-          accountsError = error;
-        } catch (e2) {
-          throw new Error("Nenhuma tabela de contas encontrada");
-        }
+      if (accountsError) {
+        console.error("Erro ao buscar accounts:", accountsError);
+        throw accountsError;
       }
 
-      if (accountsError) throw accountsError;
+      if (!accountsData || accountsData.length === 0) {
+        setClients([]);
+        toast({ 
+          title: "Nenhuma conta encontrada", 
+          description: "Não há contas ativas no sistema",
+          variant: "default"
+        });
+        return;
+      }
 
-      const { data: configsData, error: configsError } = await supabase
+      // Buscar configurações de relatórios
+      const { data: configsData } = await supabase
         .from("relatorio_config")
-        .select("client_id, ativo_meta, ativo_google, horario_disparo, dias_semana, updated_at");
+        .select("client_id, ativo_meta, ativo_google, horario_disparo, dias_semana");
 
-      const configs = configsError ? [] : (configsData || []);
-
-      const { data: disparosData, error: disparosError } = await supabase
+      // Buscar últimos disparos
+      const { data: disparosData } = await supabase
         .from("relatorio_disparos")
         .select("client_id, data_disparo, status, mensagem_erro")
         .order("data_disparo", { ascending: false });
 
-      const disparos = disparosError ? [] : (disparosData || []);
+      // Buscar estatísticas de leads
+      const { data: leadsStats } = await supabase
+        .from("leads_stats")
+        .select("client_id, total_leads, leads_convertidos");
 
-      const processedClients: ClientReport[] = (accountsData || []).map((account) => {
+      const configs = configsData || [];
+      const disparos = disparosData || [];
+      const stats = leadsStats || [];
+
+      // Processar dados
+      const processedClients: ClientReport[] = accountsData.map((account) => {
         const config = configs.find((c: any) => c.client_id === account.id);
         const ultimoDisparo = disparos.find((d: any) => d.client_id === account.id);
+        const accountStats = stats.find((s: any) => s.client_id === account.id);
+
         return {
           id: account.id,
           nome_cliente: account.nome_cliente || "Sem nome",
-          nome_empresa: account.nome_empresa,
           id_grupo: account.id_grupo,
           meta_account_id: account.meta_account_id,
           google_ads_id: account.google_ads_id,
@@ -132,7 +130,7 @@ export default function RelatorioN8n() {
             ? {
                 ativo_meta: config.ativo_meta || false,
                 ativo_google: config.ativo_google || false,
-                horario_disparo: config.horario_disparo,
+                horario_disparo: config.horario_disparo || "09:00:00",
                 dias_semana: config.dias_semana || [1, 2, 3, 4, 5],
               }
             : {
@@ -148,36 +146,27 @@ export default function RelatorioN8n() {
                 mensagem_erro: ultimoDisparo.mensagem_erro,
               }
             : undefined,
-          stats: { total_leads: 0, leads_convertidos: 0 },
+          stats: {
+            total_leads: accountStats?.total_leads || 0,
+            leads_convertidos: accountStats?.leads_convertidos || 0,
+          },
         };
       });
 
       setClients(processedClients);
-      toast({ title: "Dados carregados!", description: `${processedClients.length} contas encontradas` });
-    } catch (error) {
+      toast({ 
+        title: "Dados carregados!", 
+        description: `${processedClients.length} conta${processedClients.length !== 1 ? 's' : ''} encontrada${processedClients.length !== 1 ? 's' : ''}`,
+        variant: "default"
+      });
+    } catch (error: any) {
       console.error("Erro ao carregar dados:", error);
-      const exemplo: ClientReport[] = [
-        {
-          id: "1",
-          nome_cliente: "Exemplo Cliente 1",
-          nome_empresa: "Empresa Exemplo",
-          id_grupo: "grupo_123",
-          meta_account_id: "meta_123",
-          status: "Ativo",
-          config: { ativo_meta: true, ativo_google: true, horario_disparo: "09:00:00", dias_semana: [1, 2, 3, 4, 5] },
-          stats: { total_leads: 0, leads_convertidos: 0 },
-        },
-        {
-          id: "2",
-          nome_cliente: "Exemplo Cliente 2",
-          nome_empresa: "Outra Empresa",
-          status: "Ativo",
-          config: { ativo_meta: false, ativo_google: false, horario_disparo: "10:00:00", dias_semana: [1, 2, 3, 4, 5] },
-          stats: { total_leads: 0, leads_convertidos: 0 },
-        },
-      ];
-      setClients(exemplo);
-      toast({ title: "Usando dados de exemplo", description: "Verifique a configuração do banco de dados", variant: "destructive" });
+      setClients([]);
+      toast({ 
+        title: "Erro ao carregar dados", 
+        description: error.message || "Verifique a conexão com o banco de dados", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
