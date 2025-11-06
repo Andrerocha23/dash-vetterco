@@ -218,7 +218,7 @@ export default function ClientDetailPage() {
         {/* KPIs Cards */}
         <Card>
           <CardContent className="p-6">
-            <MetaMetricsGrid kpis={kpis} loading={loading} />
+            <MetaMetricsGrid metrics={metrics} loading={loading} />
           </CardContent>
         </Card>
 
@@ -582,13 +582,15 @@ export default function ClientDetailPage() {
 
         {editModalOpen && (
           <ModernAccountForm
-            account={accountData}
+            initialData={accountData}
             open={editModalOpen}
-            onClose={() => setEditModalOpen(false)}
-            onSuccess={() => {
+            onOpenChange={setEditModalOpen}
+            onSubmit={async (data) => {
+              // Handle submit logic here if needed
               setEditModalOpen(false);
               if (id) loadAccountBasics(id);
             }}
+            isEdit={true}
           />
         )}
       </div>

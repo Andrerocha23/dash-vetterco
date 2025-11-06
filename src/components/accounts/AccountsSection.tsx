@@ -61,7 +61,7 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
       setLoading(true);
       const { data, error } = await supabase
         .from('accounts')
-        .select('id, canais, nome_empresa, status, observacoes, created_at')
+        .select('id, canais, meta_account_id, google_ads_id, status, observacoes, created_at')
         .eq('cliente_id', clientId)
         .order('created_at', { ascending: false });
 
@@ -71,7 +71,7 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
       const transformedAccounts: Account[] = (data || []).map(acc => ({
         id: acc.id,
         tipo: acc.canais?.[0] || 'Meta Ads',
-        account_id: acc.nome_empresa || '',
+        account_id: acc.meta_account_id || acc.google_ads_id || '',
         status: acc.status || 'Ativo',
         observacoes: acc.observacoes,
         created_at: acc.created_at
@@ -98,13 +98,18 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
     try {
       setSubmitting(true);
       
+      // Determine which account_id field to use based on tipo
+      const accountIdField = data.tipo === 'Meta Ads' ? 'meta_account_id' : 
+                            data.tipo === 'Google Ads' ? 'google_ads_id' : 
+                            'meta_account_id';
+      
       if (editingAccount) {
         // Update existing account
         const { error } = await supabase
           .from('accounts')
           .update({
             canais: [data.tipo],
-            nome_empresa: data.account_id,
+            [accountIdField]: data.account_id,
             status: data.status,
             observacoes: data.observacoes || null,
           })
@@ -118,17 +123,21 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
         });
       } else {
         // Create new account
+        const insertData: any = {
+          cliente_id: clientId,
+          canais: [data.tipo],
+          status: data.status,
+          observacoes: data.observacoes || null,
+          nome_cliente: '',
+          telefone: '',
+        };
+        
+        // Add the appropriate account_id field
+        insertData[accountIdField] = data.account_id;
+        
         const { error } = await supabase
           .from('accounts')
-          .insert({
-            cliente_id: clientId,
-            canais: [data.tipo],
-            nome_empresa: data.account_id,
-            status: data.status,
-            observacoes: data.observacoes || null,
-            nome_cliente: data.account_id,
-            telefone: '',
-          });
+          .insert(insertData);
 
         if (error) throw error;
 
@@ -144,19 +153,11 @@ export function AccountsSection({ clientId }: AccountsSectionProps) {
     } catch (error: any) {
       console.error('Error saving account:', error);
       
-      if (error.code === '23505') {
-        toast({
-          title: "Erro",
-          description: "Já existe uma conta deste tipo com este ID para este cliente",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Não foi possível salvar a conta",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível salvar a conta",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
