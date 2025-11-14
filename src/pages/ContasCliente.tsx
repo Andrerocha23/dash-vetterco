@@ -45,7 +45,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface AccountData {
   id: string;
   nome_cliente: string;
-  nome_empresa: string;
   telefone: string;
   email: string | null;
   cliente_id: string;
@@ -190,7 +189,6 @@ export default function ContasCliente() {
     const matchesSearch =
       !searchTerm ||
       account.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (account.nome_empresa?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       account.telefone.includes(searchTerm) ||
       (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === "Todos os Status" || account.status === filterStatus;

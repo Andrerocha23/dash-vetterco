@@ -50,7 +50,6 @@ import { Label } from "@/components/ui/label";
 interface ClientData {
   id: string;
   nome_cliente: string;
-  nome_empresa: string;
   telefone: string;
   email: string | null;
   canais: string[];
@@ -91,7 +90,6 @@ export default function Clients() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newClientData, setNewClientData] = useState({
     nome_cliente: '',
-    nome_empresa: '',
     telefone: '',
     email: '',
     canais: [] as string[],
@@ -184,7 +182,6 @@ export default function Clients() {
       setShowCreateModal(false);
       setNewClientData({
         nome_cliente: '',
-        nome_empresa: '',
         telefone: '',
         email: '',
         canais: [],
@@ -247,7 +244,6 @@ export default function Clients() {
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.nome_cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.telefone.includes(searchTerm) ||
                          client.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -504,10 +500,6 @@ export default function Clients() {
                       
                       <div className="flex items-center gap-4 text-sm text-text-secondary">
                         <div className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {client.nome_empresa}
-                        </div>
-                        <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
                           {client.telefone}
                         </div>
@@ -647,16 +639,6 @@ export default function Clients() {
                   value={newClientData.nome_cliente}
                   onChange={(e) => setNewClientData(prev => ({ ...prev, nome_cliente: e.target.value }))}
                   placeholder="Ex: Casa & Cia Imóveis"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nome_empresa">Nome da Empresa</Label>
-                <Input
-                  id="nome_empresa"
-                  value={newClientData.nome_empresa}
-                  onChange={(e) => setNewClientData(prev => ({ ...prev, nome_empresa: e.target.value }))}
-                  placeholder="Ex: Casa & Cia Ltda"
                 />
               </div>
 
